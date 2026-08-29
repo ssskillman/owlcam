@@ -10,6 +10,7 @@ firebase deploy --only hosting --project carver-owlcam-72343
 ```
 
 Production URL: <https://carver-owlcam-72343.web.app>
+About Chris: <https://carver-owlcam-72343.web.app/about>
 
 The page is public, but the video remains private. It requests:
 
