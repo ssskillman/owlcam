@@ -355,23 +355,37 @@ def render_about_page() -> str:
     return to_xml(page)
 
 
-def _moment_card(item: dict[str, str]) -> Div:
-    media = (
-        Video(
+def _moment_media(item: dict[str, str]):
+    """Grid rows load a small thumbnail; the original opens on demand."""
+    stem = item["filename"].rsplit(".", 1)[0]
+    thumbnail = f"/assets/moments/thumbs/{stem}.jpg"
+
+    if item["type"] == "video":
+        return Video(
             src=f"/assets/moments/{item['filename']}",
+            poster=thumbnail,
             controls=True,
             muted=True,
             playsinline=True,
-            preload="metadata",
+            preload="none",
             aria_label=item["alt"],
         )
-        if item["type"] == "video"
-        else Img(
-            src=f"/assets/moments/{item['filename']}",
+
+    return A(
+        Img(
+            src=thumbnail,
             alt=item["alt"],
             loading="lazy",
-        )
+            decoding="async",
+        ),
+        Span("View full size", cls="thumb-hint"),
+        href=f"/assets/moments/{item['filename']}",
+        cls="moment-thumb",
     )
+
+
+def _moment_card(item: dict[str, str]) -> Div:
+    media = _moment_media(item)
     credit = [
         "Media: ",
         A(item["credit"], href=item["source"], rel="noopener noreferrer"),
