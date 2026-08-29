@@ -9,12 +9,21 @@ readonly REMOTE_STAGE="/home/shawn/owlcam/deploy"
 dry_run=false
 install_config=false
 
+ssh_cmd=(ssh -o BatchMode=yes -o IdentitiesOnly=yes)
+if [[ -n "${OWLCAM_SSH_IDENTITY:-}" ]]; then
+  ssh_cmd+=(-i "${OWLCAM_SSH_IDENTITY}")
+fi
+
 usage() {
   cat <<'EOF'
 Usage: deploy.sh [--dry-run] [--install-config]
 
-Stages only OwlCam scripts and MediaMTX configuration. The live configuration
-is replaced only when --install-config is explicitly supplied.
+Stages OwlCam scripts and MediaMTX configuration over SSH. The live
+configuration is replaced only when --install-config is explicitly supplied.
+
+Optional environment:
+  OWLCAM_SSH_TARGET     default shawn@100.123.8.55
+  OWLCAM_SSH_IDENTITY   path to a private key for BatchMode SSH
 EOF
 }
 
@@ -33,6 +42,8 @@ if "${dry_run}"; then
     "${REPO_ROOT}" "${TARGET}" "${REMOTE_STAGE}"
   printf 'Would stage %s/pi/config/ at %s:%s/pi/config/\n' \
     "${REPO_ROOT}" "${TARGET}" "${REMOTE_STAGE}"
+  printf 'Would stage %s/scripts/ at %s:%s/scripts/\n' \
+    "${REPO_ROOT}" "${TARGET}" "${REMOTE_STAGE}"
   if "${install_config}"; then
     printf 'Would back up and install mediamtx.yml as /etc/mediamtx.yml\n'
   fi
@@ -44,15 +55,20 @@ if "${install_config}" && [[ ! -r "${REPO_ROOT}/pi/config/mediamtx.yml" ]]; then
   exit 1
 fi
 
-ssh "${TARGET}" \
-  "mkdir -p '${REMOTE_STAGE}/pi/scripts' '${REMOTE_STAGE}/pi/config'"
+"${ssh_cmd[@]}" "${TARGET}" \
+  "mkdir -p '${REMOTE_STAGE}/pi/scripts' '${REMOTE_STAGE}/pi/config' '${REMOTE_STAGE}/scripts'"
 rsync -av --exclude '*.secret' --exclude '*.key' \
+  -e "${ssh_cmd[*]}" \
   "${REPO_ROOT}/pi/scripts/" "${TARGET}:${REMOTE_STAGE}/pi/scripts/"
 rsync -av --exclude '*.secret' --exclude '*.key' \
+  -e "${ssh_cmd[*]}" \
   "${REPO_ROOT}/pi/config/" "${TARGET}:${REMOTE_STAGE}/pi/config/"
+rsync -av --exclude '*.secret' --exclude '*.key' \
+  -e "${ssh_cmd[*]}" \
+  "${REPO_ROOT}/scripts/" "${TARGET}:${REMOTE_STAGE}/scripts/"
 
 if "${install_config}"; then
-  ssh "${TARGET}" \
+  "${ssh_cmd[@]}" "${TARGET}" \
     'backup="/etc/mediamtx.yml.bak.$(date -u +%Y%m%dT%H%M%SZ)"; sudo cp /etc/mediamtx.yml "${backup}" && sudo install -m 0644 /home/shawn/owlcam/deploy/pi/config/mediamtx.yml /etc/mediamtx.yml && printf "Backup: %s\n" "${backup}"'
 fi
 

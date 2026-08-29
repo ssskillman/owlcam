@@ -1,0 +1,74 @@
+# Stages files onto the Pi over Tailscale SSH. Does not expose port 22.
+# Official Tailscale Action: https://github.com/tailscale/github-action
+#
+# If the Pi is powered off or Tailscale is down, this workflow stays green and
+# records a notice in the Actions log so a later re-run can stage the files.
+name: Deploy Pi
+
+on:
+  workflow_dispatch:
+    inputs:
+      install_config:
+        description: Install /etc/mediamtx.yml from the staged repo copy
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-pi
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ secrets.TS_OAUTH_CLIENT_ID != '' && secrets.TS_OAUTH_SECRET != '' && secrets.OWLCAM_SSH_KEY != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Connect Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Check whether the OwlCam Pi is online
+        id: pi
+        run: |
+          set -u
+          target_ip="100.123.8.55"
+          echo "Checking Tailscale reachability of OwlCam Pi at ${target_ip}..."
+          if tailscale ping --c 3 --timeout 5s "${target_ip}"; then
+            echo "pi_online=true" >> "${GITHUB_OUTPUT}"
+            echo "OwlCam Pi is online at ${target_ip}. Deploy will continue."
+          else
+            echo "pi_online=false" >> "${GITHUB_OUTPUT}"
+            echo "OwlCam Pi is offline or unreachable on Tailscale (${target_ip})."
+            echo "Deploy skipped. Power on the Pi, wait for Tailscale, then re-run Deploy Pi."
+            echo "::notice title=OwlCam Pi offline::${target_ip} is not reachable on Tailscale. Files were not staged. Re-run this workflow when the Pi is powered on and connected."
+          fi
+
+      - name: Install deploy SSH key
+        if: steps.pi.outputs.pi_online == 'true'
+        env:
+          OWLCAM_SSH_KEY: ${{ secrets.OWLCAM_SSH_KEY }}
+        run: |
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${OWLCAM_SSH_KEY}" > "${HOME}/.ssh/owlcam_deploy"
+          chmod 600 "${HOME}/.ssh/owlcam_deploy"
+          ssh-keyscan -4 -T 15 100.123.8.55 >> "${HOME}/.ssh/known_hosts"
+
+      - name: Stage files on the Pi
+        if: steps.pi.outputs.pi_online == 'true'
+        env:
+          OWLCAM_SSH_TARGET: ${{ vars.OWLCAM_SSH_TARGET || 'shawn@100.123.8.55' }}
+        run: |
+          export OWLCAM_SSH_IDENTITY="${HOME}/.ssh/owlcam_deploy"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.install_config }}" == "true" ]]; then
+            ./pi/scripts/deploy.sh --install-config
+          else
+            ./pi/scripts/deploy.sh
+          fi

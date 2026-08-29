@@ -81,6 +81,11 @@ Deployment stages a narrow set of files under `/home/shawn/owlcam/deploy`.
 Installing the staged MediaMTX configuration requires the explicit
 `--install-config` flag and creates a timestamped backup first.
 
+GitHub Actions can run the same staging over Tailscale after merge to `main`,
+or from **Actions → Deploy Pi**. If the Pi is offline, that workflow logs a
+notice and skips staging instead of failing. Setup is in
+[`docs/github-actions.md`](docs/github-actions.md).
+
 Runtime configuration belongs in `/etc/owlcam/owlcam.env`; use
 [`.env.example`](.env.example) as a non-secret template.
 
