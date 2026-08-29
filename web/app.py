@@ -25,92 +25,79 @@ from fasthtml.common import (
 
 DEFAULT_STREAM_URL = "https://owlcam.tail31318f.ts.net/owl/index.m3u8"
 AMG_TEAM_URL = "https://www.aquaticmanagementgroup.com/the-executive-team"
+OWLCAM_GROUP_URL = "https://www.facebook.com/groups/619431688614242/"
 MOMENTS = (
     {
-        "filename": "barred-owl-portrait.jpg",
-        "timestamp": "2006-12-26",
+        "filename": "nest-box-build.jpg",
+        "timestamp": "2026-08-29",
         "type": "photo",
-        "subject": "Adult portrait",
-        "alt": "Barred owl perched among bare branches",
-        "story": (
-            "A quiet adult holds the edge of the woods, listening before "
-            "the next flight. On OwlCam, a pause like this could be a parent "
-            "checking that the path home is clear."
+        "badge": "NEST ARCHIVE",
+        "subject": "The box itself",
+        "alt": (
+            "Hand-built owl-shaped nest box on a porch rail at night, with "
+            "camera lenses set into its eyes"
         ),
-        "credit": "D. Gordon E. Robertson · CC BY-SA 3.0",
-        "source": "https://commons.wikimedia.org/wiki/File:Barred_owl.jpg",
-        "license": "https://creativecommons.org/licenses/by-sa/3.0",
+        "story": (
+            "Before any owl moved in, the nest box sat on the porch rail "
+            "with lenses set into its eyes—an owl built to watch owls. "
+            "Layered shingle feathers, a driftwood perch, and a doorway "
+            "sized for a barred owl family."
+        ),
+        "credit": "Shared in the OwlCam group",
+        "source": OWLCAM_GROUP_URL,
     },
     {
-        "filename": "florida-perch.jpg",
-        "timestamp": "2011-01-24",
+        "filename": "owlet-in-doorway.jpg",
+        "timestamp": "2026-08-29",
         "type": "photo",
-        "subject": "Branch watch",
-        "alt": "Barred owl looking down from a tree branch",
+        "badge": "NEST ARCHIVE",
+        "subject": "Chick in the doorway",
+        "alt": "Downy owlet looking out of the owl-shaped nest box doorway",
         "story": (
-            "The round face works like a satellite dish, gathering tiny "
-            "sounds below. A resident parent might use this patient lookout "
-            "to choose the safest moment to return to the chicks."
+            "A downy chick fills the doorway, still mostly fluff, watching "
+            "woods it has not flown yet. Behind it the camera housing sits "
+            "back in the dark of the box—the same vantage the live feed "
+            "carries."
         ),
-        "credit": "DickDaniels · CC BY-SA 3.0",
-        "source": "https://commons.wikimedia.org/wiki/File:Barred_Owl_RWD2.jpg",
-        "license": "https://creativecommons.org/licenses/by-sa/3.0",
+        "credit": "Shared in the OwlCam group",
+        "source": OWLCAM_GROUP_URL,
     },
     {
-        "filename": "mother-at-dusk.jpg",
-        "timestamp": "2018-07-28",
+        "filename": "owlet-on-ledge.jpg",
+        "timestamp": "2026-08-29",
         "type": "photo",
-        "subject": "Mother at dusk",
-        "alt": "Female barred owl perched shortly after sunset",
+        "badge": "NEST ARCHIVE",
+        "subject": "Standing tall",
+        "alt": "Owlet standing on the front ledge of the nest box in daylight",
         "story": (
-            "Dusk belongs to this mother. The source notes that she raised "
-            "four chicks that year; this watchful stop may have come between "
-            "the evening's many trips through the trees."
+            "Up on the front ledge, wings tucked, the owlet practices being "
+            "a whole owl. Branching like this comes before real flight, and "
+            "it is when a parent's food runs are hardest to keep up with."
         ),
-        "credit": "Sixflashphoto · CC BY-SA 4.0",
-        "source": (
-            "https://commons.wikimedia.org/wiki/"
-            "File:Innis_Woods_-_Barred_Owl_2.jpg"
-        ),
-        "license": "https://creativecommons.org/licenses/by-sa/4.0",
+        "credit": "Shared in the OwlCam group",
+        "source": OWLCAM_GROUP_URL,
     },
     {
-        "filename": "winter-watch.jpg",
-        "timestamp": "2005-01-01",
+        "filename": "adult-barred-owl.jpg",
+        "timestamp": "2026-08-29",
         "type": "photo",
-        "subject": "Winter watch",
-        "alt": "Barred owl perched in winter woodland",
+        "badge": "NEST ARCHIVE",
+        "subject": "The parent",
+        "alt": "Adult barred owl perched on a branch in green summer canopy",
         "story": (
-            "Feathers puff into a warm coat while the owl waits out a cold "
-            "January morning. If chicks were in the box, both parents would "
-            "balance warmth, rest, and the next search for food."
+            "The adult keeps station in the canopy: dark eyes, barred "
+            "chest, no sound at all. This is the bird the box was built "
+            "for, and the one whose comings and goings make a whole night "
+            "worth watching."
         ),
-        "credit": "Mdf · CC BY-SA 3.0",
-        "source": "https://commons.wikimedia.org/wiki/File:Strix-varia-005.jpg",
-        "license": "https://creativecommons.org/licenses/by-sa/3.0",
-    },
-    {
-        "filename": "cypress-swamp.jpg",
-        "timestamp": "2013-04-23",
-        "type": "photo",
-        "subject": "Nesting season",
-        "alt": "Barred owl in a cypress swamp during nesting season",
-        "story": (
-            "A barred owl settles into the layered greens of a cypress "
-            "swamp. During nesting season, stillness can hide a busy family "
-            "rhythm: guard, hunt, feed, repeat."
-        ),
-        "credit": 'Gregory "Slobirdr" Smith · CC BY-SA 2.0',
-        "source": (
-            "https://commons.wikimedia.org/wiki/"
-            "File:Barred_Owl_(Strix_varia)_(9732594639).jpg"
-        ),
-        "license": "https://creativecommons.org/licenses/by-sa/2.0",
+        "credit": "Shared in the OwlCam group",
+        "source": OWLCAM_GROUP_URL,
     },
     {
         "filename": "mole-delivery.webm",
         "timestamp": "2013-07-21",
         "type": "video",
+        "badge": "PLACEHOLDER CLIP",
         "subject": "Food",
         "alt": "Barred owl eating a mole",
         "story": (
@@ -395,10 +382,19 @@ def _moment_card(item: dict[str, str]) -> Div:
             loading="lazy",
         )
     )
+    credit = [
+        "Media: ",
+        A(item["credit"], href=item["source"], rel="noopener noreferrer"),
+    ]
+    if "license" in item:
+        credit += [
+            " · ",
+            A("license", href=item["license"], rel="noopener noreferrer"),
+        ]
     return Div(
         Div(
             media,
-            Span("PLACEHOLDER", cls="placeholder-badge"),
+            Span(item["badge"], cls="placeholder-badge"),
             cls="moment-media",
         ),
         Div(
@@ -410,26 +406,12 @@ def _moment_card(item: dict[str, str]) -> Div:
             H2(item["subject"]),
             P(item["story"], cls="moment-story"),
             P(
-                Span("AI-GENERATED PLACEHOLDER STORY", cls="story-label"),
+                Span("AI-GENERATED STORY", cls="story-label"),
                 " · ",
                 item["filename"],
                 cls="moment-file",
             ),
-            P(
-                "Media: ",
-                A(
-                    item["credit"],
-                    href=item["source"],
-                    rel="noopener noreferrer",
-                ),
-                " · ",
-                A(
-                    "license",
-                    href=item["license"],
-                    rel="noopener noreferrer",
-                ),
-                cls="moment-credit",
-            ),
+            P(*credit, cls="moment-credit"),
             cls="moment-copy",
         ),
         cls="moment-card",
@@ -454,19 +436,22 @@ def render_moments_page() -> str:
             _nav(active="moments"),
             Main(
                 Section(
-                    Span("FIELD LOG / PREVIEW", cls="live-label"),
+                    Span("FIELD LOG", cls="live-label"),
                     H1("Small moments.", Span("Wild stories.", cls="accent")),
                     P(
-                        "A future home for OwlCam action shots and short "
-                        "clips—with an AI-assisted field note about parents, "
-                        "food deliveries, chicks, and movement in the box.",
+                        "Action shots and short clips from the nest box—each "
+                        "with an AI-assisted field note about parents, food "
+                        "deliveries, chicks, and movement in the box.",
                         cls="lede",
                     ),
                     P(
-                        "These are not OwlCam captures. Every item below is "
-                        "a licensed barred-owl placeholder, and each story is "
-                        "a clearly labeled sample—not a factual observation "
-                        "from the Carver nest.",
+                        "Nest archive photos come from the OwlCam group; "
+                        "their original capture dates were not preserved in "
+                        "the shared files, so timestamps show when each was "
+                        "logged here. Stories are AI-written interpretations, "
+                        "not verified observations, and the clip marked "
+                        "placeholder is licensed stock standing in until "
+                        "OwlCam records its own video.",
                         cls="moments-notice",
                     ),
                     cls="moments-intro",
