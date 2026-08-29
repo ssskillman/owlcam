@@ -53,15 +53,81 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
 A `200` means the page will play. From a device off the tailnet, the same
 `curl` only returns `200` when Funnel is enabled.
 
-## Funnel prerequisites
+## Certificate and Funnel prerequisites
 
-Funnel needs, in the tailnet policy:
+**The order matters, and getting it wrong produces a misleading error.**
 
-- HTTPS certificates enabled for the tailnet
-- the `funnel` node attribute granted to the Pi
+Both Serve and Funnel need HTTPS certificates enabled for the whole tailnet
+before either will work. That is a tailnet-wide setting, not a per-machine one:
 
-Without those, `tailscale funnel` refuses to start and the script exits
-non-zero.
+1. Enable HTTPS certificates at <https://login.tailscale.com/admin/dns>.
+2. Grant the `funnel` node attribute to the Pi. Tailscale surfaces this as an
+   approval link of the form
+   `https://login.tailscale.com/f/funnel?node=<node-id>`.
+
+If you approve Funnel first and skip step 1, `tailscale funnel` still fails
+with `Funnel is not enabled on your tailnet`. The message points at Funnel, but
+the missing piece is the certificate setting, and `sudo` does not help. Confirm
+step 1 landed before touching anything else:
+
+```bash
+sudo tailscale cert owlcam.tail31318f.ts.net
+```
+
+That succeeds and writes a key and certificate once certificates are enabled.
+Until then it fails, and so will both Serve and Funnel.
+
+### What enabling certificates costs
+
+Issuing a certificate publishes `owlcam.tail31318f.ts.net` to the public
+Certificate Transparency logs. The name becomes permanently discoverable by
+anyone reading those logs. It does **not** become reachable — while the node is
+Serve-only, connections from outside the tailnet are refused — but the hostname
+itself is no longer private. Tailscale warns about this at enable time. There is
+no way to publish a stream over HTTPS without accepting it.
+
+## Should the feed be public?
+
+**Recommendation: no, not over Funnel.** Keep `serve-stream.sh` on its private
+default.
+
+Funnel is the wrong tool for this particular job, by its author's own account.
+Tailscale [documents](https://tailscale.com/docs/features/tailscale-funnel)
+that Funnel traffic is subject to non-configurable bandwidth limits, and a
+Tailscale engineer put it plainly: *"there is a bandwidth limit, it's a funnel,
+not a hose... I would suggest setting up your media server inside your tailnet
+for the best experience."* A 24/7 2.5 Mbps video stream is exactly the sustained
+high-bandwidth case Funnel is not built for.
+
+The bandwidth ceiling is not the only problem:
+
+- **No authentication.** Funnel exposes port 443 to the entire internet with no
+  auth, no rate limit, and no abuse controls. The page publishes the stream URL,
+  so the URL is not a secret and cannot act as one.
+- **Upload saturation.** Every viewer pulls the full bitrate from the house.
+  Ten simultaneous viewers is 25 Mbps sustained upstream, which degrades the
+  household connection along with the stream.
+- **Nest disturbance.** This is an active barred owl nest. A publicly
+  advertised live feed invites attention to a nest site, and the About page
+  already narrows down whose property it is.
+
+### Better ways to make it visible
+
+If the goal is that family and friends can watch, in increasing order of effort:
+
+| Approach | Public ingress | Cost per extra viewer | Notes |
+|---|---|---|---|
+| Share the `owlcam` machine on the tailnet | none | full bitrate | Already the documented control in [`security.md`](security.md). Best for a handful of people. |
+| Publish snapshots or short clips to the existing page | none | zero | Firebase serves them. Reuses the Moments gallery pattern, and survives the Pi being offline. |
+| Restream to YouTube or Facebook Live | none | zero | The Pi pushes one 2.5 Mbps connection upstream; the platform fans out to any audience size. |
+
+The third row is the correct architecture for a genuinely public audience: one
+outbound stream regardless of how many people watch, no inbound port, and no
+home-upload scaling problem. `security.md` already anticipates it by listing
+Facebook stream keys as never-commit material.
+
+Funnel remains available behind `--public` for a deliberate, short-lived share.
+It should not be the way the feed is normally published.
 
 ## Cross-origin note
 

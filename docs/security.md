@@ -11,6 +11,10 @@ identity, future upload credentials, camera footage, and future stream keys.
 - Use Tailscale for SSH and private viewing.
 - Do not forward SSH, RTSP, HLS, or WebRTC ports on the router.
 - Share only the `owlcam` Tailscale machine with viewers.
+- Leave Tailscale Funnel off. It publishes port 443 with no authentication and
+  no rate limit. To reach viewers who are not on the tailnet, restream outbound
+  or publish clips, rather than opening inbound. See
+  [`live-feed.md`](live-feed.md).
 - Keep runtime configuration under `/etc/owlcam`, readable only as required.
 - Review MediaMTX authentication settings before every configuration commit.
 - Download MediaMTX over HTTPS and verify the release checksum before install.
