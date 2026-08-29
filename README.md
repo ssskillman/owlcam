@@ -95,11 +95,13 @@ End to end, against a running feed:
 
 ```bash
 ssh shawn@100.123.8.55 'rpicam-hello --list-cameras'
-curl -sS -o /dev/null -w '%{http_code}\n' https://owlcam.tail31318f.ts.net/owl/index.m3u8
+curl -sSL -o /dev/null -w '%{http_code}\n' https://owlcam.tail31318f.ts.net/owl/index.m3u8
 ```
 
-A `200` means the page will play. Read [`docs/recovery.md`](docs/recovery.md)
-before changing the known-good manual stream.
+A `200` means the page will play. The `-L` matters: MediaMTX redirects the first
+manifest request to `?cookieCheck=1`, so without it a healthy feed reports
+`302`. Read [`docs/recovery.md`](docs/recovery.md) before changing the
+known-good manual stream.
 
 ## Deploying to the Pi
 
