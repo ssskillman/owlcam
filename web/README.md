@@ -25,7 +25,9 @@ is enabled and reachable, the page displays its offline state.
 
 The static bundle in `public/` is generated and intentionally ignored by Git.
 
-The placeholder gallery media in `static/moments/` is sourced from Wikimedia
-Commons. Each gallery card links to its source file and Creative Commons
-license. Replace these files and the matching `MOMENTS` metadata in `app.py`
-when real OwlCam captures are ready.
+Gallery media lives in `static/moments/`, described by `MOMENTS` in `app.py`.
+The nest archive photos were shared in the OwlCam Facebook group; their EXIF
+capture dates were stripped, so each `timestamp` records when the photo was
+added to this log. Confirm photographer credit with the group before using
+them more widely. `mole-delivery.webm` remains licensed Wikimedia Commons
+stock, badged as a placeholder, until OwlCam records its own clip.

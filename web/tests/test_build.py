@@ -51,20 +51,25 @@ def test_moments_page_has_placeholder_media_stories_and_sorting():
 
     assert html.count("<!doctype html>") == 1
     assert "<title>Owl Moments — Carver OwlCam</title>" in html
-    assert len(MOMENTS) == 6
-    assert sum(item["type"] == "photo" for item in MOMENTS) == 5
+    assert len(MOMENTS) == 5
+    assert sum(item["type"] == "photo" for item in MOMENTS) == 4
     assert sum(item["type"] == "video" for item in MOMENTS) == 1
-    assert html.count("PLACEHOLDER") >= len(MOMENTS)
-    assert html.count("AI-GENERATED PLACEHOLDER STORY") == len(MOMENTS)
+    assert html.count("NEST ARCHIVE") == 4
+    assert html.count("PLACEHOLDER") >= 1
+    assert html.count("AI-GENERATED STORY") == len(MOMENTS)
     assert 'data-sort-key="filename"' in html
     assert 'data-sort-key="timestamp"' in html
     assert 'data-sort-key="type"' in html
     assert 'data-sort-key="subject"' in html
-    assert 'src="/assets/moments/' in html
+    assert 'src="/assets/moments/nest-box-build.jpg"' in html
+    assert 'src="/assets/moments/owlet-in-doorway.jpg"' in html
+    assert 'src="/assets/moments/owlet-on-ledge.jpg"' in html
+    assert 'src="/assets/moments/adult-barred-owl.jpg"' in html
     assert 'src="/assets/moments/mole-delivery.webm"' in html
     assert 'src="/assets/moments.js"' in html
     assert 'href="/moments"' in html
-    assert "These are not OwlCam captures" in html
+    assert "capture dates were not preserved" in html
+    assert "Strix-varia" not in html
 
 
 def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
@@ -78,8 +83,9 @@ def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
     assert (output / "assets" / "styles.css").is_file()
     assert (output / "assets" / "player.js").is_file()
     assert (output / "assets" / "moments.js").is_file()
-    assert (output / "assets" / "moments" / "barred-owl-portrait.jpg").is_file()
+    assert (output / "assets" / "moments" / "nest-box-build.jpg").is_file()
     assert (output / "assets" / "moments" / "mole-delivery.webm").is_file()
+    assert not (output / "assets" / "moments" / "winter-watch.jpg").exists()
     index = (output / "index.html").read_text()
     about = (output / "about.html").read_text()
     moments = (output / "moments.html").read_text()
