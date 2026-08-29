@@ -8,6 +8,7 @@ from fasthtml.common import (
     H2,
     Head,
     Html,
+    Img,
     Link,
     Main,
     Meta,
@@ -24,6 +25,107 @@ from fasthtml.common import (
 
 DEFAULT_STREAM_URL = "https://owlcam.tail31318f.ts.net/owl/index.m3u8"
 AMG_TEAM_URL = "https://www.aquaticmanagementgroup.com/the-executive-team"
+MOMENTS = (
+    {
+        "filename": "barred-owl-portrait.jpg",
+        "timestamp": "2006-12-26",
+        "type": "photo",
+        "subject": "Adult portrait",
+        "alt": "Barred owl perched among bare branches",
+        "story": (
+            "A quiet adult holds the edge of the woods, listening before "
+            "the next flight. On OwlCam, a pause like this could be a parent "
+            "checking that the path home is clear."
+        ),
+        "credit": "D. Gordon E. Robertson · CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Barred_owl.jpg",
+        "license": "https://creativecommons.org/licenses/by-sa/3.0",
+    },
+    {
+        "filename": "florida-perch.jpg",
+        "timestamp": "2011-01-24",
+        "type": "photo",
+        "subject": "Branch watch",
+        "alt": "Barred owl looking down from a tree branch",
+        "story": (
+            "The round face works like a satellite dish, gathering tiny "
+            "sounds below. A resident parent might use this patient lookout "
+            "to choose the safest moment to return to the chicks."
+        ),
+        "credit": "DickDaniels · CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Barred_Owl_RWD2.jpg",
+        "license": "https://creativecommons.org/licenses/by-sa/3.0",
+    },
+    {
+        "filename": "mother-at-dusk.jpg",
+        "timestamp": "2018-07-28",
+        "type": "photo",
+        "subject": "Mother at dusk",
+        "alt": "Female barred owl perched shortly after sunset",
+        "story": (
+            "Dusk belongs to this mother. The source notes that she raised "
+            "four chicks that year; this watchful stop may have come between "
+            "the evening's many trips through the trees."
+        ),
+        "credit": "Sixflashphoto · CC BY-SA 4.0",
+        "source": (
+            "https://commons.wikimedia.org/wiki/"
+            "File:Innis_Woods_-_Barred_Owl_2.jpg"
+        ),
+        "license": "https://creativecommons.org/licenses/by-sa/4.0",
+    },
+    {
+        "filename": "winter-watch.jpg",
+        "timestamp": "2005-01-01",
+        "type": "photo",
+        "subject": "Winter watch",
+        "alt": "Barred owl perched in winter woodland",
+        "story": (
+            "Feathers puff into a warm coat while the owl waits out a cold "
+            "January morning. If chicks were in the box, both parents would "
+            "balance warmth, rest, and the next search for food."
+        ),
+        "credit": "Mdf · CC BY-SA 3.0",
+        "source": "https://commons.wikimedia.org/wiki/File:Strix-varia-005.jpg",
+        "license": "https://creativecommons.org/licenses/by-sa/3.0",
+    },
+    {
+        "filename": "cypress-swamp.jpg",
+        "timestamp": "2013-04-23",
+        "type": "photo",
+        "subject": "Nesting season",
+        "alt": "Barred owl in a cypress swamp during nesting season",
+        "story": (
+            "A barred owl settles into the layered greens of a cypress "
+            "swamp. During nesting season, stillness can hide a busy family "
+            "rhythm: guard, hunt, feed, repeat."
+        ),
+        "credit": 'Gregory "Slobirdr" Smith · CC BY-SA 2.0',
+        "source": (
+            "https://commons.wikimedia.org/wiki/"
+            "File:Barred_Owl_(Strix_varia)_(9732594639).jpg"
+        ),
+        "license": "https://creativecommons.org/licenses/by-sa/2.0",
+    },
+    {
+        "filename": "mole-delivery.webm",
+        "timestamp": "2013-07-21",
+        "type": "video",
+        "subject": "Food",
+        "alt": "Barred owl eating a mole",
+        "story": (
+            "A mole becomes a hard-won meal. When OwlCam catches food "
+            "arriving at the box, the clues—prey, parent, time, and which "
+            "chick eats first—can turn a few seconds into a family story."
+        ),
+        "credit": "Mike · CC BY 2.0",
+        "source": (
+            "https://commons.wikimedia.org/wiki/"
+            "File:Barred_owl_(Strix_varia)_dining_on_a_mole.webm"
+        ),
+        "license": "https://creativecommons.org/licenses/by/2.0",
+    },
+)
 
 
 def _head(*, title: str, description: str, include_player: bool) -> Head:
@@ -54,11 +156,13 @@ def _head(*, title: str, description: str, include_player: bool) -> Head:
 
 def _nav(*, active: str) -> Div:
     live = {"aria_current": "page"} if active == "live" else {}
+    moments = {"aria_current": "page"} if active == "moments" else {}
     about = {"aria_current": "page"} if active == "about" else {}
     return Div(
         Span("CARVER FIELD STATION", cls="eyebrow"),
         Nav(
             A("Live", href="/", **live),
+            A("Moments", href="/moments", **moments),
             A("About", href="/about", **about),
             cls="site-nav",
             aria_label="Site",
@@ -268,6 +372,151 @@ def render_about_page() -> str:
                 ),
             ),
             _footer(),
+        ),
+        lang="en",
+    )
+    return to_xml(page)
+
+
+def _moment_card(item: dict[str, str]) -> Div:
+    media = (
+        Video(
+            src=f"/assets/moments/{item['filename']}",
+            controls=True,
+            muted=True,
+            playsinline=True,
+            preload="metadata",
+            aria_label=item["alt"],
+        )
+        if item["type"] == "video"
+        else Img(
+            src=f"/assets/moments/{item['filename']}",
+            alt=item["alt"],
+            loading="lazy",
+        )
+    )
+    return Div(
+        Div(
+            media,
+            Span("PLACEHOLDER", cls="placeholder-badge"),
+            cls="moment-media",
+        ),
+        Div(
+            Div(
+                Span(item["type"].upper(), cls="moment-type"),
+                Span(item["timestamp"]),
+                cls="moment-kicker",
+            ),
+            H2(item["subject"]),
+            P(item["story"], cls="moment-story"),
+            P(
+                Span("AI-GENERATED PLACEHOLDER STORY", cls="story-label"),
+                " · ",
+                item["filename"],
+                cls="moment-file",
+            ),
+            P(
+                "Media: ",
+                A(
+                    item["credit"],
+                    href=item["source"],
+                    rel="noopener noreferrer",
+                ),
+                " · ",
+                A(
+                    "license",
+                    href=item["license"],
+                    rel="noopener noreferrer",
+                ),
+                cls="moment-credit",
+            ),
+            cls="moment-copy",
+        ),
+        cls="moment-card",
+        data_filename=item["filename"],
+        data_timestamp=item["timestamp"],
+        data_type=item["type"],
+        data_subject=item["subject"],
+    )
+
+
+def render_moments_page() -> str:
+    page = Html(
+        _head(
+            title="Owl Moments — Carver OwlCam",
+            description=(
+                "A sortable field log for OwlCam action shots, short clips, "
+                "and AI-generated stories about the barred owl family."
+            ),
+            include_player=False,
+        ),
+        Body(
+            _nav(active="moments"),
+            Main(
+                Section(
+                    Span("FIELD LOG / PREVIEW", cls="live-label"),
+                    H1("Small moments.", Span("Wild stories.", cls="accent")),
+                    P(
+                        "A future home for OwlCam action shots and short "
+                        "clips—with an AI-assisted field note about parents, "
+                        "food deliveries, chicks, and movement in the box.",
+                        cls="lede",
+                    ),
+                    P(
+                        "These are not OwlCam captures. Every item below is "
+                        "a licensed barred-owl placeholder, and each story is "
+                        "a clearly labeled sample—not a factual observation "
+                        "from the Carver nest.",
+                        cls="moments-notice",
+                    ),
+                    cls="moments-intro",
+                ),
+                Section(
+                    Div(
+                        Span("SORT FIELD LOG", cls="sort-title"),
+                        Button(
+                            "Filename",
+                            type="button",
+                            data_sort_key="filename",
+                            aria_pressed="false",
+                        ),
+                        Button(
+                            "Timestamp",
+                            type="button",
+                            data_sort_key="timestamp",
+                            aria_pressed="true",
+                        ),
+                        Button(
+                            "Media type",
+                            type="button",
+                            data_sort_key="type",
+                            aria_pressed="false",
+                        ),
+                        Button(
+                            "Subject",
+                            type="button",
+                            data_sort_key="subject",
+                            aria_pressed="false",
+                        ),
+                        cls="sort-header",
+                        aria_label="Sort moments",
+                    ),
+                    P(
+                        "Sorted by timestamp, newest first.",
+                        id="sort-status",
+                        cls="sort-status",
+                        aria_live="polite",
+                    ),
+                    Div(
+                        *(_moment_card(item) for item in MOMENTS),
+                        id="moments-grid",
+                        cls="moments-grid",
+                    ),
+                    cls="moments-log",
+                ),
+            ),
+            _footer(),
+            Script(src="/assets/moments.js", defer=True),
         ),
         lang="en",
     )

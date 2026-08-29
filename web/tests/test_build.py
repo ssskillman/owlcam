@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from app import DEFAULT_STREAM_URL, render_about_page, render_page
+from app import (
+    DEFAULT_STREAM_URL,
+    MOMENTS,
+    render_about_page,
+    render_moments_page,
+    render_page,
+)
 from build import build_site
 
 
@@ -40,6 +46,27 @@ def test_about_page_covers_chris_carver_only():
     assert 'href="/"' in html
 
 
+def test_moments_page_has_placeholder_media_stories_and_sorting():
+    html = render_moments_page()
+
+    assert html.count("<!doctype html>") == 1
+    assert "<title>Owl Moments — Carver OwlCam</title>" in html
+    assert len(MOMENTS) == 6
+    assert sum(item["type"] == "photo" for item in MOMENTS) == 5
+    assert sum(item["type"] == "video" for item in MOMENTS) == 1
+    assert html.count("PLACEHOLDER") >= len(MOMENTS)
+    assert html.count("AI-GENERATED PLACEHOLDER STORY") == len(MOMENTS)
+    assert 'data-sort-key="filename"' in html
+    assert 'data-sort-key="timestamp"' in html
+    assert 'data-sort-key="type"' in html
+    assert 'data-sort-key="subject"' in html
+    assert 'src="/assets/moments/' in html
+    assert 'src="/assets/moments/mole-delivery.webm"' in html
+    assert 'src="/assets/moments.js"' in html
+    assert 'href="/moments"' in html
+    assert "These are not OwlCam captures" in html
+
+
 def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
     output = tmp_path / "public"
 
@@ -47,10 +74,16 @@ def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
 
     assert (output / "index.html").is_file()
     assert (output / "about.html").is_file()
+    assert (output / "moments.html").is_file()
     assert (output / "assets" / "styles.css").is_file()
     assert (output / "assets" / "player.js").is_file()
+    assert (output / "assets" / "moments.js").is_file()
+    assert (output / "assets" / "moments" / "barred-owl-portrait.jpg").is_file()
+    assert (output / "assets" / "moments" / "mole-delivery.webm").is_file()
     index = (output / "index.html").read_text()
     about = (output / "about.html").read_text()
+    moments = (output / "moments.html").read_text()
     assert "owlcam.tail31318f.ts.net" in index
     assert "Chris Carver" in about
     assert "Braxton" not in about
+    assert "Owl Moments" in moments
