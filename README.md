@@ -100,6 +100,13 @@ curl --fail --show-error http://100.123.8.55:8888/owl/index.m3u8
 See [`docs/recovery.md`](docs/recovery.md) before changing the known-good
 manual stream.
 
+## Web demo
+
+The owl-themed FastHTML demo is published at
+<https://carver-owlcam-72343.web.app>. Firebase Hosting serves a static build;
+the livestream remains private at the OwlCam Tailscale HTTPS hostname. See
+[`web/README.md`](web/README.md) for build and access details.
+
 ## Raspberry Pi UDP streaming
 
 OwlCam can also send H.264 as MPEG-TS over UDP through Tailscale to a receiver.

@@ -13,4 +13,6 @@ logs/
 __pycache__/
 *.py[cod]
 .venv/
+web/public/
+.firebase/
 .DS_Store

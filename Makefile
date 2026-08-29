@@ -1,8 +1,8 @@
 SHELL := /bin/bash
 
-.PHONY: check syntax test deploy-dry-run
+.PHONY: check syntax test deploy-dry-run web-test web-build
 
-check: syntax test deploy-dry-run
+check: syntax test deploy-dry-run web-test web-build
 
 syntax:
 	@for script in pi/scripts/*.sh scripts/*.sh tests/*.sh; do \
@@ -19,3 +19,9 @@ test:
 
 deploy-dry-run:
 	@bash pi/scripts/deploy.sh --dry-run
+
+web-test:
+	@cd web && uv run --frozen python -m pytest
+
+web-build:
+	@cd web && uv run --frozen python build.py
