@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from app import (
@@ -23,6 +24,7 @@ def test_page_uses_private_https_stream_and_accessible_player():
     assert 'id="stream-status"' in html
     assert "Camera is resting" in html
     assert 'href="/about"' in html
+    assert ">Live<" not in html
     assert "Braxton" not in html
     assert "Greg Blum" not in html
 
@@ -38,8 +40,10 @@ def test_about_page_covers_chris_carver_only():
     assert "Camp Raven Knob" in html
     assert "Seven Oaks Swim Club" in html
     assert "NC State University" in html
-    assert 'href="https://www.aquaticmanagementgroup.com/the-executive-team"' in html
+    assert "aquaticmanagementgroup.com" not in html
+    assert "AMG executive team" not in html
     assert "Share the OwlCam moments" in html
+    assert ">Live<" not in html
     assert "Braxton" not in html
     assert "Greg Blum" not in html
     assert "Mackenzie" not in html
@@ -70,6 +74,34 @@ def test_moments_page_has_placeholder_media_stories_and_sorting():
     assert 'href="/moments"' in html
     assert "capture dates were not preserved" in html
     assert "Strix-varia" not in html
+
+
+def test_hosting_config_revalidates_code_and_allows_the_stream_host():
+    config = json.loads(
+        (Path(__file__).resolve().parents[2] / "firebase.json").read_text()
+    )
+    headers = config["hosting"]["headers"]
+    by_source = {
+        entry["source"]: {h["key"]: h["value"] for h in entry["headers"]}
+        for entry in headers
+    }
+
+    stream_host = DEFAULT_STREAM_URL.split("/owl/")[0]
+    csp = by_source["**"]["Content-Security-Policy"]
+    assert f"media-src 'self' {stream_host}" in csp
+    assert f"connect-src 'self' {stream_host}" in csp
+
+    code = by_source["/assets/**/*.@(css|js)"]["Cache-Control"]
+    assert "must-revalidate" in code
+    assert "max-age=0" in code
+
+    media_sources = [s for s in by_source if s.startswith("/assets/") and s != code]
+    long_lived = [
+        s
+        for s in media_sources
+        if "jpg" in s and "max-age=3600" in by_source[s]["Cache-Control"]
+    ]
+    assert long_lived, "image assets lost their long-lived cache policy"
 
 
 def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
