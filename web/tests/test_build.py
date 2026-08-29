@@ -91,6 +91,18 @@ def test_photo_moments_load_thumbnails_that_open_full_size():
     assert html.count("View full size") == 4
 
 
+def test_player_never_adds_an_empty_class_token():
+    source = (WEB_ROOT / "static" / "player.js").read_text()
+
+    # classList.add("") throws a SyntaxError. The connecting state passes an
+    # empty class, so an unguarded add aborts connect() on its first statement
+    # and the player silently never starts.
+    assert 'setState("", ' in source, "connecting state no longer passes an empty class"
+    assert "if (state) dot.classList.add(state)" in source, (
+        "classList.add must be guarded against the empty connecting state"
+    )
+
+
 def test_player_prefers_hls_js_over_the_native_probe():
     source = (WEB_ROOT / "static" / "player.js").read_text()
 

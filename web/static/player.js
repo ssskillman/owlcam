@@ -11,7 +11,10 @@
   const setState = (state, message) => {
     status.textContent = message;
     dot.classList.remove("online", "offline");
-    dot.classList.add(state);
+    // The connecting state has no class of its own, and classList.add("")
+    // throws a SyntaxError. Unguarded, that aborted connect() on its first
+    // statement, so the player never ran at all.
+    if (state) dot.classList.add(state);
     panel.hidden = state === "online";
   };
 
