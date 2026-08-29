@@ -80,10 +80,28 @@ by a stale cached stylesheet.
 cd web
 uv run --frozen python -m pytest    # tests
 uv run --frozen python build.py     # build to web/public
-firebase deploy --only hosting      # from the repo root
+make deploy                         # build then deploy, from the repo root
 ```
 
+Use `make deploy` rather than a bare `firebase deploy`. It pins the account, so a
+stale directory default cannot publish as the wrong identity.
+
 See [`web/README.md`](web/README.md).
+
+### Personal identity
+
+This machine's global git identity and SSH key belong to a work account, so this
+repo overrides both locally. A bare `git push` authenticates as the work user and
+gets a `403`; a bare `firebase deploy` fails to find the project.
+
+```bash
+make setup-identity
+```
+
+That sets the repo-local commit identity, routes git credentials through the `gh`
+CLI's personal account, and pins the Firebase account for this directory only —
+nothing global changes, so work projects are unaffected. **Re-run it after
+cloning**, because repo-local git config is not carried by a clone.
 
 ## Validation
 
