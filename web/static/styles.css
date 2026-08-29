@@ -53,6 +53,18 @@ a {
 
 .eyebrow {
   font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  letter-spacing: 0.16em;
+}
+
+.eyebrow:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.eyebrow[aria-current="page"] {
+  color: var(--ink);
 }
 
 .access-pill {

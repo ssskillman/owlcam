@@ -24,7 +24,6 @@ from fasthtml.common import (
 )
 
 DEFAULT_STREAM_URL = "https://owlcam.tail31318f.ts.net/owl/index.m3u8"
-AMG_TEAM_URL = "https://www.aquaticmanagementgroup.com/the-executive-team"
 OWLCAM_GROUP_URL = "https://www.facebook.com/groups/619431688614242/"
 MOMENTS = (
     {
@@ -142,13 +141,12 @@ def _head(*, title: str, description: str, include_player: bool) -> Head:
 
 
 def _nav(*, active: str) -> Div:
-    live = {"aria_current": "page"} if active == "live" else {}
+    home = {"aria_current": "page"} if active == "live" else {}
     moments = {"aria_current": "page"} if active == "moments" else {}
     about = {"aria_current": "page"} if active == "about" else {}
     return Div(
-        Span("CARVER FIELD STATION", cls="eyebrow"),
+        A("CARVER FIELD STATION", href="/", cls="eyebrow", **home),
         Nav(
-            A("Live", href="/", **live),
             A("Moments", href="/moments", **moments),
             A("About", href="/about", **about),
             cls="site-nav",
@@ -343,14 +341,6 @@ def render_about_page() -> str:
                             "In spare hours he looks for the elusive North "
                             "Carolina record bass. All around, a good dude "
                             "to know."
-                        ),
-                        P(
-                            A(
-                                "AMG executive team",
-                                href=AMG_TEAM_URL,
-                                rel="noopener noreferrer",
-                            ),
-                            " · Chris Carver, Chief Service Officer and owner"
                         ),
                         cls="about-copy",
                     ),

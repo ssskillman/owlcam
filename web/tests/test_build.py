@@ -23,6 +23,7 @@ def test_page_uses_private_https_stream_and_accessible_player():
     assert 'id="stream-status"' in html
     assert "Camera is resting" in html
     assert 'href="/about"' in html
+    assert ">Live<" not in html
     assert "Braxton" not in html
     assert "Greg Blum" not in html
 
@@ -38,8 +39,10 @@ def test_about_page_covers_chris_carver_only():
     assert "Camp Raven Knob" in html
     assert "Seven Oaks Swim Club" in html
     assert "NC State University" in html
-    assert 'href="https://www.aquaticmanagementgroup.com/the-executive-team"' in html
+    assert "aquaticmanagementgroup.com" not in html
+    assert "AMG executive team" not in html
     assert "Share the OwlCam moments" in html
+    assert ">Live<" not in html
     assert "Braxton" not in html
     assert "Greg Blum" not in html
     assert "Mackenzie" not in html
