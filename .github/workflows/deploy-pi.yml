@@ -21,14 +21,31 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ secrets.TS_OAUTH_CLIENT_ID != '' && secrets.TS_OAUTH_SECRET != '' && secrets.OWLCAM_SSH_KEY != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
+      - name: Skip if deploy secrets are missing
+        id: secrets
+        env:
+          HAS_TS_ID: ${{ secrets.TS_OAUTH_CLIENT_ID != '' }}
+          HAS_TS_SECRET: ${{ secrets.TS_OAUTH_SECRET != '' }}
+          HAS_SSH: ${{ secrets.OWLCAM_SSH_KEY != '' }}
+        run: |
+          if [[ "${HAS_TS_ID}" != "true" || "${HAS_TS_SECRET}" != "true" || "${HAS_SSH}" != "true" ]]; then
+            echo "configured=false" >> "${GITHUB_OUTPUT}"
+            echo "Deploy skipped: GitHub secrets TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET, and/or OWLCAM_SSH_KEY are not set."
+            echo "::notice title=Deploy secrets missing::Add TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET, and OWLCAM_SSH_KEY, then re-run Deploy Pi. See docs/github-actions.md."
+          else
+            echo "configured=true" >> "${GITHUB_OUTPUT}"
+            echo "Deploy secrets are present."
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.secrets.outputs.configured == 'true'
 
       - name: Connect Tailscale
+        if: steps.secrets.outputs.configured == 'true'
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
@@ -36,6 +53,7 @@ jobs:
           tags: tag:ci
 
       - name: Check whether the OwlCam Pi is online
+        if: steps.secrets.outputs.configured == 'true'
         id: pi
         run: |
           set -u
@@ -52,7 +70,7 @@ jobs:
           fi
 
       - name: Install deploy SSH key
-        if: steps.pi.outputs.pi_online == 'true'
+        if: steps.secrets.outputs.configured == 'true' && steps.pi.outputs.pi_online == 'true'
         env:
           OWLCAM_SSH_KEY: ${{ secrets.OWLCAM_SSH_KEY }}
         run: |
@@ -62,10 +80,10 @@ jobs:
           ssh-keyscan -4 -T 15 100.123.8.55 >> "${HOME}/.ssh/known_hosts"
 
       - name: Stage files on the Pi
-        if: steps.pi.outputs.pi_online == 'true'
+        if: steps.secrets.outputs.configured == 'true' && steps.pi.outputs.pi_online == 'true'
         env:
-          OWLCAM_SSH_TARGET: ${{ vars.OWLCAM_SSH_TARGET || 'shawn@100.123.8.55' }}
-          INSTALL_CONFIG: ${{ github.event_name == 'workflow_dispatch' && inputs.install_config || false }}
+          OWLCAM_SSH_TARGET: shawn@100.123.8.55
+          INSTALL_CONFIG: ${{ github.event.inputs.install_config }}
         run: |
           export OWLCAM_SSH_IDENTITY="${HOME}/.ssh/owlcam_deploy"
           if [[ "${INSTALL_CONFIG}" == "true" ]]; then
