@@ -61,6 +61,29 @@ a {
   border: 1px solid var(--line);
 }
 
+.site-nav {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.site-nav a[aria-current="page"],
+.site-nav a:hover {
+  color: var(--ink);
+}
+
+.site-nav a:hover {
+  text-decoration: underline;
+}
+
 main {
   width: min(1440px, 100%);
   margin: 0 auto;
@@ -288,6 +311,47 @@ footer {
   letter-spacing: 0.1em;
 }
 
+.about-intro {
+  max-width: 38rem;
+}
+
+.about-intro h1 {
+  max-width: 12ch;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  margin-top: clamp(4rem, 8vw, 7rem);
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.about-copy {
+  padding: clamp(1.5rem, 3vw, 2.8rem);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.about-copy h2 {
+  margin: 0 0 1.25rem;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.8rem;
+  font-weight: 400;
+}
+
+.about-copy p {
+  max-width: 38rem;
+  margin: 0 0 1.1rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.about-copy p:last-child {
+  margin-bottom: 0;
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.3;
@@ -312,6 +376,10 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .about-grid {
+    grid-template-columns: 1fr;
+  }
+
   .fact {
     min-height: auto;
   }
@@ -329,7 +397,8 @@ footer {
     padding-bottom: 0.8rem;
   }
 
-  .access-pill {
+  .access-pill,
+  .site-nav {
     text-align: right;
   }
 

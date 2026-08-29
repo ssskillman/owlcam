@@ -1,7 +1,7 @@
 from pathlib import Path
 from shutil import copytree, rmtree
 
-from app import render_page
+from app import render_about_page, render_page
 
 WEB_ROOT = Path(__file__).parent
 DEFAULT_OUTPUT = WEB_ROOT / "public"
@@ -12,6 +12,7 @@ def build_site(output: Path = DEFAULT_OUTPUT) -> None:
         rmtree(output)
     output.mkdir(parents=True)
     (output / "index.html").write_text(render_page(), encoding="utf-8")
+    (output / "about.html").write_text(render_about_page(), encoding="utf-8")
     copytree(WEB_ROOT / "static", output / "assets")
 
 

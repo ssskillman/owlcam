@@ -11,6 +11,7 @@ from fasthtml.common import (
     Link,
     Main,
     Meta,
+    Nav,
     P,
     Script,
     Section,
@@ -21,23 +22,14 @@ from fasthtml.common import (
     to_xml,
 )
 
-DEFAULT_STREAM_URL = (
-    "https://owlcam.tail31318f.ts.net/owl/index.m3u8"
-)
+DEFAULT_STREAM_URL = "https://owlcam.tail31318f.ts.net/owl/index.m3u8"
+AMG_TEAM_URL = "https://www.aquaticmanagementgroup.com/the-executive-team"
 
 
-def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
-    page = Html(
-        Head(
-            Meta(charset="utf-8"),
-            Meta(name="viewport", content="width=device-width, initial-scale=1"),
-            Meta(
-                name="description",
-                content="A private live look inside the Carver owl nest.",
-            ),
-            Title("Carver OwlCam — Live from the Nest"),
-            Link(rel="preconnect", href="https://cdn.jsdelivr.net"),
-            Link(rel="stylesheet", href="/assets/styles.css"),
+def _head(*, title: str, description: str, include_player: bool) -> Head:
+    scripts = []
+    if include_player:
+        scripts = [
             Script(
                 src="https://cdn.jsdelivr.net/npm/hls.js@1.7.1/dist/hls.min.js",
                 defer=True,
@@ -48,13 +40,53 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                 crossorigin="anonymous",
             ),
             Script(src="/assets/player.js", defer=True),
+        ]
+    return Head(
+        Meta(charset="utf-8"),
+        Meta(name="viewport", content="width=device-width, initial-scale=1"),
+        Meta(name="description", content=description),
+        Title(title),
+        Link(rel="preconnect", href="https://cdn.jsdelivr.net"),
+        Link(rel="stylesheet", href="/assets/styles.css"),
+        *scripts,
+    )
+
+
+def _nav(*, active: str) -> Div:
+    live = {"aria_current": "page"} if active == "live" else {}
+    about = {"aria_current": "page"} if active == "about" else {}
+    return Div(
+        Span("CARVER FIELD STATION", cls="eyebrow"),
+        Nav(
+            A("Live", href="/", **live),
+            A("About", href="/about", **about),
+            cls="site-nav",
+            aria_label="Site",
+        ),
+        cls="utility-bar",
+    )
+
+
+def _footer() -> Footer:
+    return Footer(
+        P(
+            "CARVER OWLCAM",
+            Span(" · ", aria_hidden="true"),
+            A("View the project", href="https://github.com/ssskillman/owlcam"),
+        ),
+        P("Observe quietly. Protect the habitat."),
+    )
+
+
+def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
+    page = Html(
+        _head(
+            title="Carver OwlCam — Live from the Nest",
+            description="A private live look inside the Carver owl nest.",
+            include_player=True,
         ),
         Body(
-            Div(
-                Span("CARVER FIELD STATION", cls="eyebrow"),
-                Span("PRIVATE TAILNET FEED", cls="access-pill"),
-                cls="utility-bar",
-            ),
+            _nav(active="live"),
             Main(
                 Section(
                     Div(
@@ -149,17 +181,93 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                     aria_label="About OwlCam",
                 ),
             ),
-            Footer(
-                P(
-                    "CARVER OWLCAM",
-                    Span(" · ", aria_hidden="true"),
-                    A(
-                        "View the project",
-                        href="https://github.com/ssskillman/owlcam",
-                    ),
-                ),
-                P("Observe quietly. Protect the habitat."),
+            _footer(),
+        ),
+        lang="en",
+    )
+    return to_xml(page)
+
+
+def render_about_page() -> str:
+    page = Html(
+        _head(
+            title="About Chris Carver — Carver OwlCam",
+            description=(
+                "Meet Chris Carver, Eagle Scout, AMG co-owner, and the "
+                "neighbor sharing OwlCam with anyone who loves the outdoors."
             ),
+            include_player=False,
+        ),
+        Body(
+            _nav(active="about"),
+            Main(
+                Section(
+                    Span("ABOUT", cls="live-label"),
+                    H1("Chris Carver.", Span("Good dude.", cls="accent")),
+                    P(
+                        "This nest camera exists so friends, family, and "
+                        "anyone who will linger a minute can share a quiet "
+                        "look at the woods with Chris. Enjoy his love of "
+                        "nature. Share the OwlCam moments with him.",
+                        cls="lede",
+                    ),
+                    cls="about-intro",
+                ),
+                Section(
+                    Div(
+                        H2("Outdoors, always"),
+                        P(
+                            "Chris is an Eagle Scout who still shares the "
+                            "outdoors with family and with anyone who will "
+                            "chat. He grew up in North Raleigh, found the "
+                            "water at Seven Oaks Swim Club on Creedmoor "
+                            "Road, joined the swim team, and spent summers "
+                            "asking the lifeguards every question he could "
+                            "think of."
+                        ),
+                        P(
+                            "Through youth he was deep in Boy Scouts. Just "
+                            "before Eagle, he earned BSA Lifeguard. In "
+                            "summer 2000, at 15, he joined the aquatics "
+                            "staff at Camp Raven Knob in the North Carolina "
+                            "foothills. He stayed four summers, teaching "
+                            "swimming and lifesaving merit badges."
+                        ),
+                        cls="about-copy",
+                    ),
+                    Div(
+                        H2("Builder of pools, and of this nest watch"),
+                        P(
+                            "While at NC State University he managed the "
+                            "Brier Creek Country Club pool for three "
+                            "summers, then co-founded Aquatic Management "
+                            "Group. He is Chief Service Officer and owner—"
+                            "designer, engineer, mechanic, contractor, and "
+                            "craftsman on the job, and a good neighbor off it."
+                        ),
+                        P(
+                            "He is an excellent father, a loud cheerleader "
+                            "at kids’ sports, a pool designer who still "
+                            "gets his hands dirty, and a reliable jokester. "
+                            "In spare hours he looks for the elusive North "
+                            "Carolina record bass. All around, a good dude "
+                            "to know."
+                        ),
+                        P(
+                            A(
+                                "AMG executive team",
+                                href=AMG_TEAM_URL,
+                                rel="noopener noreferrer",
+                            ),
+                            " · Chris Carver, Chief Service Officer and owner"
+                        ),
+                        cls="about-copy",
+                    ),
+                    cls="about-grid",
+                    aria_label="About Chris Carver",
+                ),
+            ),
+            _footer(),
         ),
         lang="en",
     )
