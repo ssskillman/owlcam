@@ -42,6 +42,29 @@ grep -F -- "-fflags +genpts" "${stream_script}" >/dev/null \
 grep -F -- "rtsp://127.0.0.1:8554/owl" "${stream_script}" >/dev/null \
   || fail "stream script default RTSP path changed"
 
+serve_script="${REPO_ROOT}/pi/scripts/serve-stream.sh"
+[[ -x "${serve_script}" ]] || fail "serve script is missing or not executable"
+
+serve_help="$("${serve_script}" --help)"
+[[ "${serve_help}" == *"Tailnet devices only"* ]] \
+  || fail "serve help does not state the private default"
+[[ "${serve_help}" == *"Anyone with the URL can watch"* ]] \
+  || fail "serve help does not warn that --public is internet-facing"
+
+if "${serve_script}" --not-an-option >/dev/null 2>&1; then
+  fail "serve script accepted an unknown option"
+fi
+
+grep -F -- "expose_mode=serve" "${serve_script}" >/dev/null \
+  || fail "serve script does not default to private Tailscale Serve"
+grep -F -- "tailscale funnel --bg" "${serve_script}" >/dev/null \
+  || fail "serve script cannot publish publicly on request"
+awk '/--public\) expose_mode=funnel/ { found = 1 } END { exit !found }' \
+  "${serve_script}" \
+  || fail "serve script enables Funnel without the --public opt-in"
+grep -F -- "pgrep -f 'rpicam-vid'" "${serve_script}" >/dev/null \
+  || fail "serve script would start a second camera capture"
+
 udp_script="${REPO_ROOT}/scripts/start_stream.sh"
 [[ -x "${udp_script}" ]] || fail "UDP stream script is missing or not executable"
 grep -F -- 'DEST_IP="${OWL_CAM_DEST_IP:-100.116.197.91}"' "${udp_script}" >/dev/null \
