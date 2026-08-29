@@ -63,7 +63,10 @@ home upload after two or three of them. Override with `OWLCAM_BITRATE`.
 - No router port forwarding, ever. That is what the blocked paths in the
   diagram mean.
 - Serve keeps video inside the tailnet. Funnel puts it on the open internet —
-  an explicit `--public` choice, never the default.
+  an explicit `--public` choice, never the default, and not the recommended way
+  to reach a public audience. Funnel is bandwidth-throttled by design and adds
+  no authentication; restreaming outbound scales better and opens no inbound
+  port. The reasoning is in [`docs/live-feed.md`](docs/live-feed.md).
 
 More in [`docs/security.md`](docs/security.md).
 
@@ -137,6 +140,10 @@ Runtime configuration belongs in `/etc/owlcam/owlcam.env`; use
   `install.sh` still fails closed by design.
 - Funnel requires the `funnel` node attribute in the tailnet policy. Until it
   is granted, `--public` exits non-zero and only tailnet devices can watch.
+  This is currently a deliberate posture rather than a gap — see the exposure
+  recommendation in [`docs/live-feed.md`](docs/live-feed.md).
+- There is no outbound restream path yet. That is the missing piece for making
+  the feed visible to people who will never join the tailnet.
 
 ## Appendix: UDP publisher
 
