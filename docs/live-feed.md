@@ -46,12 +46,17 @@ the watch URL and the exposure level.
 
 ```bash
 tailscale ping --c 3 --timeout 5s 100.123.8.55
-curl -sS -o /dev/null -w '%{http_code}\n' \
+curl -sSL -o /dev/null -w '%{http_code}\n' \
   https://owlcam.tail31318f.ts.net/owl/index.m3u8
 ```
 
 A `200` means the page will play. From a device off the tailnet, the same
 `curl` only returns `200` when Funnel is enabled.
+
+**Use `-L`.** MediaMTX answers the first request for a manifest with a `302` to
+`?cookieCheck=1` and serves the playlist on the redirect. Browsers and hls.js
+follow that automatically, so a bare `curl` without `-L` reports `302` on a feed
+that is working perfectly. Do not chase that as a fault.
 
 ## Certificate and Funnel prerequisites
 
