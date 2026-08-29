@@ -35,6 +35,10 @@ grep -F -- 'HEIGHT="${OWLCAM_HEIGHT:-1080}"' "${stream_script}" >/dev/null \
   || fail "stream script default height changed"
 grep -F -- 'FRAMERATE="${OWLCAM_FRAMERATE:-30}"' "${stream_script}" >/dev/null \
   || fail "stream script default frame rate changed"
+grep -F -- 'BITRATE="${OWLCAM_BITRATE:-2500000}"' "${stream_script}" >/dev/null \
+  || fail "stream script default bitrate changed"
+grep -F -- '--bitrate "${BITRATE}"' "${stream_script}" >/dev/null \
+  || fail "stream script does not cap the encoder bitrate"
 grep -F -- "-c:v copy" "${stream_script}" >/dev/null \
   || fail "stream script would re-encode video"
 grep -F -- "-fflags +genpts" "${stream_script}" >/dev/null \

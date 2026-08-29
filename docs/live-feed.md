@@ -66,7 +66,7 @@ non-zero.
 ## Cross-origin note
 
 The page is served from `web.app` while the video comes from `ts.net`, so the
-HLS response must allow the cross-origin read. MediaMTX ships
-`hlsAllowOrigin: '*'`, which satisfies this. If the feed loads by `curl` but
+HLS response must allow the cross-origin read. The Pi's MediaMTX config sets
+`hlsAllowOrigins: ['*']`, which satisfies this. If the feed loads by `curl` but
 the player still reports it offline, check that setting first, then confirm the
 Firebase CSP still lists the Tailscale host in `media-src` and `connect-src`.
