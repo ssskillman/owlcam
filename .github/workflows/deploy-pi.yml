@@ -65,7 +65,6 @@ jobs:
         if: steps.pi.outputs.pi_online == 'true'
         env:
           OWLCAM_SSH_TARGET: ${{ vars.OWLCAM_SSH_TARGET || 'shawn@100.123.8.55' }}
-        env:
           INSTALL_CONFIG: ${{ github.event_name == 'workflow_dispatch' && inputs.install_config || false }}
         run: |
           export OWLCAM_SSH_IDENTITY="${HOME}/.ssh/owlcam_deploy"
