@@ -1,0 +1,93 @@
+# Stages files onto the Pi over Tailscale SSH. Does not expose port 22.
+# Official Tailscale Action: https://github.com/tailscale/github-action
+#
+# If the Pi is powered off or Tailscale is down, this workflow stays green and
+# records a notice in the Actions log so a later re-run can stage the files.
+name: Deploy Pi
+
+on:
+  workflow_dispatch:
+    inputs:
+      install_config:
+        description: Install /etc/mediamtx.yml from the staged repo copy
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-pi
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Skip if deploy secrets are missing
+        id: secrets
+        env:
+          HAS_TS_ID: ${{ secrets.TS_OAUTH_CLIENT_ID != '' }}
+          HAS_TS_SECRET: ${{ secrets.TS_OAUTH_SECRET != '' }}
+          HAS_SSH: ${{ secrets.OWLCAM_SSH_KEY != '' }}
+        run: |
+          if [[ "${HAS_TS_ID}" != "true" || "${HAS_TS_SECRET}" != "true" || "${HAS_SSH}" != "true" ]]; then
+            echo "configured=false" >> "${GITHUB_OUTPUT}"
+            echo "Deploy skipped: GitHub secrets TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET, and/or OWLCAM_SSH_KEY are not set."
+            echo "::notice title=Deploy secrets missing::Add TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET, and OWLCAM_SSH_KEY, then re-run Deploy Pi. See docs/github-actions.md."
+          else
+            echo "configured=true" >> "${GITHUB_OUTPUT}"
+            echo "Deploy secrets are present."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.configured == 'true'
+
+      - name: Connect Tailscale
+        if: steps.secrets.outputs.configured == 'true'
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Check whether the OwlCam Pi is online
+        if: steps.secrets.outputs.configured == 'true'
+        id: pi
+        run: |
+          set -u
+          target_ip="100.123.8.55"
+          echo "Checking Tailscale reachability of OwlCam Pi at ${target_ip}..."
+          if tailscale ping --c 3 --timeout 5s "${target_ip}"; then
+            echo "pi_online=true" >> "${GITHUB_OUTPUT}"
+            echo "OwlCam Pi is online at ${target_ip}. Deploy will continue."
+          else
+            echo "pi_online=false" >> "${GITHUB_OUTPUT}"
+            echo "OwlCam Pi is offline or unreachable on Tailscale (${target_ip})."
+            echo "Deploy skipped. Power on the Pi, wait for Tailscale, then re-run Deploy Pi."
+            echo "::notice title=OwlCam Pi offline::${target_ip} is not reachable on Tailscale. Files were not staged. Re-run this workflow when the Pi is powered on and connected."
+          fi
+
+      - name: Install deploy SSH key
+        if: steps.secrets.outputs.configured == 'true' && steps.pi.outputs.pi_online == 'true'
+        env:
+          OWLCAM_SSH_KEY: ${{ secrets.OWLCAM_SSH_KEY }}
+        run: |
+          install -d -m 700 "${HOME}/.ssh"
+          printf '%s\n' "${OWLCAM_SSH_KEY}" > "${HOME}/.ssh/owlcam_deploy"
+          chmod 600 "${HOME}/.ssh/owlcam_deploy"
+          ssh-keyscan -4 -T 15 100.123.8.55 >> "${HOME}/.ssh/known_hosts"
+
+      - name: Stage files on the Pi
+        if: steps.secrets.outputs.configured == 'true' && steps.pi.outputs.pi_online == 'true'
+        env:
+          OWLCAM_SSH_TARGET: shawn@100.123.8.55
+          INSTALL_CONFIG: ${{ github.event.inputs.install_config }}
+        run: |
+          export OWLCAM_SSH_IDENTITY="${HOME}/.ssh/owlcam_deploy"
+          if [[ "${INSTALL_CONFIG}" == "true" ]]; then
+            ./pi/scripts/deploy.sh --install-config
+          else
+            ./pi/scripts/deploy.sh
+          fi

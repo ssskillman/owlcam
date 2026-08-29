@@ -13,6 +13,8 @@ deploy_output="$("${REPO_ROOT}/pi/scripts/deploy.sh" --dry-run)"
   || fail "deploy dry-run did not describe staged files"
 [[ "${deploy_output}" == *"/deploy/pi/scripts/"* ]] \
   || fail "deploy layout would break repository-relative script paths"
+[[ "${deploy_output}" == *"/deploy/scripts/"* ]] \
+  || fail "deploy dry-run does not stage UDP scripts/"
 [[ "${deploy_output}" != *"Would back up and install"* ]] \
   || fail "deploy dry-run installs configuration without opt-in"
 

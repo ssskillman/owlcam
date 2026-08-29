@@ -16,6 +16,8 @@ identity, future upload credentials, camera footage, and future stream keys.
 - Download MediaMTX over HTTPS and verify the release checksum before install.
 - Stage deployment files under `/home/shawn/owlcam/deploy`; require an explicit
   flag before replacing `/etc/mediamtx.yml`.
+- GitHub deploy uses Tailscale plus a dedicated SSH key in repository secrets.
+  Never commit Tailscale OAuth credentials or the deploy private key.
 
 ## Never commit
 
