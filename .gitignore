@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+*.secret
+*.key
+*.pem
+*.nmconnection
+captures/
+outbox/
+sent/
+failed/
+logs/
+__pycache__/
+*.py[cod]
+.venv/
+.DS_Store
