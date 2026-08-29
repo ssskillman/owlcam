@@ -28,12 +28,10 @@
       hls = undefined;
     }
 
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = source;
-      video.load();
-      return;
-    }
-
+    // hls.js must be tried before the native check. Chrome answers
+    // canPlayType("application/vnd.apple.mpegurl") with "maybe" — truthy — but
+    // cannot decode HLS on the desktop, so probing native support first strands
+    // every browser except Safari on "Checking private feed…" forever.
     if (window.Hls?.isSupported()) {
       hls = new window.Hls({
         manifestLoadingTimeOut: 8000,
@@ -48,6 +46,14 @@
       });
       hls.loadSource(source);
       hls.attachMedia(video);
+      return;
+    }
+
+    // iOS Safari ships no MSE, so hls.js reports unsupported there and native
+    // HLS is the genuine path rather than a guess.
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = source;
+      video.load();
       return;
     }
 
