@@ -91,6 +91,18 @@ def test_photo_moments_load_thumbnails_that_open_full_size():
     assert html.count("View full size") == 4
 
 
+def test_player_prefers_hls_js_over_the_native_probe():
+    source = (WEB_ROOT / "static" / "player.js").read_text()
+
+    hls_js = source.index("window.Hls?.isSupported()")
+    native = source.index('video.canPlayType("application/vnd.apple.mpegurl")')
+
+    # Chrome returns "maybe" from canPlayType but cannot decode HLS. Probing
+    # native support first leaves every non-Safari browser stuck on
+    # "Checking private feed…" with no error to recover from.
+    assert hls_js < native, "native HLS probe must not run before hls.js"
+
+
 def test_hosting_config_revalidates_code_and_allows_the_stream_host():
     config = json.loads(
         (Path(__file__).resolve().parents[2] / "firebase.json").read_text()
