@@ -5,11 +5,11 @@ SHELL := /bin/bash
 check: syntax test deploy-dry-run
 
 syntax:
-	@for script in pi/scripts/*.sh tests/*.sh; do \
+	@for script in pi/scripts/*.sh scripts/*.sh tests/*.sh; do \
 		bash -n "$$script"; \
 	done
 	@if command -v shellcheck >/dev/null 2>&1; then \
-		shellcheck pi/scripts/*.sh tests/*.sh; \
+		shellcheck pi/scripts/*.sh scripts/*.sh tests/*.sh; \
 	else \
 		echo "shellcheck not installed; skipped"; \
 	fi

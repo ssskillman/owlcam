@@ -31,8 +31,11 @@ MediaMTX path /owl
     +-- HLS on 8888
 ```
 
-Management and viewing are private over Tailscale. Do not expose SSH, RTSP, or
-HLS with router port forwarding.
+Management and viewing are private over Tailscale. Do not expose SSH, RTSP,
+HLS, or UDP port 5000 with router port forwarding.
+
+Do not run the MediaMTX publisher and the UDP publisher at the same time. The
+physical camera can only be owned by one `rpicam-vid` process.
 
 ## Known-good manual stream
 
@@ -91,3 +94,96 @@ curl --fail --show-error http://100.123.8.55:8888/owl/index.m3u8
 
 See [`docs/recovery.md`](docs/recovery.md) before changing the known-good
 manual stream.
+
+## Raspberry Pi UDP streaming
+
+OwlCam can also send H.264 as MPEG-TS over UDP through Tailscale to a receiver.
+FFmpeg copies the camera bitstream (`-c:v copy`) and does not re-encode.
+
+The destination `100.116.197.91` is a Tailscale address. Both the Pi and the
+receiver must be on the same tailnet. Do not replace this with a LAN IP in
+scripts that should keep working after a house move.
+
+### Requirements
+
+The Raspberry Pi requires:
+
+- Raspberry Pi OS
+- `rpicam-vid`
+- `ffmpeg`
+- Tailscale connectivity to the receiving server
+
+Verify the tools are installed:
+
+```bash
+rpicam-vid --version
+ffmpeg -version
+tailscale status
+```
+
+### Start the stream
+
+From the repository root, on the Pi:
+
+```bash
+./scripts/start_stream.sh
+```
+
+The default stream destination is:
+
+```text
+udp://100.116.197.91:5000
+```
+
+The default video settings are:
+
+- 1920x1080
+- 30 FPS
+- H.264
+- MPEG-TS
+- UDP packet size 1316
+
+### Override the destination
+
+```bash
+OWL_CAM_DEST_IP=100.x.x.x \
+OWL_CAM_DEST_PORT=5000 \
+./scripts/start_stream.sh
+```
+
+### Override camera settings
+
+```bash
+OWL_CAM_WIDTH=1280 \
+OWL_CAM_HEIGHT=720 \
+OWL_CAM_FRAMERATE=30 \
+./scripts/start_stream.sh
+```
+
+### Stop the stream
+
+Press Ctrl+C.
+
+### Test the UDP receiver
+
+On the destination machine:
+
+```bash
+ffplay "udp://0.0.0.0:5000"
+```
+
+or:
+
+```bash
+ffmpeg \
+  -i "udp://0.0.0.0:5000" \
+  -f null -
+```
+
+The known-good VLC receiver used during LAN/Tailscale testing:
+
+```bash
+/Applications/VLC.app/Contents/MacOS/VLC \
+  --network-caching=500 \
+  "udp://@:5000"
+```

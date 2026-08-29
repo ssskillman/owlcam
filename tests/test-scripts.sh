@@ -40,4 +40,27 @@ grep -F -- "-fflags +genpts" "${stream_script}" >/dev/null \
 grep -F -- "rtsp://127.0.0.1:8554/owl" "${stream_script}" >/dev/null \
   || fail "stream script default RTSP path changed"
 
+udp_script="${REPO_ROOT}/scripts/start_stream.sh"
+[[ -x "${udp_script}" ]] || fail "UDP stream script is missing or not executable"
+grep -F -- 'DEST_IP="${OWL_CAM_DEST_IP:-100.116.197.91}"' "${udp_script}" >/dev/null \
+  || fail "UDP script default destination IP changed"
+grep -F -- 'DEST_PORT="${OWL_CAM_DEST_PORT:-5000}"' "${udp_script}" >/dev/null \
+  || fail "UDP script default destination port changed"
+grep -F -- 'WIDTH="${OWL_CAM_WIDTH:-1920}"' "${udp_script}" >/dev/null \
+  || fail "UDP script default width changed"
+grep -F -- 'HEIGHT="${OWL_CAM_HEIGHT:-1080}"' "${udp_script}" >/dev/null \
+  || fail "UDP script default height changed"
+grep -F -- 'FRAMERATE="${OWL_CAM_FRAMERATE:-30}"' "${udp_script}" >/dev/null \
+  || fail "UDP script default frame rate changed"
+grep -F -- "--inline" "${udp_script}" >/dev/null \
+  || fail "UDP script is missing inline headers"
+grep -F -- "-c:v copy" "${udp_script}" >/dev/null \
+  || fail "UDP script would re-encode video"
+grep -F -- "-muxdelay 0" "${udp_script}" >/dev/null \
+  || fail "UDP script is missing muxdelay 0"
+grep -F -- '-f mpegts' "${udp_script}" >/dev/null \
+  || fail "UDP script is not MPEG-TS"
+grep -F -- 'udp://${DEST_IP}:${DEST_PORT}?pkt_size=1316' "${udp_script}" >/dev/null \
+  || fail "UDP script destination or packet size changed"
+
 printf 'Script checks passed.\n'
