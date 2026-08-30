@@ -65,7 +65,11 @@ def test_moments_page_has_placeholder_media_stories_and_sorting():
     assert sum(item["type"] == "video" for item in MOMENTS) == 1
     assert html.count("NEST ARCHIVE") == 4
     assert html.count("PLACEHOLDER") >= 1
-    assert html.count("AI-GENERATED STORY") == len(MOMENTS)
+    assert html.count("FIELD NOTE") == len(MOMENTS)
+    assert "AI-GENERATED" not in html
+    assert "AI-assisted" not in html
+    assert "AI-written" not in html
+    assert "AI-generated" not in html
     assert 'data-sort-key="filename"' in html
     assert 'data-sort-key="timestamp"' in html
     assert 'data-sort-key="type"' in html
@@ -94,6 +98,15 @@ def test_photo_moments_load_thumbnails_that_open_full_size():
     assert 'src="/assets/moments/nest-box-build.jpg"' not in html
     assert 'src="/assets/moments/adult-barred-owl.jpg"' not in html
     assert html.count("View full size") == 4
+
+
+def test_pages_do_not_advertise_ai_generated_copy():
+    for markup in (render_page(), render_about_page(), render_moments_page()):
+        lower = markup.lower()
+        assert "ai-generated" not in lower
+        assert "ai-assisted" not in lower
+        assert "ai-written" not in lower
+        assert "ai generated" not in lower
 
 
 def test_player_starts_playback_rather_than_only_reporting_online():
