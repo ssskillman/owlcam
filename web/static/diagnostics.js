@@ -5,7 +5,11 @@
     "#diagnostics-habitat-temperature",
   );
   const humidity = document.querySelector("#diagnostics-humidity");
+  const daylight = document.querySelector("#diagnostics-daylight");
   const temperature = document.querySelector("#diagnostics-temperature");
+  const temperatureUnitButtons = document.querySelectorAll(
+    "[data-temperature-unit]",
+  );
   const memory = document.querySelector("#diagnostics-memory");
   const load = document.querySelector("#diagnostics-load");
   const processes = document.querySelector("#diagnostics-processes");
@@ -18,7 +22,9 @@
     !status ||
     !habitatTemperature ||
     !humidity ||
+    !daylight ||
     !temperature ||
+    temperatureUnitButtons.length !== 2 ||
     !memory ||
     !load ||
     !processes ||
@@ -28,6 +34,18 @@
   }
 
   const endpoint = panel.dataset.diagnosticsUrl;
+  let temperatureUnit = "f";
+  let latestData = null;
+  panel.dataset.temperatureUnit = temperatureUnit;
+
+  const celsiusToFahrenheit = (value) => (value * 9) / 5 + 32;
+
+  const formatTemperature = (value) => {
+    if (temperatureUnit === "f") {
+      return `${celsiusToFahrenheit(value).toFixed(1)} °F`;
+    }
+    return `${value.toFixed(1)} °C`;
+  };
 
   const validateClimate = (climate) => {
     if (!climate || typeof climate.connected !== "boolean") {
@@ -67,21 +85,23 @@
 
   const renderClimate = (climate) => {
     if (climate.connected) {
-      habitatTemperature.textContent = `${climate.temperatureC.toFixed(1)} °C`;
+      habitatTemperature.textContent = formatTemperature(climate.temperatureC);
       humidity.textContent = `${climate.humidityPercent.toFixed(1)} %`;
-      return;
+    } else {
+      habitatTemperature.textContent = "Not connected";
+      humidity.textContent = "Not connected";
     }
-    habitatTemperature.textContent = "Not connected";
-    humidity.textContent = "Not connected";
+    daylight.textContent = "Sensor needed";
   };
 
   const render = (data, processValues) => {
+    latestData = data;
     const stableCount = processValues.filter(Boolean).length;
     const loadLabel =
       data.load1 < 1 ? "LOW" : data.load1 < 2 ? "MODERATE" : "HIGH";
 
     renderClimate(data.climate);
-    temperature.textContent = `${data.temperatureC.toFixed(1)} °C`;
+    temperature.textContent = formatTemperature(data.temperatureC);
     memory.textContent = `${data.memoryAvailableGiB.toFixed(1)} GiB`;
     load.textContent = `${data.load1.toFixed(2)} · ${loadLabel}`;
     processes.textContent = `${stableCount}/3 stable`;
@@ -99,6 +119,7 @@
     status.textContent = "Diagnostics unavailable — checking again";
     habitatTemperature.textContent = "—";
     humidity.textContent = "—";
+    daylight.textContent = "—";
     temperature.textContent = "—";
     memory.textContent = "—";
     load.textContent = "—";
@@ -106,6 +127,23 @@
     updated.textContent = "The live camera can continue without diagnostics";
     panel.dataset.state = "offline";
   };
+
+  temperatureUnitButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      temperatureUnit = button.dataset.temperatureUnit;
+      panel.dataset.temperatureUnit = temperatureUnit;
+      temperatureUnitButtons.forEach((candidate) => {
+        candidate.setAttribute(
+          "aria-pressed",
+          String(candidate === button),
+        );
+      });
+      if (latestData) {
+        temperature.textContent = formatTemperature(latestData.temperatureC);
+        renderClimate(latestData.climate);
+      }
+    });
+  });
 
   const refresh = async () => {
     const controller = new AbortController();

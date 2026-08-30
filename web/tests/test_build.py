@@ -34,6 +34,10 @@ def test_about_page_covers_chris_carver_only():
 
     assert html.count("<!doctype html>") == 1
     assert "<title>About Chris Carver — Carver OwlCam</title>" in html
+    assert 'src="/assets/chris-carver.webp"' in html
+    assert 'alt="Chris Carver outdoors by a pool"' in html
+    assert 'width="750"' in html
+    assert 'height="562"' in html
     assert "Chris Carver" in html
     assert "Chief Service Officer" in html
     assert "Eagle Scout" in html
@@ -119,12 +123,20 @@ def test_live_page_has_accessible_realtime_diagnostics():
 
     assert 'id="diagnostics"' in html
     assert 'data-diagnostics-url="https://owlcam.tail31318f.ts.net/diagnostics"' in html
+    assert "NEST CONDITIONS" in html
+    assert "PI HEALTH" in html
     assert 'id="diagnostics-temperature"' in html
     assert 'id="diagnostics-habitat-temperature"' in html
     assert 'id="diagnostics-humidity"' in html
+    assert 'id="diagnostics-daylight"' in html
     assert 'id="diagnostics-memory"' in html
     assert 'id="diagnostics-load"' in html
     assert 'id="diagnostics-processes"' in html
+    assert 'id="temperature-unit-toggle"' in html
+    assert 'aria-pressed="true"' in html
+    assert 'data-temperature-unit="f"' in html
+    assert html.count('class="diagnostics-help"') == 7
+    assert html.count('tabindex="0"') >= 7
     assert 'id="diagnostics-status"' in html
     assert 'aria-live="polite"' in html
     assert 'src="/assets/diagnostics.js"' in html
@@ -146,7 +158,11 @@ def test_diagnostics_polling_is_bounded_and_renders_as_text():
     assert 'processes.textContent = "—"' in source
     assert "habitatTemperature" in source
     assert "humidity" in source
+    assert "daylight" in source
     assert "data?.climate" in source
+    assert "celsiusToFahrenheit" in source
+    assert "temperatureUnit" in source
+    assert 'dataset.temperatureUnit' in source
     assert 'Not connected' in source
 
 
@@ -182,7 +198,7 @@ def test_player_prefers_hls_js_over_the_native_probe():
 
     # Chrome returns "maybe" from canPlayType but cannot decode HLS. Probing
     # native support first leaves every non-Safari browser stuck on
-    # "Checking private feed…" with no error to recover from.
+    # "Checking live feed…" with no error to recover from.
     assert hls_js < native, "native HLS probe must not run before hls.js"
 
 
@@ -241,6 +257,7 @@ def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
     assert (output / "index.html").is_file()
     assert (output / "about.html").is_file()
     assert (output / "moments.html").is_file()
+    assert (output / "assets" / "chris-carver.webp").is_file()
     assert (output / "assets" / "moments" / "nest-box-build.jpg").is_file()
     assert (output / "assets" / "moments" / "thumbs" / "nest-box-build.jpg").is_file()
     assert (output / "assets" / "moments" / "thumbs" / "mole-delivery.jpg").is_file()
@@ -250,6 +267,7 @@ def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
     about = (output / "about.html").read_text()
     moments = (output / "moments.html").read_text()
     assert "owlcam.tail31318f.ts.net" in index
+    assert "Checking private feed" not in index
     assert "Chris Carver" in about
     assert "Braxton" not in about
     assert "Owl Moments" in moments
