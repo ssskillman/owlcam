@@ -22,7 +22,8 @@ def test_page_uses_private_https_stream_and_accessible_player():
     assert 'id="owlcam-player"' in html
     assert 'aria-label="Carver OwlCam livestream"' in html
     assert 'id="stream-status"' in html
-    assert "Camera is resting" in html
+    assert 'id="offline-title"' in html
+    assert 'id="offline-message"' in html
     assert 'href="/about"' in html
     assert ">Live<" not in html
     assert "Braxton" not in html
@@ -212,6 +213,47 @@ def test_player_reconnects_after_the_pi_stream_restarts():
     assert "setTimeout(connect, RECONNECT_DELAY)" in source
     assert "if (data.fatal) scheduleReconnect()" in source
     assert 'video.addEventListener("error", scheduleReconnect)' in source
+
+
+def test_offline_panel_names_the_cause_instead_of_blaming_the_camera():
+    html = render_page()
+    source = (WEB_ROOT / "static" / "player.js").read_text()
+
+    # The panel used to headline "Camera is resting" for every failure, so a
+    # blocked request and a dead network both read as an owl taking a nap and
+    # sent the viewer looking at the wrong thing.
+    assert "Connecting to the camera" in html, "panel must open on the true state"
+    assert "Camera is resting" not in html, (
+        "a resting camera is one possible cause, not the page's default claim"
+    )
+
+    for reason in ("connecting", "resting", "interrupted", "unreachable", "unsupported"):
+        assert f"{reason}:" in source, f"player cannot report the {reason} case"
+
+    # Reachability is what separates a resting camera from a broken path to it,
+    # and only the stream URL itself can answer that.
+    assert "const diagnose" in source
+    assert "fetch(video.dataset.streamUrl" in source
+    assert 'return response.ok ? "interrupted" : "resting"' in source
+    assert 'return "unreachable"' in source
+    assert "diagnose().then(explain)" in source
+
+    # The retry timer must not wait on a probe that can hang.
+    assert source.index("diagnose().then(explain)") < source.index(
+        "setTimeout(connect, RECONNECT_DELAY)"
+    )
+
+
+def test_diagnostics_distinguishes_unreachable_from_erroring():
+    source = (WEB_ROOT / "static" / "diagnostics.js").read_text()
+
+    # One message for three causes hid whether the Pi was unreachable, broken,
+    # or answering with something the page could not parse.
+    assert "Cannot reach the Pi" in source
+    assert "Pi answered HTTP" in source
+    assert "Unexpected vitals from the Pi" in source
+    assert "let httpStatus = null" in source
+    assert "renderUnavailable(httpStatus)" in source
 
 
 def test_hosting_config_revalidates_code_and_allows_the_stream_host():

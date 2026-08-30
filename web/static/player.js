@@ -4,11 +4,68 @@
   const retry = document.querySelector("#retry-stream");
   const status = document.querySelector("#stream-status");
   const dot = document.querySelector(".status-dot");
+  const title = document.querySelector("#offline-title");
+  const message = document.querySelector("#offline-message");
   const RECONNECT_DELAY = 5000;
   let hls;
   let reconnectTimer;
 
   if (!video || !panel || !retry || !status || !dot) return;
+
+  // "Camera is resting" was the panel's only headline, so a blocked request, a
+  // dead network, and a genuinely idle camera all read as an owl taking a nap.
+  // Each cause needs a different action from the viewer, so each gets its own copy.
+  const REASONS = {
+    connecting: {
+      title: "Connecting to the camera",
+      message: "Contacting the nest box. This usually takes a few seconds.",
+    },
+    resting: {
+      title: "Camera is resting",
+      message:
+        "The nest box answered but is not streaming right now. The feed " +
+        "reconnects automatically when OwlCam comes back online.",
+    },
+    interrupted: {
+      title: "Stream interrupted",
+      message:
+        "The nest box is reachable and the video briefly stopped arriving. " +
+        "Reconnecting automatically.",
+    },
+    unreachable: {
+      title: "Cannot reach the camera",
+      message:
+        "The nest box did not answer at all. That is a network problem " +
+        "between this device and the camera, not a sleeping camera. " +
+        "Retrying automatically.",
+    },
+    unsupported: {
+      title: "This browser cannot play the feed",
+      message:
+        "OwlCam streams HLS video, which this browser cannot decode. " +
+        "Safari, Chrome, Firefox, and Edge all play it.",
+    },
+  };
+
+  const explain = (reason) => {
+    const copy = REASONS[reason];
+    if (!copy || !title || !message) return;
+    title.textContent = copy.title;
+    message.textContent = copy.message;
+  };
+
+  // The player only knows that playback failed, never why. Asking the stream
+  // URL directly separates "no answer" from "answered, nothing to play".
+  const diagnose = async () => {
+    try {
+      const response = await fetch(video.dataset.streamUrl, {
+        cache: "no-store",
+      });
+      return response.ok ? "interrupted" : "resting";
+    } catch {
+      return "unreachable";
+    }
+  };
 
   const setState = (state, message) => {
     status.textContent = message;
@@ -26,6 +83,8 @@
 
   const scheduleReconnect = () => {
     showOffline();
+    // Fire and forget: the retry timer must not wait on a probe that may hang.
+    diagnose().then(explain);
     if (reconnectTimer) return;
     reconnectTimer = setTimeout(connect, RECONNECT_DELAY);
   };
@@ -46,6 +105,7 @@
   const connect = () => {
     const source = video.dataset.streamUrl;
     setState("", "Checking live feed…");
+    explain("connecting");
     clearTimeout(reconnectTimer);
     reconnectTimer = undefined;
 
@@ -85,6 +145,7 @@
     }
 
     setState("offline", "This browser cannot play HLS video");
+    explain("unsupported");
   };
 
   video.addEventListener("loadedmetadata", () => {

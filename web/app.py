@@ -225,11 +225,16 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                             ),
                             Div(
                                 Div("◉", cls="owl-mark", aria_hidden="true"),
-                                H2("Camera is resting"),
+                                # A resting camera and an unreachable one look
+                                # identical from the couch, so the panel starts
+                                # on the state that is actually true — connecting
+                                # — and player.js names the real cause once it
+                                # knows it.
+                                H2("Connecting to the camera", id="offline-title"),
                                 P(
-                                    "The feed reconnects automatically when "
-                                    "OwlCam is online. This public nature cam "
-                                    "does not require a viewer account."
+                                    "Contacting the nest box. This usually "
+                                    "takes a few seconds.",
+                                    id="offline-message",
                                 ),
                                 Button(
                                     "Try again",
