@@ -20,12 +20,13 @@ Point 3 is the decision that matters. Tailscale offers two ways to publish:
 
 | Mode | Command | Who can watch |
 |------|---------|---------------|
-| Serve | `serve-stream.sh` | Only devices signed in to the tailnet |
-| Funnel | `serve-stream.sh --public` | Anyone on the internet with the URL |
+| Serve | `publish-feed.sh --private` | Only devices signed in to the tailnet |
+| Funnel | `publish-feed.sh --public` | Anyone on the internet with the URL |
 
-Serve keeps the current security posture: the page is public, the video is not.
-Funnel is what makes the feed visible to family and friends who will never
-install Tailscale, and it exposes the nest camera to the open internet.
+Funnel is the current setting, so phones and browsers with no Tailscale account
+can watch. See [Should the feed be public?](#should-the-feed-be-public) for the
+decision and its costs. `publish-feed.sh` changes exposure only; use
+`serve-stream.sh` when you also need to start capture.
 
 ## Bringing it up
 
@@ -138,8 +139,45 @@ no way to publish a stream over HTTPS without accepting it.
 
 ## Should the feed be public?
 
-**Recommendation: no, not over Funnel.** Keep `serve-stream.sh` on its private
-default.
+**Decided 2026-08-30: yes, over Funnel.** The feed is a nature camera with no
+private content, and requiring every viewer to install Tailscale and be added to
+the tailnet defeated the point. Phones on cellular could not watch at all.
+
+```bash
+./pi/scripts/publish-feed.sh --public    # anyone with the URL
+./pi/scripts/publish-feed.sh --private   # back to tailnet only
+./pi/scripts/publish-feed.sh --status    # what is live right now
+```
+
+**One-time approval is required first.** The Pi needs the `funnel` node
+attribute, and until it is granted `tailscale funnel` does not fail — it blocks
+on the approval flow indefinitely. Worse, a blocked attempt that gets killed
+after the old mounts were cleared takes the feed down for tailnet viewers too.
+`publish-feed.sh --public` therefore checks for the attribute up front, refuses
+with the approval URL, and leaves the live mounts alone:
+
+```text
+https://login.tailscale.com/f/funnel?node=<node-id>
+```
+
+Approve that in the admin console, then re-run `--public`. If a funnel attempt
+ever does hang, `pkill -f "tailscale funnel"` clears it; check
+`tailscale serve status` afterwards, because "No serve config" means the feed is
+down and needs `publish-feed.sh --private` to come back.
+
+Serve and Funnel apply per **port**, not per mount point, so the HLS root and
+the `/diagnostics` mount are always declared together in the same mode. Going
+public therefore also publishes the vitals payload. That payload is an allowlist
+by design — no PIDs, paths, usernames, or addresses — which is what makes this
+acceptable. Keep it that way.
+
+`install-services.sh` calls `publish-feed.sh --preserve`, so reinstalling does
+not quietly pull a public feed back to private.
+
+### What this costs, and when to switch
+
+The objections below are real and unchanged; they are accepted, not refuted.
+Revisit the restream option in the table further down when any of them bites.
 
 Funnel is the wrong tool for this particular job, by its author's own account.
 Tailscale [documents](https://tailscale.com/docs/features/tailscale-funnel)
@@ -161,9 +199,10 @@ The bandwidth ceiling is not the only problem:
   advertised live feed invites attention to a nest site, and the About page
   already narrows down whose property it is.
 
-### Better ways to make it visible
+### Alternatives if Funnel stops being enough
 
-If the goal is that family and friends can watch, in increasing order of effort:
+The row that matters is the third one: it is the only option that scales past a
+handful of simultaneous viewers.
 
 | Approach | Public ingress | Cost per extra viewer | Notes |
 |---|---|---|---|
@@ -171,13 +210,11 @@ If the goal is that family and friends can watch, in increasing order of effort:
 | Publish snapshots or short clips to the existing page | none | zero | Firebase serves them. Reuses the Moments gallery pattern, and survives the Pi being offline. |
 | Restream to YouTube or Facebook Live | none | zero | The Pi pushes one 2.5 Mbps connection upstream; the platform fans out to any audience size. |
 
-The third row is the correct architecture for a genuinely public audience: one
+Restreaming is the correct architecture for a large public audience: one
 outbound stream regardless of how many people watch, no inbound port, and no
 home-upload scaling problem. `security.md` already anticipates it by listing
-Facebook stream keys as never-commit material.
-
-Funnel remains available behind `--public` for a deliberate, short-lived share.
-It should not be the way the feed is normally published.
+Facebook stream keys as never-commit material. Funnel is the right trade only
+while the audience is small enough that home upload is not the constraint.
 
 ## Cross-origin note
 

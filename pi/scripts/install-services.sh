@@ -44,7 +44,10 @@ require systemctl
 require loginctl
 
 if "${uninstall}"; then
-  tailscale serve --bg --set-path /diagnostics off 2>/dev/null || true
+  # The mount could have been declared in either mode, and clearing one does
+  # not clear the other.
+  tailscale funnel --https=443 --set-path=/diagnostics off 2>/dev/null || true
+  tailscale serve --https=443 --set-path=/diagnostics off 2>/dev/null || true
   systemctl --user disable --now owlcam-diagnostics.service 2>/dev/null || true
   systemctl --user disable --now owlcam-stream.service 2>/dev/null || true
   systemctl --user disable --now owlcam-mediamtx.service 2>/dev/null || true
@@ -140,10 +143,10 @@ if [[ "${diagnostics_ready:-false}" != true ]]; then
   exit 1
 fi
 
-# This adds a second tailnet-only handler without replacing the existing root
-# HLS proxy. Tailscale Serve persists its configuration across reboots.
-tailscale serve --bg --set-path /diagnostics \
-  "http://127.0.0.1:${OWLCAM_DIAGNOSTICS_PORT:-8765}"
+# Declares the HLS root and the diagnostics mount together, keeping whatever
+# exposure is already in effect so a reinstall cannot pull a deliberately public
+# feed back to tailnet-only. Tailscale persists this across reboots.
+"${SCRIPT_DIR}/publish-feed.sh" --preserve
 
 printf 'OwlCam services installed and serving.\n'
 systemctl --user is-enabled \
