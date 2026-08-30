@@ -137,6 +137,45 @@ grep -F -- 'Refusing to start' "${udp_script}" >/dev/null \
 grep -F -- '/owl/index.m3u8' "${udp_script}" >/dev/null \
   || fail "UDP script does not offer the HLS URL as the non-destructive option"
 
+publish_script="${REPO_ROOT}/pi/scripts/publish-feed.sh"
+[[ -x "${publish_script}" ]] || fail "publish script is missing or not executable"
+
+publish_help="$("${publish_script}" --help)"
+[[ "${publish_help}" == *"--public"* ]] \
+  || fail "publish help does not document going public"
+[[ "${publish_help}" == *"--private"* ]] \
+  || fail "publish help does not document reverting to tailnet only"
+[[ "${publish_help}" == *"Anyone on the internet"* ]] \
+  || fail "publish help does not state what --public exposes"
+
+if "${publish_script}" --not-an-option >/dev/null 2>&1; then
+  fail "publish script accepted an unknown option"
+fi
+
+grep -F -- 'apply funnel' "${publish_script}" >/dev/null \
+  || fail "publish script cannot expose the feed publicly"
+grep -F -- 'apply serve' "${publish_script}" >/dev/null \
+  || fail "publish script cannot return the feed to the tailnet"
+grep -F -- 'tailscale "${verb}" --bg --yes --https=443' "${publish_script}" \
+  >/dev/null \
+  || fail "publish script does not publish non-interactively on the HTTPS port"
+# Funnel and Serve are per-port, so the diagnostics mount has to be re-declared
+# in the same mode or it disappears when exposure changes.
+grep -F -- '--set-path=/diagnostics' "${publish_script}" >/dev/null \
+  || fail "publish script drops the diagnostics mount when exposure changes"
+grep -F -- 'AllowFunnel' "${publish_script}" >/dev/null \
+  || fail "publish script cannot detect the current exposure"
+# Funnel blocks on approval instead of failing, and a killed attempt can leave
+# the port with no mounts, so the feed goes down for tailnet viewers too.
+grep -F -- 'require_funnel_attribute' "${publish_script}" >/dev/null \
+  || fail "publish script would hang instead of refusing without the funnel attribute"
+grep -F -- 'login.tailscale.com/f/funnel' "${publish_script}" >/dev/null \
+  || fail "publish script does not print the funnel approval link"
+if grep -E -- 'tailscale (serve|funnel) --https=443 off' "${publish_script}" \
+  >/dev/null; then
+  fail "publish script clears the live mounts before declaring the new ones"
+fi
+
 install_script="${REPO_ROOT}/pi/scripts/install-services.sh"
 [[ -x "${install_script}" ]] || fail "service installer is missing or not executable"
 
@@ -165,8 +204,10 @@ grep -F -- 'curl -fsSL' "${install_script}" >/dev/null \
   || fail "installer health check must follow the MediaMTX cookie redirect"
 grep -F -- 'owlcam-diagnostics.service' "${install_script}" >/dev/null \
   || fail "installer does not manage the diagnostics service"
-grep -F -- '--set-path /diagnostics' "${install_script}" >/dev/null \
-  || fail "installer does not add the private diagnostics route"
+# Reinstalling must not quietly drag a deliberately public feed back to
+# tailnet-only, so exposure setup is delegated rather than hardcoded to serve.
+grep -F -- 'publish-feed.sh" --preserve' "${install_script}" >/dev/null \
+  || fail "installer does not preserve the current exposure mode"
 
 stream_unit="${REPO_ROOT}/pi/systemd/owlcam-stream.service"
 mediamtx_unit="${REPO_ROOT}/pi/systemd/owlcam-mediamtx.service"

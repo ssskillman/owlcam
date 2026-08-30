@@ -18,7 +18,7 @@ OwlCam is deliberately split, and the split is the whole security design.
 |---|---|---|
 | Served by | Firebase Hosting | MediaMTX on the Pi, via Tailscale |
 | Contains | HTML, CSS, photos, the player | Live H.264 / HLS |
-| Reachable by | anyone | tailnet only, unless Funnel is on |
+| Reachable by | anyone | tailnet now, public once Funnel is approved |
 | If the Pi is off | still up | page shows "Camera is resting" |
 
 The page never proxies video. It asks the browser to fetch HLS directly from
@@ -76,7 +76,22 @@ when the last SSH session closes and never start at boot at all.
 
 Once the services are installed, do not also run `serve-stream.sh` or the UDP
 publisher — they fight the unit for the sensor, and the unit will lose and
-restart in a loop. Tailscale Serve is separate and already persists on its own.
+restart in a loop. Tailscale publishing is separate and already persists on its
+own.
+
+### Who can watch
+
+```bash
+./pi/scripts/publish-feed.sh --status    # current exposure
+./pi/scripts/publish-feed.sh --public    # anyone with the URL
+./pi/scripts/publish-feed.sh --private   # tailnet devices only
+```
+
+Going public needs the `funnel` node attribute approved once in the Tailscale
+admin console. Until then `--public` refuses and prints the approval URL rather
+than hanging, and the feed stays tailnet-only. Exposure applies per port, so the
+video and the `/diagnostics` payload are always published together in the same
+mode. Details in [`docs/live-feed.md`](docs/live-feed.md).
 
 ### Capture defaults
 
@@ -92,11 +107,13 @@ home upload after two or three of them. Override with `OWLCAM_BITRATE`.
 - RTMP, WebRTC, SRT, the admin API, metrics, pprof, and playback are disabled.
 - No router port forwarding, ever. That is what the blocked paths in the
   diagram mean.
-- Serve keeps video inside the tailnet. Funnel puts it on the open internet —
-  an explicit `--public` choice, never the default, and not the recommended way
-  to reach a public audience. Funnel is bandwidth-throttled by design and adds
-  no authentication; restreaming outbound scales better and opens no inbound
-  port. The reasoning is in [`docs/live-feed.md`](docs/live-feed.md).
+- Funnel is on, so the video is public and needs no Tailscale account to watch.
+  Only two things sit behind it: MediaMTX HLS and the read-only diagnostics
+  payload, both proxied from loopback. Funnel is bandwidth-throttled and
+  unauthenticated by design, so restreaming outbound is the answer if the
+  audience outgrows home upload. Flip back with
+  `pi/scripts/publish-feed.sh --private`. The reasoning is in
+  [`docs/live-feed.md`](docs/live-feed.md).
 
 More in [`docs/security.md`](docs/security.md).
 
