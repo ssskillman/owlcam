@@ -156,6 +156,11 @@ grep -F -- 'loginctl enable-linger' "${install_script}" >/dev/null \
 # restart forever instead of serving.
 grep -F -- 'pkill -x rpicam-vid' "${install_script}" >/dev/null \
   || fail "installer does not release the sensor before starting the unit"
+# "enable --now" leaves an already-active unit running the previous binary, so a
+# reinstall of newly staged code silently keeps serving the old payload.
+grep -F -- 'systemctl --user restart owlcam-diagnostics.service' "${install_script}" \
+  >/dev/null \
+  || fail "installer does not restart diagnostics onto the newly staged code"
 grep -F -- 'curl -fsSL' "${install_script}" >/dev/null \
   || fail "installer health check must follow the MediaMTX cookie redirect"
 grep -F -- 'owlcam-diagnostics.service' "${install_script}" >/dev/null \

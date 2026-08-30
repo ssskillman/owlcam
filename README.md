@@ -169,6 +169,43 @@ The Pi must run 64-bit Raspberry Pi OS on `aarch64`.
 ./pi/scripts/deploy.sh
 ```
 
+### Getting a new commit onto the Pi
+
+The Pi does not clone this repo and never runs `git pull`. Code reaches it by
+rsync from a laptop, or from GitHub Actions after a merge to `main`. Two steps,
+in this order:
+
+```bash
+# 1. On the Mac, from the repo root
+git checkout main && git pull
+OWLCAM_SSH_IDENTITY=~/.ssh/owlcam_pi ./pi/scripts/deploy.sh
+
+# 2. On the Pi
+ssh shawn@owlcam.local
+cd /home/shawn/owlcam/deploy
+./pi/scripts/install-services.sh
+```
+
+Step 2 is required after any Pi-side change. `deploy.sh` only stages files; the
+installer is what copies them into `~/.local/bin`, reloads the units, and
+restarts the services onto the new code.
+
+Two traps worth knowing:
+
+- **Do not SSH to `100.123.8.55` from the Pi itself.** That address *is* the Pi.
+  `~/.ssh/owlcam_pi` only exists on the laptop, so the command fails with
+  `Identity file ... not accessible` and then prompts for a host key.
+- **A running unit keeps its old binary.** `systemctl enable --now` does nothing
+  to an already-active service, which is why staged code can appear installed
+  while the endpoint still serves the previous payload. The installer now
+  restarts all three units for this reason. To confirm what is actually running:
+
+```bash
+curl -sS https://owlcam.tail31318f.ts.net/diagnostics
+```
+
+A payload with a `climate` object is the current build.
+
 Deployment stages a narrow set of files under `/home/shawn/owlcam/deploy`.
 Installing a staged MediaMTX configuration requires an explicit
 `--install-config` flag and takes a timestamped backup first. GitHub Actions

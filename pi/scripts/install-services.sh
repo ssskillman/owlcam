@@ -93,10 +93,17 @@ if pgrep -x mediamtx >/dev/null 2>&1; then
 fi
 
 systemctl --user daemon-reload
-systemctl --user enable --now owlcam-mediamtx.service
+systemctl --user enable owlcam-mediamtx.service
+systemctl --user enable owlcam-stream.service
+systemctl --user enable owlcam-diagnostics.service
+
+# Restart rather than "enable --now": an already-running unit keeps executing the
+# binary it started with, so freshly staged code would not take effect until the
+# next reboot.
+systemctl --user restart owlcam-mediamtx.service
 sleep 3
-systemctl --user enable --now owlcam-stream.service
-systemctl --user enable --now owlcam-diagnostics.service
+systemctl --user restart owlcam-stream.service
+systemctl --user restart owlcam-diagnostics.service
 
 printf '\nWaiting for local HLS...\n'
 hls_url="http://127.0.0.1:${OWLCAM_HLS_PORT:-8888}/${OWLCAM_STREAM_PATH:-owl}/index.m3u8"

@@ -18,9 +18,14 @@ the allowlisted diagnostics payload, never invent numbers.
    Address `0x76` or `0x77` is auto-detected.
 3. Confirm the bus: `i2cdetect -y 1` should show the chip.
 4. Copy the latest repo to the Pi and reinstall user units so diagnostics can
-   open `/dev/i2c-1`:
+   open `/dev/i2c-1`. Staging from the Mac comes first; the installer is what
+   puts the new code into service (see
+   [Getting a new commit onto the Pi](../README.md#getting-a-new-commit-onto-the-pi)):
 
 ```bash
+# Mac
+OWLCAM_SSH_IDENTITY=~/.ssh/owlcam_pi ./pi/scripts/deploy.sh
+# Pi
 cd /home/shawn/owlcam/deploy
 ./pi/scripts/install-services.sh
 ```
