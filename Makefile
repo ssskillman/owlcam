@@ -24,6 +24,7 @@ syntax:
 
 test:
 	@bash tests/test-scripts.sh
+	@python3 -m unittest discover -s pi/tests -p 'test_*.py'
 
 deploy-dry-run:
 	@bash pi/scripts/deploy.sh --dry-run

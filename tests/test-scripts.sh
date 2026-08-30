@@ -19,6 +19,8 @@ deploy_output="$("${REPO_ROOT}/pi/scripts/deploy.sh" --dry-run)"
   || fail "deploy dry-run does not stage the systemd units the installer reads"
 [[ "${deploy_output}" != *"Would back up and install"* ]] \
   || fail "deploy dry-run installs configuration without opt-in"
+grep -F -- "--exclude '__pycache__'" "${REPO_ROOT}/pi/scripts/deploy.sh" >/dev/null \
+  || fail "deploy sends Python bytecode caches to the Pi"
 
 config_output="$("${REPO_ROOT}/pi/scripts/deploy.sh" --dry-run --install-config)"
 [[ "${config_output}" == *"Would back up and install"* ]] \
@@ -156,16 +158,30 @@ grep -F -- 'pkill -x rpicam-vid' "${install_script}" >/dev/null \
   || fail "installer does not release the sensor before starting the unit"
 grep -F -- 'curl -fsSL' "${install_script}" >/dev/null \
   || fail "installer health check must follow the MediaMTX cookie redirect"
+grep -F -- 'owlcam-diagnostics.service' "${install_script}" >/dev/null \
+  || fail "installer does not manage the diagnostics service"
+grep -F -- '--set-path /diagnostics' "${install_script}" >/dev/null \
+  || fail "installer does not add the private diagnostics route"
 
 stream_unit="${REPO_ROOT}/pi/systemd/owlcam-stream.service"
 mediamtx_unit="${REPO_ROOT}/pi/systemd/owlcam-mediamtx.service"
+diagnostics_unit="${REPO_ROOT}/pi/systemd/owlcam-diagnostics.service"
 [[ -r "${stream_unit}" ]] || fail "owlcam-stream.service is missing"
 [[ -r "${mediamtx_unit}" ]] || fail "owlcam-mediamtx.service is missing"
+[[ -r "${diagnostics_unit}" ]] || fail "owlcam-diagnostics.service is missing"
 
 grep -F -- 'Restart=always' "${stream_unit}" >/dev/null \
   || fail "stream unit does not restart after a failure"
 grep -F -- 'Restart=always' "${mediamtx_unit}" >/dev/null \
   || fail "mediamtx unit does not restart after a failure"
+grep -F -- 'Restart=always' "${diagnostics_unit}" >/dev/null \
+  || fail "diagnostics unit does not restart after a failure"
+grep -F -- '127.0.0.1' "${REPO_ROOT}/pi/scripts/diagnostics_server.py" >/dev/null \
+  || fail "diagnostics endpoint is not bound to loopback"
+grep -F -- 'ProtectHome=read-only' "${diagnostics_unit}" >/dev/null \
+  || fail "diagnostics unit can write to the user's home directory"
+grep -F -- 'DeviceAllow=/dev/i2c-1 rw' "${diagnostics_unit}" >/dev/null \
+  || fail "diagnostics unit cannot open the nest climate I2C bus"
 # Capture published before MediaMTX is listening leaves the page on "resting".
 grep -F -- 'After=owlcam-mediamtx.service' "${stream_unit}" >/dev/null \
   || fail "stream unit does not wait for the media server"

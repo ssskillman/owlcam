@@ -24,6 +24,7 @@ from fasthtml.common import (
 )
 
 DEFAULT_STREAM_URL = "https://owlcam.tail31318f.ts.net/owl/index.m3u8"
+DEFAULT_DIAGNOSTICS_URL = "https://owlcam.tail31318f.ts.net/diagnostics"
 OWLCAM_GROUP_URL = "https://www.facebook.com/groups/619431688614242/"
 MOMENTS = (
     {
@@ -128,6 +129,7 @@ def _head(*, title: str, description: str, include_player: bool) -> Head:
                 crossorigin="anonymous",
             ),
             Script(src="/assets/player.js", defer=True),
+            Script(src="/assets/diagnostics.js", defer=True),
         ]
     return Head(
         Meta(charset="utf-8"),
@@ -239,6 +241,62 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                         cls="player-shell",
                     ),
                     cls="hero",
+                ),
+                Section(
+                    Div(
+                        Div(
+                            Span("LIVE SYSTEM DIAGNOSTICS", cls="diagnostics-label"),
+                            H2("Nest box vitals"),
+                        ),
+                        Div(
+                            Span(cls="diagnostics-dot", aria_hidden="true"),
+                            Span(
+                                "Connecting to the Pi…",
+                                id="diagnostics-status",
+                                aria_live="polite",
+                            ),
+                            cls="diagnostics-state",
+                        ),
+                        cls="diagnostics-header",
+                    ),
+                    Div(
+                        Div(
+                            Span("NEST AIR", cls="diagnostics-key"),
+                            P("—", id="diagnostics-habitat-temperature"),
+                            cls="diagnostics-metric",
+                        ),
+                        Div(
+                            Span("HUMIDITY", cls="diagnostics-key"),
+                            P("—", id="diagnostics-humidity"),
+                            cls="diagnostics-metric",
+                        ),
+                        Div(
+                            Span("PI TEMPERATURE", cls="diagnostics-key"),
+                            P("—", id="diagnostics-temperature"),
+                            cls="diagnostics-metric",
+                        ),
+                        Div(
+                            Span("MEMORY AVAILABLE", cls="diagnostics-key"),
+                            P("—", id="diagnostics-memory"),
+                            cls="diagnostics-metric",
+                        ),
+                        Div(
+                            Span("1-MINUTE LOAD", cls="diagnostics-key"),
+                            P("—", id="diagnostics-load"),
+                            cls="diagnostics-metric",
+                        ),
+                        Div(
+                            Span("STREAMING PROCESSES", cls="diagnostics-key"),
+                            P("—", id="diagnostics-processes"),
+                            cls="diagnostics-metric",
+                        ),
+                        cls="diagnostics-grid",
+                    ),
+                    Small("Waiting for first sample", id="diagnostics-updated"),
+                    id="diagnostics",
+                    cls="diagnostics",
+                    data_diagnostics_url=DEFAULT_DIAGNOSTICS_URL,
+                    aria_label="Realtime OwlCam system diagnostics",
                 ),
                 Section(
                     Div(

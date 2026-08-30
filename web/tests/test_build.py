@@ -114,6 +114,42 @@ def test_livestream_element_can_autoplay():
     assert "playsinline" in video, "iOS would take the video fullscreen"
 
 
+def test_live_page_has_accessible_realtime_diagnostics():
+    html = render_page()
+
+    assert 'id="diagnostics"' in html
+    assert 'data-diagnostics-url="https://owlcam.tail31318f.ts.net/diagnostics"' in html
+    assert 'id="diagnostics-temperature"' in html
+    assert 'id="diagnostics-habitat-temperature"' in html
+    assert 'id="diagnostics-humidity"' in html
+    assert 'id="diagnostics-memory"' in html
+    assert 'id="diagnostics-load"' in html
+    assert 'id="diagnostics-processes"' in html
+    assert 'id="diagnostics-status"' in html
+    assert 'aria-live="polite"' in html
+    assert 'src="/assets/diagnostics.js"' in html
+
+
+def test_diagnostics_polling_is_bounded_and_renders_as_text():
+    source = (WEB_ROOT / "static" / "diagnostics.js").read_text()
+
+    assert "fetch(endpoint" in source
+    assert "AbortController" in source
+    assert "POLL_INTERVAL = 5000" in source
+    assert "setTimeout(refresh, POLL_INTERVAL)" in source
+    assert ".textContent =" in source
+    assert ".innerHTML" not in source
+    assert "response.ok" in source
+    assert 'temperature.textContent = "—"' in source
+    assert 'memory.textContent = "—"' in source
+    assert 'load.textContent = "—"' in source
+    assert 'processes.textContent = "—"' in source
+    assert "habitatTemperature" in source
+    assert "humidity" in source
+    assert "data?.climate" in source
+    assert 'Not connected' in source
+
+
 def test_pages_declare_the_favicon():
     for markup in (render_page(), render_about_page(), render_moments_page()):
         assert '/assets/favicon.svg' in markup, "page is missing the tab icon"
@@ -150,6 +186,18 @@ def test_player_prefers_hls_js_over_the_native_probe():
     assert hls_js < native, "native HLS probe must not run before hls.js"
 
 
+def test_player_reconnects_after_the_pi_stream_restarts():
+    source = (WEB_ROOT / "static" / "player.js").read_text()
+
+    # A fatal hls.js error used to leave an open page permanently offline even
+    # after systemd restored the Pi stream. The page promises automatic
+    # reconnection, so fatal HLS and native media failures must schedule it.
+    assert "const scheduleReconnect" in source
+    assert "setTimeout(connect, RECONNECT_DELAY)" in source
+    assert "if (data.fatal) scheduleReconnect()" in source
+    assert 'video.addEventListener("error", scheduleReconnect)' in source
+
+
 def test_hosting_config_revalidates_code_and_allows_the_stream_host():
     config = json.loads(
         (Path(__file__).resolve().parents[2] / "firebase.json").read_text()
@@ -162,8 +210,16 @@ def test_hosting_config_revalidates_code_and_allows_the_stream_host():
 
     stream_host = DEFAULT_STREAM_URL.split("/owl/")[0]
     csp = by_source["**"]["Content-Security-Policy"]
-    assert f"media-src 'self' {stream_host}" in csp
+    assert "media-src 'self' blob:" in csp, (
+        "hls.js renders through a blob: MediaSource, so blocking blob: leaves "
+        "the player online but permanently gray"
+    )
+    assert stream_host in csp.split("media-src ", 1)[1].split(";", 1)[0]
     assert f"connect-src 'self' {stream_host}" in csp
+    assert "worker-src 'self' blob:" in csp, (
+        "hls.js uses a blob worker; without worker-src it falls back to the "
+        "main thread and logs a production CSP error"
+    )
 
     # Pages must revalidate, or a deploy stays invisible behind a stale cache.
     assert "no-cache" in by_source["**"]["Cache-Control"]
@@ -207,6 +263,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assets = output / "assets"
     assert not (assets / "styles.css").exists(), "unhashed stylesheet still shipped"
     assert not (assets / "player.js").exists()
+    assert not (assets / "diagnostics.js").exists()
     assert not (assets / "moments.js").exists()
 
     hashed = {p.name for p in assets.glob("*.*.css")} | {
@@ -214,13 +271,14 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     }
     assert any(n.startswith("styles.") and n.endswith(".css") for n in hashed)
     assert any(n.startswith("player.") and n.endswith(".js") for n in hashed)
+    assert any(n.startswith("diagnostics.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("moments.") and n.endswith(".js") for n in hashed)
 
     index = (output / "index.html").read_text()
     assert '"/assets/styles.css"' not in index
     referenced = [n for n in hashed if f"/assets/{n}" in index]
     assert sorted(referenced) == sorted(
-        n for n in hashed if n.startswith(("styles.", "player."))
+        n for n in hashed if n.startswith(("styles.", "player.", "diagnostics."))
     )
 
     # A content change must produce a different URL.

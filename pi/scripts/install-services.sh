@@ -19,8 +19,8 @@ usage() {
   cat <<'EOF'
 Usage: install-services.sh [--uninstall]
 
-  (default)    Install and start owlcam-mediamtx and owlcam-stream user units.
-  --uninstall  Stop, disable, and remove both units.
+  (default)    Install and start the media, stream, and diagnostics user units.
+  --uninstall  Stop, disable, and remove all three units.
 EOF
 }
 
@@ -44,10 +44,14 @@ require systemctl
 require loginctl
 
 if "${uninstall}"; then
+  tailscale serve --bg --set-path /diagnostics off 2>/dev/null || true
+  systemctl --user disable --now owlcam-diagnostics.service 2>/dev/null || true
   systemctl --user disable --now owlcam-stream.service 2>/dev/null || true
   systemctl --user disable --now owlcam-mediamtx.service 2>/dev/null || true
-  rm -f "${UNIT_DIR}/owlcam-stream.service" \
+  rm -f "${UNIT_DIR}/owlcam-diagnostics.service" \
+        "${UNIT_DIR}/owlcam-stream.service" \
         "${UNIT_DIR}/owlcam-mediamtx.service" \
+        "${BIN_DIR}/owlcam-diagnostics" \
         "${BIN_DIR}/owlcam-start-stream"
   systemctl --user daemon-reload
   printf 'OwlCam services removed.\n'
@@ -57,6 +61,8 @@ fi
 require mediamtx
 require rpicam-vid
 require ffmpeg
+require python3
+require tailscale
 
 # Without lingering, user units stop when the last SSH session closes and never
 # start at boot, which is the entire point of installing them.
@@ -64,6 +70,8 @@ loginctl enable-linger "${USER}"
 
 mkdir -p "${UNIT_DIR}" "${BIN_DIR}"
 install -m 0755 "${SCRIPT_DIR}/start-stream.sh" "${BIN_DIR}/owlcam-start-stream"
+install -m 0755 "${SCRIPT_DIR}/diagnostics_server.py" "${BIN_DIR}/owlcam-diagnostics"
+install -m 0644 "${UNIT_SRC}/owlcam-diagnostics.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-mediamtx.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-stream.service" "${UNIT_DIR}/"
 
@@ -88,6 +96,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now owlcam-mediamtx.service
 sleep 3
 systemctl --user enable --now owlcam-stream.service
+systemctl --user enable --now owlcam-diagnostics.service
 
 printf '\nWaiting for local HLS...\n'
 hls_url="http://127.0.0.1:${OWLCAM_HLS_PORT:-8888}/${OWLCAM_STREAM_PATH:-owl}/index.m3u8"
@@ -108,5 +117,29 @@ if [[ "${ready:-false}" != true ]]; then
   exit 1
 fi
 
+printf '\nWaiting for local diagnostics...\n'
+diagnostics_url="http://127.0.0.1:${OWLCAM_DIAGNOSTICS_PORT:-8765}/diagnostics"
+for _ in $(seq 1 10); do
+  if curl -fsS -m 3 -o /dev/null "${diagnostics_url}"; then
+    diagnostics_ready=true
+    break
+  fi
+  sleep 1
+done
+
+if [[ "${diagnostics_ready:-false}" != true ]]; then
+  printf 'Local diagnostics never became ready. Check:\n' >&2
+  printf '  systemctl --user status owlcam-diagnostics\n' >&2
+  exit 1
+fi
+
+# This adds a second tailnet-only handler without replacing the existing root
+# HLS proxy. Tailscale Serve persists its configuration across reboots.
+tailscale serve --bg --set-path /diagnostics \
+  "http://127.0.0.1:${OWLCAM_DIAGNOSTICS_PORT:-8765}"
+
 printf 'OwlCam services installed and serving.\n'
-systemctl --user is-enabled owlcam-mediamtx.service owlcam-stream.service
+systemctl --user is-enabled \
+  owlcam-mediamtx.service \
+  owlcam-stream.service \
+  owlcam-diagnostics.service
