@@ -1,0 +1,18 @@
+[Unit]
+Description=OwlCam camera capture published to MediaMTX over RTSP
+Documentation=https://github.com/ssskillman/owlcam/blob/main/docs/live-feed.md
+After=owlcam-mediamtx.service
+Wants=owlcam-mediamtx.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/owlcam-start-stream
+
+# The camera sensor accepts exactly one consumer. If MediaMTX is not up yet, or
+# ffmpeg loses the RTSP session, the pipeline exits and systemd brings it back
+# rather than leaving the web page on "Camera is resting" until someone notices.
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -15,6 +15,8 @@ deploy_output="$("${REPO_ROOT}/pi/scripts/deploy.sh" --dry-run)"
   || fail "deploy layout would break repository-relative script paths"
 [[ "${deploy_output}" == *"/deploy/scripts/"* ]] \
   || fail "deploy dry-run does not stage UDP scripts/"
+[[ "${deploy_output}" == *"/deploy/pi/systemd/"* ]] \
+  || fail "deploy dry-run does not stage the systemd units the installer reads"
 [[ "${deploy_output}" != *"Would back up and install"* ]] \
   || fail "deploy dry-run installs configuration without opt-in"
 
@@ -91,5 +93,44 @@ grep -F -- '-f mpegts' "${udp_script}" >/dev/null \
   || fail "UDP script is not MPEG-TS"
 grep -F -- 'udp://${DEST_IP}:${DEST_PORT}?pkt_size=1316' "${udp_script}" >/dev/null \
   || fail "UDP script destination or packet size changed"
+
+install_script="${REPO_ROOT}/pi/scripts/install-services.sh"
+[[ -x "${install_script}" ]] || fail "service installer is missing or not executable"
+
+install_help="$("${install_script}" --help)"
+[[ "${install_help}" == *"--uninstall"* ]] \
+  || fail "installer help does not document removal"
+
+if "${install_script}" --not-an-option >/dev/null 2>&1; then
+  fail "installer accepted an unknown option"
+fi
+
+# User units stop with the last SSH session and never start at boot unless the
+# account lingers, which defeats the point of installing them at all.
+grep -F -- 'loginctl enable-linger' "${install_script}" >/dev/null \
+  || fail "installer does not enable lingering for boot survival"
+# The sensor takes one consumer, so a hand-started capture makes the unit
+# restart forever instead of serving.
+grep -F -- 'pkill -x rpicam-vid' "${install_script}" >/dev/null \
+  || fail "installer does not release the sensor before starting the unit"
+grep -F -- 'curl -fsSL' "${install_script}" >/dev/null \
+  || fail "installer health check must follow the MediaMTX cookie redirect"
+
+stream_unit="${REPO_ROOT}/pi/systemd/owlcam-stream.service"
+mediamtx_unit="${REPO_ROOT}/pi/systemd/owlcam-mediamtx.service"
+[[ -r "${stream_unit}" ]] || fail "owlcam-stream.service is missing"
+[[ -r "${mediamtx_unit}" ]] || fail "owlcam-mediamtx.service is missing"
+
+grep -F -- 'Restart=always' "${stream_unit}" >/dev/null \
+  || fail "stream unit does not restart after a failure"
+grep -F -- 'Restart=always' "${mediamtx_unit}" >/dev/null \
+  || fail "mediamtx unit does not restart after a failure"
+# Capture published before MediaMTX is listening leaves the page on "resting".
+grep -F -- 'After=owlcam-mediamtx.service' "${stream_unit}" >/dev/null \
+  || fail "stream unit does not wait for the media server"
+grep -F -- 'WantedBy=default.target' "${stream_unit}" >/dev/null \
+  || fail "stream unit would not start at boot"
+grep -F -- 'WantedBy=default.target' "${mediamtx_unit}" >/dev/null \
+  || fail "mediamtx unit would not start at boot"
 
 printf 'Script checks passed.\n'
