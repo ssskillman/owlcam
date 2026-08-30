@@ -32,9 +32,15 @@ a page on any other origin is refused access to the private address MagicDNS
 returns for this host, so the feed was dead on every device running Tailscale.
 See [`docs/live-feed.md`](docs/live-feed.md#why-one-origin).
 
-- Site: <https://owlcam.tail31318f.ts.net/>
+**Share this:** <https://carver-owlcam-72343.web.app>
+
+It 302s to the Pi, preserving the path, and nothing caches the redirect. That
+indirection is the point: if the Pi's hostname changes or the page moves again,
+editing `firebase.json` repoints every link already shared. The `ts.net` name is
+the thing that can change underneath.
+
+- Origin the Pi serves: <https://owlcam.tail31318f.ts.net/>
 - Stream: `https://owlcam.tail31318f.ts.net/owl/index.m3u8`
-- <https://carver-owlcam-72343.web.app> now only redirects to the site.
 
 The trade is availability: the page used to stay up when the Pi was off, and now
 it does not. Firebase's redirects are 302 and `no-store` so that stays a config

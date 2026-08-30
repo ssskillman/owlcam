@@ -9,12 +9,15 @@ uv run python build.py
 make pi-deploy          # from the repo root: builds and stages the site to the Pi
 ```
 
-Production URL: <https://owlcam.tail31318f.ts.net/>
-About Chris: <https://owlcam.tail31318f.ts.net/about>
-Owl Moments: <https://owlcam.tail31318f.ts.net/moments>
+Link to share: <https://carver-owlcam-72343.web.app>
+About Chris: <https://carver-owlcam-72343.web.app/about>
+Owl Moments: <https://carver-owlcam-72343.web.app/moments>
 
-<https://carver-owlcam-72343.web.app> only redirects there now. `make deploy`
-still publishes those redirects to Firebase.
+Those 302 to the Pi with the path preserved, so the address bar ends on
+<https://owlcam.tail31318f.ts.net/> — the origin that actually serves the page.
+Prefer the Firebase links when sharing: the redirect is repointable, so a hostname
+change never invalidates a link someone already has. `make deploy` publishes
+those redirects; `make pi-deploy` publishes the page itself.
 
 The page and nature-camera video are public, and both come from the same origin
 so the player can request relative paths:

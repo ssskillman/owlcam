@@ -9,6 +9,8 @@ beside the stream. It asks for the video and the vitals as relative paths:
 ```
 
 <https://carver-owlcam-72343.web.app> redirects there and serves nothing else.
+That redirect is the link to hand out, because it is repointable: it is a 302
+marked `no-store`, so changing `firebase.json` moves every shared link at once.
 See [Why one origin](#why-one-origin) for why the page moved off Firebase.
 
 When the stream does not answer, the page now names the failure it actually hit
