@@ -1,0 +1,25 @@
+[Unit]
+Description=OwlCam site, served beside the stream so both share one origin
+Documentation=https://github.com/ssskillman/owlcam/blob/main/docs/live-feed.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/owlcam-site
+Environment=PYTHONUNBUFFERED=1
+Environment=OWLCAM_SITE_ROOT=%h/owlcam/site
+Restart=always
+RestartSec=5
+
+# Serves read-only files on loopback. Tailscale is the only thing that talks
+# to it, and it never needs to write anything.
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET
+
+[Install]
+WantedBy=default.target

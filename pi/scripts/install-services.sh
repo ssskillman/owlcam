@@ -19,8 +19,11 @@ usage() {
   cat <<'EOF'
 Usage: install-services.sh [--uninstall]
 
-  (default)    Install and start the media, stream, and diagnostics user units.
-  --uninstall  Stop, disable, and remove all three units.
+  (default)    Install and start the media, stream, site, and diagnostics units.
+  --uninstall  Stop, disable, and remove all four units.
+
+The site unit serves the built page from ${HOME}/owlcam/site, which deploy.sh
+stages. Build and stage it before installing, or the page will 404.
 EOF
 }
 
@@ -44,17 +47,24 @@ require systemctl
 require loginctl
 
 if "${uninstall}"; then
-  # The mount could have been declared in either mode, and clearing one does
+  # A mount could have been declared in either mode, and clearing one does
   # not clear the other.
-  tailscale funnel --https=443 --set-path=/diagnostics off 2>/dev/null || true
-  tailscale serve --https=443 --set-path=/diagnostics off 2>/dev/null || true
+  for mount_path in /diagnostics "/${OWLCAM_STREAM_PATH:-owl}"; do
+    tailscale funnel --https=443 --set-path="${mount_path}" off 2>/dev/null || true
+    tailscale serve --https=443 --set-path="${mount_path}" off 2>/dev/null || true
+  done
+  tailscale funnel --https=443 off 2>/dev/null || true
+  tailscale serve --https=443 off 2>/dev/null || true
   systemctl --user disable --now owlcam-diagnostics.service 2>/dev/null || true
+  systemctl --user disable --now owlcam-site.service 2>/dev/null || true
   systemctl --user disable --now owlcam-stream.service 2>/dev/null || true
   systemctl --user disable --now owlcam-mediamtx.service 2>/dev/null || true
   rm -f "${UNIT_DIR}/owlcam-diagnostics.service" \
+        "${UNIT_DIR}/owlcam-site.service" \
         "${UNIT_DIR}/owlcam-stream.service" \
         "${UNIT_DIR}/owlcam-mediamtx.service" \
         "${BIN_DIR}/owlcam-diagnostics" \
+        "${BIN_DIR}/owlcam-site" \
         "${BIN_DIR}/owlcam-start-stream"
   systemctl --user daemon-reload
   printf 'OwlCam services removed.\n'
@@ -74,8 +84,10 @@ loginctl enable-linger "${USER}"
 mkdir -p "${UNIT_DIR}" "${BIN_DIR}"
 install -m 0755 "${SCRIPT_DIR}/start-stream.sh" "${BIN_DIR}/owlcam-start-stream"
 install -m 0755 "${SCRIPT_DIR}/diagnostics_server.py" "${BIN_DIR}/owlcam-diagnostics"
+install -m 0755 "${SCRIPT_DIR}/site_server.py" "${BIN_DIR}/owlcam-site"
 install -m 0644 "${UNIT_SRC}/owlcam-diagnostics.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-mediamtx.service" "${UNIT_DIR}/"
+install -m 0644 "${UNIT_SRC}/owlcam-site.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-stream.service" "${UNIT_DIR}/"
 
 # A capture started by hand, or by the UDP script, holds the sensor and would
@@ -98,6 +110,7 @@ fi
 systemctl --user daemon-reload
 systemctl --user enable owlcam-mediamtx.service
 systemctl --user enable owlcam-stream.service
+systemctl --user enable owlcam-site.service
 systemctl --user enable owlcam-diagnostics.service
 
 # Restart rather than "enable --now": an already-running unit keeps executing the
@@ -106,6 +119,7 @@ systemctl --user enable owlcam-diagnostics.service
 systemctl --user restart owlcam-mediamtx.service
 sleep 3
 systemctl --user restart owlcam-stream.service
+systemctl --user restart owlcam-site.service
 systemctl --user restart owlcam-diagnostics.service
 
 printf '\nWaiting for local HLS...\n'
@@ -143,6 +157,27 @@ if [[ "${diagnostics_ready:-false}" != true ]]; then
   exit 1
 fi
 
+printf '\nWaiting for the local site...\n'
+site_url="http://127.0.0.1:${OWLCAM_SITE_PORT:-8080}/"
+for _ in $(seq 1 10); do
+  if curl -fsS -m 3 -o /dev/null "${site_url}"; then
+    site_ready=true
+    break
+  fi
+  sleep 1
+done
+
+# A running server with no files answers 404, which looks like a healthy unit
+# but serves a blank site, so the check asks for the page itself.
+if [[ "${site_ready:-false}" != true ]]; then
+  printf 'The local site never answered. Check:\n' >&2
+  printf '  systemctl --user status owlcam-site\n' >&2
+  printf '  ls %s/owlcam/site/index.html\n' "${HOME}" >&2
+  printf 'If the site directory is empty, build and stage it first:\n' >&2
+  printf '  make web-build && bash pi/scripts/deploy.sh   (from a workstation)\n' >&2
+  exit 1
+fi
+
 # Declares the HLS root and the diagnostics mount together, keeping whatever
 # exposure is already in effect so a reinstall cannot pull a deliberately public
 # feed back to tailnet-only. Tailscale persists this across reboots.
@@ -152,4 +187,5 @@ printf 'OwlCam services installed and serving.\n'
 systemctl --user is-enabled \
   owlcam-mediamtx.service \
   owlcam-stream.service \
+  owlcam-site.service \
   owlcam-diagnostics.service
