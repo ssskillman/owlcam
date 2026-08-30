@@ -13,6 +13,12 @@ ssh_cmd=(ssh -o BatchMode=yes -o IdentitiesOnly=yes)
 if [[ -n "${OWLCAM_SSH_IDENTITY:-}" ]]; then
   ssh_cmd+=(-i "${OWLCAM_SSH_IDENTITY}")
 fi
+rsync_excludes=(
+  --exclude '*.secret'
+  --exclude '*.key'
+  --exclude '__pycache__'
+  --exclude '*.pyc'
+)
 
 usage() {
   cat <<'EOF'
@@ -59,16 +65,16 @@ fi
 
 "${ssh_cmd[@]}" "${TARGET}" \
   "mkdir -p '${REMOTE_STAGE}/pi/scripts' '${REMOTE_STAGE}/pi/config' '${REMOTE_STAGE}/pi/systemd' '${REMOTE_STAGE}/scripts'"
-rsync -av --exclude '*.secret' --exclude '*.key' \
+rsync -av "${rsync_excludes[@]}" \
   -e "${ssh_cmd[*]}" \
   "${REPO_ROOT}/pi/scripts/" "${TARGET}:${REMOTE_STAGE}/pi/scripts/"
-rsync -av --exclude '*.secret' --exclude '*.key' \
+rsync -av "${rsync_excludes[@]}" \
   -e "${ssh_cmd[*]}" \
   "${REPO_ROOT}/pi/config/" "${TARGET}:${REMOTE_STAGE}/pi/config/"
-rsync -av --exclude '*.secret' --exclude '*.key' \
+rsync -av "${rsync_excludes[@]}" \
   -e "${ssh_cmd[*]}" \
   "${REPO_ROOT}/pi/systemd/" "${TARGET}:${REMOTE_STAGE}/pi/systemd/"
-rsync -av --exclude '*.secret' --exclude '*.key' \
+rsync -av "${rsync_excludes[@]}" \
   -e "${ssh_cmd[*]}" \
   "${REPO_ROOT}/scripts/" "${TARGET}:${REMOTE_STAGE}/scripts/"
 

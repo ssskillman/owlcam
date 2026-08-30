@@ -1,0 +1,24 @@
+[Unit]
+Description=Read-only OwlCam diagnostics endpoint
+Documentation=https://github.com/ssskillman/owlcam/blob/main/docs/live-feed.md
+After=network-online.target owlcam-mediamtx.service owlcam-stream.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/owlcam-diagnostics
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=5
+
+# Loopback plus /proc, SoC thermal, and optional nest BME280 on I2C.
+NoNewPrivileges=true
+PrivateDevices=true
+DeviceAllow=/dev/i2c-1 rw
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET
+
+[Install]
+WantedBy=default.target

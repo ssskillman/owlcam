@@ -59,11 +59,13 @@ cd /home/shawn/owlcam/deploy
 ./pi/scripts/install-services.sh --uninstall  # remove
 ```
 
-That gives you `owlcam-mediamtx` and `owlcam-stream`, which start at boot and
-restart within about five seconds of a failure.
+That gives you `owlcam-mediamtx`, `owlcam-stream`, and `owlcam-diagnostics`.
+They start at boot and restart within about five seconds of a failure. The
+diagnostics service exposes a small read-only health payload at the tailnet-only
+`/diagnostics` route for the live browser panel.
 
 ```bash
-systemctl --user status owlcam-stream owlcam-mediamtx
+systemctl --user status owlcam-stream owlcam-mediamtx owlcam-diagnostics
 journalctl --user -u owlcam-stream -n 50
 systemctl --user restart owlcam-stream
 ```
@@ -186,7 +188,7 @@ Runtime configuration belongs in `/etc/owlcam/owlcam.env`; use
 | `web/` | FastHTML site, build script, tests, static assets |
 | `scripts/` | standalone UDP publisher |
 | `tests/` | shell script test suite |
-| `docs/` | architecture, runbooks, security, live-feed guide |
+| `docs/` | architecture, runbooks, security, live-feed guide, [next steps](docs/next_steps.md) |
 
 ## Known gaps
 

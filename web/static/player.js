@@ -4,7 +4,9 @@
   const retry = document.querySelector("#retry-stream");
   const status = document.querySelector("#stream-status");
   const dot = document.querySelector(".status-dot");
+  const RECONNECT_DELAY = 5000;
   let hls;
+  let reconnectTimer;
 
   if (!video || !panel || !retry || !status || !dot) return;
 
@@ -20,6 +22,12 @@
 
   const showOffline = () => {
     setState("offline", "Private feed unavailable");
+  };
+
+  const scheduleReconnect = () => {
+    showOffline();
+    if (reconnectTimer) return;
+    reconnectTimer = setTimeout(connect, RECONNECT_DELAY);
   };
 
   // hls.js buffers but never starts playback on its own. Without this the panel
@@ -38,6 +46,8 @@
   const connect = () => {
     const source = video.dataset.streamUrl;
     setState("", "Checking private feed…");
+    clearTimeout(reconnectTimer);
+    reconnectTimer = undefined;
 
     if (hls) {
       hls.destroy();
@@ -59,7 +69,7 @@
         start();
       });
       hls.on(window.Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) showOffline();
+        if (data.fatal) scheduleReconnect();
       });
       hls.loadSource(source);
       hls.attachMedia(video);
@@ -85,7 +95,7 @@
   // A live edge that stalls behind the playlist window never recovers on its
   // own, and a paused live stream is indistinguishable from a dead one.
   video.addEventListener("stalled", start);
-  video.addEventListener("error", showOffline);
+  video.addEventListener("error", scheduleReconnect);
   retry.addEventListener("click", connect);
   connect();
 })();
