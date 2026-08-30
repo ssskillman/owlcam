@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Installs the OwlCam capture and MediaMTX units so the feed comes back by
+# itself after a reboot or a crash.
+#
+# These are *user* units, not system units. The Pi has no passwordless sudo, and
+# user units plus lingering achieve the same result: start at boot, restart on
+# failure, no password prompt during install.
+
+readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly UNIT_SRC="${SCRIPT_DIR}/../systemd"
+readonly UNIT_DIR="${HOME}/.config/systemd/user"
+readonly BIN_DIR="${HOME}/.local/bin"
+
+uninstall=false
+
+usage() {
+  cat <<'EOF'
+Usage: install-services.sh [--uninstall]
+
+  (default)    Install and start owlcam-mediamtx and owlcam-stream user units.
+  --uninstall  Stop, disable, and remove both units.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --uninstall) uninstall=true ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; exit 2 ;;
+  esac
+  shift
+done
+
+require() {
+  command -v "$1" >/dev/null 2>&1 || {
+    printf 'Missing required command: %s\n' "$1" >&2
+    exit 1
+  }
+}
+
+require systemctl
+require loginctl
+
+if "${uninstall}"; then
+  systemctl --user disable --now owlcam-stream.service 2>/dev/null || true
+  systemctl --user disable --now owlcam-mediamtx.service 2>/dev/null || true
+  rm -f "${UNIT_DIR}/owlcam-stream.service" \
+        "${UNIT_DIR}/owlcam-mediamtx.service" \
+        "${BIN_DIR}/owlcam-start-stream"
+  systemctl --user daemon-reload
+  printf 'OwlCam services removed.\n'
+  exit 0
+fi
+
+require mediamtx
+require rpicam-vid
+require ffmpeg
+
+# Without lingering, user units stop when the last SSH session closes and never
+# start at boot, which is the entire point of installing them.
+loginctl enable-linger "${USER}"
+
+mkdir -p "${UNIT_DIR}" "${BIN_DIR}"
+install -m 0755 "${SCRIPT_DIR}/start-stream.sh" "${BIN_DIR}/owlcam-start-stream"
+install -m 0644 "${UNIT_SRC}/owlcam-mediamtx.service" "${UNIT_DIR}/"
+install -m 0644 "${UNIT_SRC}/owlcam-stream.service" "${UNIT_DIR}/"
+
+# A capture started by hand, or by the UDP script, holds the sensor and would
+# make the new unit fail on every restart attempt.
+if pgrep -x rpicam-vid >/dev/null 2>&1; then
+  printf 'Stopping an existing camera capture so the unit can claim the sensor.\n'
+  pkill -x rpicam-vid 2>/dev/null || true
+  sleep 2
+  pkill -x ffmpeg 2>/dev/null || true
+  sleep 1
+fi
+
+# MediaMTX started by hand would keep port 8888 and the unit would restart forever.
+if pgrep -x mediamtx >/dev/null 2>&1; then
+  printf 'Stopping a hand-started MediaMTX so the unit owns the port.\n'
+  pkill -x mediamtx 2>/dev/null || true
+  sleep 2
+fi
+
+systemctl --user daemon-reload
+systemctl --user enable --now owlcam-mediamtx.service
+sleep 3
+systemctl --user enable --now owlcam-stream.service
+
+printf '\nWaiting for local HLS...\n'
+hls_url="http://127.0.0.1:${OWLCAM_HLS_PORT:-8888}/${OWLCAM_STREAM_PATH:-owl}/index.m3u8"
+for _ in $(seq 1 20); do
+  # MediaMTX answers the first request with a 302 to ?cookieCheck=1, so a bare
+  # request without redirect following reports a false failure.
+  if curl -fsSL -m 3 -o /dev/null "${hls_url}"; then
+    ready=true
+    break
+  fi
+  sleep 2
+done
+
+if [[ "${ready:-false}" != true ]]; then
+  printf 'Local HLS never became ready. Check:\n' >&2
+  printf '  systemctl --user status owlcam-stream owlcam-mediamtx\n' >&2
+  printf '  journalctl --user -u owlcam-stream -n 50\n' >&2
+  exit 1
+fi
+
+printf 'OwlCam services installed and serving.\n'
+systemctl --user is-enabled owlcam-mediamtx.service owlcam-stream.service

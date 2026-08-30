@@ -42,6 +42,8 @@ if "${dry_run}"; then
     "${REPO_ROOT}" "${TARGET}" "${REMOTE_STAGE}"
   printf 'Would stage %s/pi/config/ at %s:%s/pi/config/\n' \
     "${REPO_ROOT}" "${TARGET}" "${REMOTE_STAGE}"
+  printf 'Would stage %s/pi/systemd/ at %s:%s/pi/systemd/\n' \
+    "${REPO_ROOT}" "${TARGET}" "${REMOTE_STAGE}"
   printf 'Would stage %s/scripts/ at %s:%s/scripts/\n' \
     "${REPO_ROOT}" "${TARGET}" "${REMOTE_STAGE}"
   if "${install_config}"; then
@@ -56,13 +58,16 @@ if "${install_config}" && [[ ! -r "${REPO_ROOT}/pi/config/mediamtx.yml" ]]; then
 fi
 
 "${ssh_cmd[@]}" "${TARGET}" \
-  "mkdir -p '${REMOTE_STAGE}/pi/scripts' '${REMOTE_STAGE}/pi/config' '${REMOTE_STAGE}/scripts'"
+  "mkdir -p '${REMOTE_STAGE}/pi/scripts' '${REMOTE_STAGE}/pi/config' '${REMOTE_STAGE}/pi/systemd' '${REMOTE_STAGE}/scripts'"
 rsync -av --exclude '*.secret' --exclude '*.key' \
   -e "${ssh_cmd[*]}" \
   "${REPO_ROOT}/pi/scripts/" "${TARGET}:${REMOTE_STAGE}/pi/scripts/"
 rsync -av --exclude '*.secret' --exclude '*.key' \
   -e "${ssh_cmd[*]}" \
   "${REPO_ROOT}/pi/config/" "${TARGET}:${REMOTE_STAGE}/pi/config/"
+rsync -av --exclude '*.secret' --exclude '*.key' \
+  -e "${ssh_cmd[*]}" \
+  "${REPO_ROOT}/pi/systemd/" "${TARGET}:${REMOTE_STAGE}/pi/systemd/"
 rsync -av --exclude '*.secret' --exclude '*.key' \
   -e "${ssh_cmd[*]}" \
   "${REPO_ROOT}/scripts/" "${TARGET}:${REMOTE_STAGE}/scripts/"

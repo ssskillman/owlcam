@@ -42,6 +42,38 @@ The script starts MediaMTX and the camera only if a capture is not already
 running, waits for local HLS to answer, then enables Serve or Funnel and prints
 the watch URL and the exposure level.
 
+### Surviving reboots
+
+`serve-stream.sh` brings the feed up once and then forgets about it. For a feed
+that comes back on its own, install the units instead:
+
+```bash
+./pi/scripts/install-services.sh
+```
+
+`owlcam-mediamtx` and `owlcam-stream` then start at boot and restart within
+about five seconds of a failure. They are user units rather than system units
+because the Pi has no passwordless sudo; the installer enables lingering so they
+survive the SSH session ending and start without a login.
+
+Do not run `serve-stream.sh` or the UDP publisher alongside the units. The
+sensor takes exactly one consumer, so whichever loses the race restarts forever.
+
+### Choosing a mode
+
+The camera feeds exactly one destination at a time, and the two publishers are
+mutually exclusive:
+
+| Publisher | Destination | Who can watch |
+|---|---|---|
+| `pi/scripts/start-stream.sh` (units use this) | RTSP into MediaMTX, served as HLS | The web page, and any tailnet device via the HLS URL |
+| `scripts/start_stream.sh` | MPEG-TS over UDP to one hardcoded IP | Only that one machine, in VLC |
+
+The UDP path is a debugging convenience. It bypasses MediaMTX entirely, so while
+it runs the web page correctly reports `no stream is available on path 'owl'`.
+Prefer the RTSP path: MediaMTX can serve many readers at once, and VLC will open
+the same tailnet HLS URL the browser uses.
+
 ## Verifying from a laptop
 
 ```bash

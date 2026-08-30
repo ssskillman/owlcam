@@ -1,0 +1,19 @@
+[Unit]
+Description=MediaMTX media server for OwlCam
+Documentation=https://github.com/ssskillman/owlcam/blob/main/docs/live-feed.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/mediamtx /etc/mediamtx.yml
+Restart=always
+RestartSec=5
+
+# MediaMTX binds RTSP and HLS to 127.0.0.1 only. Tailscale Serve is the one
+# door in, so the media server never needs privileged ports or root.
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

@@ -48,6 +48,34 @@ the watch URL and the exposure level. Details and Funnel prerequisites are in
 Only one process can own the camera. Never run `serve-stream.sh`,
 `pi/scripts/start-stream.sh`, and `scripts/start_stream.sh` at the same time.
 
+### Keeping it up by itself
+
+`serve-stream.sh` is a one-shot bring-up: nothing restarts the feed after a
+reboot or a crash. To make it durable, install the services once:
+
+```bash
+cd /home/shawn/owlcam/deploy
+./pi/scripts/install-services.sh              # install, enable, start
+./pi/scripts/install-services.sh --uninstall  # remove
+```
+
+That gives you `owlcam-mediamtx` and `owlcam-stream`, which start at boot and
+restart within about five seconds of a failure.
+
+```bash
+systemctl --user status owlcam-stream owlcam-mediamtx
+journalctl --user -u owlcam-stream -n 50
+systemctl --user restart owlcam-stream
+```
+
+These are **user** units, not system units, because the Pi has no passwordless
+sudo. The installer runs `loginctl enable-linger`, without which user units stop
+when the last SSH session closes and never start at boot at all.
+
+Once the services are installed, do not also run `serve-stream.sh` or the UDP
+publisher — they fight the unit for the sensor, and the unit will lose and
+restart in a loop. Tailscale Serve is separate and already persists on its own.
+
 ### Capture defaults
 
 1920x1080 at 30 fps, H.264, capped at 2.5 Mbps. The cap matters: every viewer
@@ -164,6 +192,9 @@ Runtime configuration belongs in `/etc/owlcam/owlcam.env`; use
   recommendation in [`docs/live-feed.md`](docs/live-feed.md).
 - There is no outbound restream path yet. That is the missing piece for making
   the feed visible to people who will never join the tailnet.
+- `ffmpeg` logs `method SETUP failed: 461 Unsupported Transport` once at
+  startup, then falls back to RTSP over TCP and publishes normally. It is noise
+  rather than a fault; passing `-rtsp_transport tcp` would silence it.
 
 ## Appendix: UDP publisher
 
