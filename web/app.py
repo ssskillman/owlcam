@@ -23,8 +23,14 @@ from fasthtml.common import (
     to_xml,
 )
 
-DEFAULT_STREAM_URL = "https://owlcam.tail31318f.ts.net/owl/index.m3u8"
-DEFAULT_DIAGNOSTICS_URL = "https://owlcam.tail31318f.ts.net/diagnostics"
+# Relative on purpose. The Pi serves this page beside the stream, so both come
+# from one origin and the browser has no cross-origin request to block. Naming
+# an absolute host here reintroduces exactly that: on any device running
+# Tailscale, MagicDNS resolves the Pi to a private address and the browser
+# refuses a public page access to the local address space, killing the video and
+# the vitals together.
+DEFAULT_STREAM_URL = "/owl/index.m3u8"
+DEFAULT_DIAGNOSTICS_URL = "/diagnostics"
 OWLCAM_GROUP_URL = "https://www.facebook.com/groups/619431688614242/"
 MOMENTS = (
     {
@@ -379,10 +385,10 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                     ),
                     Div(
                         Span("02", cls="fact-number"),
-                        H2("Private by design"),
+                        H2("One door in"),
                         P(
-                            "Video stays on Tailscale. The public demo shell "
-                            "never exposes camera ports."
+                            "Tailscale publishes a single HTTPS address. No "
+                            "camera ports, logins, or accounts are exposed."
                         ),
                         cls="fact",
                     ),
