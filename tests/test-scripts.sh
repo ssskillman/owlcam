@@ -94,6 +94,25 @@ grep -F -- '-f mpegts' "${udp_script}" >/dev/null \
 grep -F -- 'udp://${DEST_IP}:${DEST_PORT}?pkt_size=1316' "${udp_script}" >/dev/null \
   || fail "UDP script destination or packet size changed"
 
+udp_help="$("${udp_script}" --help)"
+[[ "${udp_help}" == *"bypasses"* ]] \
+  || fail "UDP help does not warn that it bypasses MediaMTX"
+[[ "${udp_help}" == *"--force"* ]] \
+  || fail "UDP help does not document the override"
+
+if "${udp_script}" --not-an-option >/dev/null 2>&1; then
+  fail "UDP script accepted an unknown option"
+fi
+
+# Silently stealing the sensor from the service reads as a dead camera on the
+# web page while systemd restarts the unit in a loop.
+grep -F -- 'systemctl --user is-active owlcam-stream.service' "${udp_script}" >/dev/null \
+  || fail "UDP script does not check for the running service"
+grep -F -- 'Refusing to start' "${udp_script}" >/dev/null \
+  || fail "UDP script does not refuse when the service owns the camera"
+grep -F -- '/owl/index.m3u8' "${udp_script}" >/dev/null \
+  || fail "UDP script does not offer the HLS URL as the non-destructive option"
+
 install_script="${REPO_ROOT}/pi/scripts/install-services.sh"
 [[ -x "${install_script}" ]] || fail "service installer is missing or not executable"
 
