@@ -557,7 +557,7 @@ def _moment_card(item: dict[str, str]) -> Div:
             H2(item["subject"]),
             P(item["story"], cls="moment-story"),
             P(
-                Span("AI-GENERATED STORY", cls="story-label"),
+                Span("FIELD NOTE", cls="story-label"),
                 " · ",
                 item["filename"],
                 cls="moment-file",
@@ -578,8 +578,8 @@ def render_moments_page() -> str:
         _head(
             title="Owl Moments — Carver OwlCam",
             description=(
-                "A sortable field log for OwlCam action shots, short clips, "
-                "and AI-generated stories about the barred owl family."
+                "A sortable field log of OwlCam action shots and short clips "
+                "from the barred owl nest."
             ),
             include_player=False,
         ),
@@ -591,18 +591,16 @@ def render_moments_page() -> str:
                     H1("Small moments.", Span("Wild stories.", cls="accent")),
                     P(
                         "Action shots and short clips from the nest box—each "
-                        "with an AI-assisted field note about parents, food "
-                        "deliveries, chicks, and movement in the box.",
+                        "with a field note about parents, food deliveries, "
+                        "chicks, and movement in the box.",
                         cls="lede",
                     ),
                     P(
                         "Nest archive photos come from the OwlCam group; "
                         "their original capture dates were not preserved in "
                         "the shared files, so timestamps show when each was "
-                        "logged here. Stories are AI-written interpretations, "
-                        "not verified observations, and the clip marked "
-                        "placeholder is licensed stock standing in until "
-                        "OwlCam records its own video.",
+                        "logged here. The clip marked placeholder is licensed "
+                        "stock standing in until OwlCam records its own video.",
                         cls="moments-notice",
                     ),
                     cls="moments-intro",
