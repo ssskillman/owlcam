@@ -21,6 +21,13 @@ deploy_output="$("${REPO_ROOT}/pi/scripts/deploy.sh" --dry-run)"
   || fail "deploy dry-run installs configuration without opt-in"
 grep -F -- "--exclude '__pycache__'" "${REPO_ROOT}/pi/scripts/deploy.sh" >/dev/null \
   || fail "deploy sends Python bytecode caches to the Pi"
+# The Pi serves the page itself now, so the built site has to reach it.
+[[ "${deploy_output}" == *"/owlcam/site"* ]] \
+  || fail "deploy dry-run does not stage the built site"
+# Every build fingerprints CSS and JS under a new name, so without --delete the
+# old copies accumulate on the SD card forever.
+grep -F -- 'rsync -av --delete' "${REPO_ROOT}/pi/scripts/deploy.sh" >/dev/null \
+  || fail "site staging would leave stale fingerprinted assets on the Pi"
 
 config_output="$("${REPO_ROOT}/pi/scripts/deploy.sh" --dry-run --install-config)"
 [[ "${config_output}" == *"Would back up and install"* ]] \
@@ -165,6 +172,17 @@ grep -F -- '--set-path=/diagnostics' "${publish_script}" >/dev/null \
   || fail "publish script drops the diagnostics mount when exposure changes"
 grep -F -- 'AllowFunnel' "${publish_script}" >/dev/null \
   || fail "publish script cannot detect the current exposure"
+# A page on any other origin cannot reach this host at all: MagicDNS resolves it
+# to a private address on Tailscale devices, and browsers refuse a public page
+# access to the local address space. One origin is what makes the video load.
+grep -F -- 'http://127.0.0.1:${SITE_PORT}' "${publish_script}" >/dev/null \
+  || fail "publish script does not serve the page at the root"
+grep -F -- '--set-path="/${STREAM_PATH}"' "${publish_script}" >/dev/null \
+  || fail "publish script does not give the stream its own path under the page"
+# --set-path strips its prefix, so the target must repeat the path or MediaMTX
+# receives /index.m3u8 and answers 404.
+grep -F -- '${HLS_PORT}/${STREAM_PATH}' "${publish_script}" >/dev/null \
+  || fail "stream mount would strip the MediaMTX path prefix"
 # Funnel blocks on approval instead of failing, and a killed attempt can leave
 # the port with no mounts, so the feed goes down for tailnet viewers too.
 grep -F -- 'require_funnel_attribute' "${publish_script}" >/dev/null \
@@ -200,8 +218,15 @@ grep -F -- 'pkill -x rpicam-vid' "${install_script}" >/dev/null \
 grep -F -- 'systemctl --user restart owlcam-diagnostics.service' "${install_script}" \
   >/dev/null \
   || fail "installer does not restart diagnostics onto the newly staged code"
+grep -F -- 'systemctl --user restart owlcam-site.service' "${install_script}" \
+  >/dev/null \
+  || fail "installer does not restart the site onto the newly staged code"
 grep -F -- 'curl -fsSL' "${install_script}" >/dev/null \
   || fail "installer health check must follow the MediaMTX cookie redirect"
+# A site server with no files answers 404 and still looks like a healthy unit,
+# so the installer asks for the page rather than just the port.
+grep -F -- 'The local site never answered' "${install_script}" >/dev/null \
+  || fail "installer does not verify that the page itself serves"
 grep -F -- 'owlcam-diagnostics.service' "${install_script}" >/dev/null \
   || fail "installer does not manage the diagnostics service"
 # Reinstalling must not quietly drag a deliberately public feed back to
@@ -229,6 +254,19 @@ grep -F -- 'ProtectHome=read-only' "${diagnostics_unit}" >/dev/null \
 grep -F -- 'DeviceAllow=/dev/i2c-1 rw' "${diagnostics_unit}" >/dev/null \
   || fail "diagnostics unit cannot open the nest climate I2C bus"
 # Capture published before MediaMTX is listening leaves the page on "resting".
+site_unit="${REPO_ROOT}/pi/systemd/owlcam-site.service"
+[[ -r "${site_unit}" ]] || fail "owlcam-site.service is missing"
+grep -F -- 'Restart=always' "${site_unit}" >/dev/null \
+  || fail "site unit does not restart after a failure"
+grep -F -- 'WantedBy=default.target' "${site_unit}" >/dev/null \
+  || fail "site unit would not start at boot"
+grep -F -- 'ProtectHome=read-only' "${site_unit}" >/dev/null \
+  || fail "site unit can write to the user's home directory"
+# Tailscale is the only thing that should reach it; a public bind would expose
+# the page on the LAN with no proxy in front of it.
+grep -F -- 'HOST = "127.0.0.1"' "${REPO_ROOT}/pi/scripts/site_server.py" >/dev/null \
+  || fail "site server is not bound to loopback"
+
 grep -F -- 'After=owlcam-mediamtx.service' "${stream_unit}" >/dev/null \
   || fail "stream unit does not wait for the media server"
 grep -F -- 'WantedBy=default.target' "${stream_unit}" >/dev/null \

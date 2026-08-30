@@ -8,7 +8,7 @@ GIT_NAME ?= Shawn Skillman
 GIT_EMAIL ?= ssskillman@users.noreply.github.com
 GITHUB_USER ?= ssskillman
 
-.PHONY: check syntax test deploy-dry-run web-test web-build deploy setup-identity
+.PHONY: check syntax test deploy-dry-run web-test web-build deploy pi-deploy setup-identity
 
 check: syntax test deploy-dry-run web-test web-build
 
@@ -37,6 +37,11 @@ web-build:
 
 deploy: web-build
 	@firebase deploy --only hosting --account "$(FIREBASE_ACCOUNT)"
+
+# The Pi serves the page beside the stream so both share one origin, so a web
+# change is not live until the built site reaches the Pi.
+pi-deploy: web-build
+	@bash pi/scripts/deploy.sh
 
 # Repo-local git config is not carried by a clone, so re-run this after cloning
 # or the work identity is inherited from the global config.

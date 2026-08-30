@@ -115,8 +115,17 @@
     panel.dataset.state = data.allProcessesStable ? "online" : "degraded";
   };
 
-  const renderUnavailable = () => {
-    status.textContent = "Diagnostics unavailable — checking again";
+  // "Diagnostics unavailable" covered an unreachable Pi, an erroring Pi, and a
+  // Pi returning something unexpected. Those need different fixes, so they get
+  // different words.
+  const unavailableReason = (httpStatus) => {
+    if (httpStatus === null) return "Cannot reach the Pi — retrying";
+    if (httpStatus >= 400) return `Pi answered HTTP ${httpStatus} — retrying`;
+    return "Unexpected vitals from the Pi — retrying";
+  };
+
+  const renderUnavailable = (httpStatus = null) => {
+    status.textContent = unavailableReason(httpStatus);
     habitatTemperature.textContent = "—";
     humidity.textContent = "—";
     daylight.textContent = "—";
@@ -148,18 +157,21 @@
   const refresh = async () => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    // Stays null until the Pi answers, which is what separates "unreachable"
+    // from "answered badly" in the message the viewer reads.
+    let httpStatus = null;
 
     try {
       const response = await fetch(endpoint, {
         cache: "no-store",
-        mode: "cors",
         signal: controller.signal,
       });
+      httpStatus = response.status;
       if (!response.ok) throw new Error(`Diagnostics HTTP ${response.status}`);
       const data = await response.json();
       render(data, validate(data));
     } catch {
-      renderUnavailable();
+      renderUnavailable(httpStatus);
     } finally {
       clearTimeout(timeout);
       setTimeout(refresh, POLL_INTERVAL);

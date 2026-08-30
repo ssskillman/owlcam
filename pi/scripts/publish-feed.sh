@@ -10,6 +10,8 @@ set -euo pipefail
 
 readonly HLS_PORT="${OWLCAM_HLS_PORT:-8888}"
 readonly DIAGNOSTICS_PORT="${OWLCAM_DIAGNOSTICS_PORT:-8765}"
+readonly SITE_PORT="${OWLCAM_SITE_PORT:-8080}"
+readonly STREAM_PATH="${OWLCAM_STREAM_PATH:-owl}"
 
 mode=status
 
@@ -25,9 +27,15 @@ Usage: publish-feed.sh [--public | --private | --preserve | --status]
               defaulting to private. Used by install-services.sh.
   --status    Show the current exposure and mounts (default).
 
+Every mode declares all three mounts together: the page at /, the stream under
+/owl, and the vitals at /diagnostics. The page and the stream must stay on one
+origin or browsers block the video on any device running Tailscale.
+
 Optional environment:
   OWLCAM_HLS_PORT            MediaMTX HLS port, default 8888
   OWLCAM_DIAGNOSTICS_PORT    diagnostics port, default 8765
+  OWLCAM_SITE_PORT           site server port, default 8080
+  OWLCAM_STREAM_PATH         stream mount and MediaMTX path, default owl
 EOF
 }
 
@@ -91,8 +99,20 @@ apply() {
   # No pre-clear: Serve and Funnel share one mount table per port and the last
   # command wins, so re-declaring the mounts flips exposure in place. Clearing
   # first would drop the feed if the second command then failed.
+  #
+  # The page sits at the root and the stream moved under /<stream path>, so the
+  # browser loads both from one origin. A page on a different origin cannot
+  # reach a Tailscale address at all: MagicDNS resolves this host to a private
+  # address on any device running Tailscale, and browsers refuse a public page
+  # access to the local address space.
+  #
+  # --set-path strips its own prefix and appends the remainder to the target
+  # URL's path, so /owl/index.m3u8 arrives at MediaMTX as /owl/index.m3u8 only
+  # because the target repeats the path.
   tailscale "${verb}" --bg --yes --https=443 \
-    "http://127.0.0.1:${HLS_PORT}"
+    "http://127.0.0.1:${SITE_PORT}"
+  tailscale "${verb}" --bg --yes --https=443 --set-path="/${STREAM_PATH}" \
+    "http://127.0.0.1:${HLS_PORT}/${STREAM_PATH}"
   tailscale "${verb}" --bg --yes --https=443 --set-path=/diagnostics \
     "http://127.0.0.1:${DIAGNOSTICS_PORT}"
 }
@@ -121,7 +141,7 @@ if [[ "${exposure}" == public ]]; then
 else
   printf 'Tailnet devices only. Sign in to Tailscale to watch.\n'
 fi
-printf 'Watch URL: https://%s/%s/index.m3u8\n' \
-  "${host}" "${OWLCAM_STREAM_PATH:-owl}"
+printf 'Watch page: https://%s/\n' "${host}"
+printf 'Stream URL: https://%s/%s/index.m3u8\n' "${host}" "${STREAM_PATH}"
 printf 'Vitals URL: https://%s/diagnostics\n' "${host}"
 tailscale serve status 2>/dev/null || true

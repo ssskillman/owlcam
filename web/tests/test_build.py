@@ -11,18 +11,19 @@ from app import (
 from build import FINGERPRINTED, WEB_ROOT, build_site
 
 
-def test_page_uses_private_https_stream_and_accessible_player():
+def test_page_uses_a_same_origin_stream_and_accessible_player():
     html = render_page()
 
     assert html.count("<!doctype html>") == 1
     assert "<title>Carver OwlCam — Live from the Nest</title>" in html
-    assert DEFAULT_STREAM_URL.startswith("https://")
+    assert DEFAULT_STREAM_URL == "/owl/index.m3u8"
     assert DEFAULT_STREAM_URL in html
     assert 'integrity="sha384-' in html
     assert 'id="owlcam-player"' in html
     assert 'aria-label="Carver OwlCam livestream"' in html
     assert 'id="stream-status"' in html
-    assert "Camera is resting" in html
+    assert 'id="offline-title"' in html
+    assert 'id="offline-message"' in html
     assert 'href="/about"' in html
     assert ">Live<" not in html
     assert "Braxton" not in html
@@ -122,7 +123,7 @@ def test_live_page_has_accessible_realtime_diagnostics():
     html = render_page()
 
     assert 'id="diagnostics"' in html
-    assert 'data-diagnostics-url="https://owlcam.tail31318f.ts.net/diagnostics"' in html
+    assert 'data-diagnostics-url="/diagnostics"' in html
     assert "NEST CONDITIONS" in html
     assert "PI HEALTH" in html
     assert 'id="diagnostics-temperature"' in html
@@ -214,39 +215,76 @@ def test_player_reconnects_after_the_pi_stream_restarts():
     assert 'video.addEventListener("error", scheduleReconnect)' in source
 
 
-def test_hosting_config_revalidates_code_and_allows_the_stream_host():
+def test_offline_panel_names_the_cause_instead_of_blaming_the_camera():
+    html = render_page()
+    source = (WEB_ROOT / "static" / "player.js").read_text()
+
+    # The panel used to headline "Camera is resting" for every failure, so a
+    # blocked request and a dead network both read as an owl taking a nap and
+    # sent the viewer looking at the wrong thing.
+    assert "Connecting to the camera" in html, "panel must open on the true state"
+    assert "Camera is resting" not in html, (
+        "a resting camera is one possible cause, not the page's default claim"
+    )
+
+    for reason in ("connecting", "resting", "interrupted", "unreachable", "unsupported"):
+        assert f"{reason}:" in source, f"player cannot report the {reason} case"
+
+    # Reachability is what separates a resting camera from a broken path to it,
+    # and only the stream URL itself can answer that.
+    assert "const diagnose" in source
+    assert "fetch(video.dataset.streamUrl" in source
+    assert 'return response.ok ? "interrupted" : "resting"' in source
+    assert 'return "unreachable"' in source
+    assert "diagnose().then(explain)" in source
+
+    # The retry timer must not wait on a probe that can hang.
+    assert source.index("diagnose().then(explain)") < source.index(
+        "setTimeout(connect, RECONNECT_DELAY)"
+    )
+
+
+def test_diagnostics_distinguishes_unreachable_from_erroring():
+    source = (WEB_ROOT / "static" / "diagnostics.js").read_text()
+
+    # One message for three causes hid whether the Pi was unreachable, broken,
+    # or answering with something the page could not parse.
+    assert "Cannot reach the Pi" in source
+    assert "Pi answered HTTP" in source
+    assert "Unexpected vitals from the Pi" in source
+    assert "let httpStatus = null" in source
+    assert "renderUnavailable(httpStatus)" in source
+
+
+def test_firebase_sends_every_visitor_to_the_single_origin():
     config = json.loads(
         (Path(__file__).resolve().parents[2] / "firebase.json").read_text()
-    )
-    headers = config["hosting"]["headers"]
-    by_source = {
-        entry["source"]: {h["key"]: h["value"] for h in entry["headers"]}
-        for entry in headers
+    )["hosting"]
+
+    # Serving the page from two origins is the bug, not a fallback: a visitor
+    # who lands on Firebase while running Tailscale gets a page that cannot
+    # reach the camera. Firebase's only job now is handing them to the Pi.
+    destinations = {rule["destination"] for rule in config["redirects"]}
+    assert destinations == {
+        "https://owlcam.tail31318f.ts.net/",
+        "https://owlcam.tail31318f.ts.net/:rest*",
     }
 
-    stream_host = DEFAULT_STREAM_URL.split("/owl/")[0]
-    csp = by_source["**"]["Content-Security-Policy"]
-    assert "media-src 'self' blob:" in csp, (
-        "hls.js renders through a blob: MediaSource, so blocking blob: leaves "
-        "the player online but permanently gray"
+    sources = {rule["source"] for rule in config["redirects"]}
+    assert "/" in sources, "the landing page itself must redirect"
+    assert "/:rest*" in sources, "deep links must keep their path"
+
+    # 302, not 301: a permanent redirect is cached hard by browsers and would
+    # make moving the site back a support problem rather than a config change.
+    assert {rule["type"] for rule in config["redirects"]} == {302}
+
+    by_source = {
+        entry["source"]: {h["key"]: h["value"] for h in entry["headers"]}
+        for entry in config["headers"]
+    }
+    assert by_source["**"]["Cache-Control"] == "no-store", (
+        "a cached redirect outlives the decision that created it"
     )
-    assert stream_host in csp.split("media-src ", 1)[1].split(";", 1)[0]
-    assert f"connect-src 'self' {stream_host}" in csp
-    assert "worker-src 'self' blob:" in csp, (
-        "hls.js uses a blob worker; without worker-src it falls back to the "
-        "main thread and logs a production CSP error"
-    )
-
-    # Pages must revalidate, or a deploy stays invisible behind a stale cache.
-    assert "no-cache" in by_source["**"]["Cache-Control"]
-
-    # Fingerprinted code can be cached hard, because a change means a new URL.
-    code = by_source["/assets/**/*.@(css|js)"]["Cache-Control"]
-    assert "immutable" in code
-    assert "max-age=31536000" in code
-
-    images = by_source["/assets/**/*.@(jpg|jpeg|png|webp|webm|svg|ico|woff2)"]
-    assert "max-age=3600" in images["Cache-Control"]
 
 
 def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
@@ -266,8 +304,13 @@ def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
     index = (output / "index.html").read_text()
     about = (output / "about.html").read_text()
     moments = (output / "moments.html").read_text()
-    assert "owlcam.tail31318f.ts.net" in index
+    assert 'data-stream-url="/owl/index.m3u8"' in index
     assert "Checking private feed" not in index
+
+    # An absolute camera host is the whole bug: it resolves to a private
+    # address on Tailscale devices and the browser blocks the request.
+    for page in (index, about, moments):
+        assert "owlcam.tail31318f.ts.net" not in page
     assert "Chris Carver" in about
     assert "Braxton" not in about
     assert "Owl Moments" in moments
