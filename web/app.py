@@ -115,6 +115,22 @@ MOMENTS = (
 )
 
 
+def _diagnostic_metric(
+    label: str,
+    metric_id: str,
+    explanation: str,
+) -> Div:
+    help_id = f"{metric_id}-help"
+    return Div(
+        Span(label, cls="diagnostics-key"),
+        P("—", id=metric_id),
+        Span(explanation, id=help_id, role="tooltip", cls="diagnostics-help"),
+        cls="diagnostics-metric",
+        tabindex="0",
+        aria_describedby=help_id,
+    )
+
+
 def _head(*, title: str, description: str, include_player: bool) -> Head:
     scripts = []
     if include_player:
@@ -212,8 +228,8 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                                 H2("Camera is resting"),
                                 P(
                                     "The feed reconnects automatically when "
-                                    "OwlCam is online and your device is on "
-                                    "the authorized Tailscale network."
+                                    "OwlCam is online. This public nature cam "
+                                    "does not require a viewer account."
                                 ),
                                 Button(
                                     "Try again",
@@ -229,7 +245,7 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                             Div(
                                 Span(cls="status-dot", aria_hidden="true"),
                                 Span(
-                                    "Checking private feed…",
+                                    "Checking live feed…",
                                     id="stream-status",
                                     aria_live="polite",
                                 ),
@@ -249,48 +265,96 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                             H2("Nest box vitals"),
                         ),
                         Div(
-                            Span(cls="diagnostics-dot", aria_hidden="true"),
-                            Span(
-                                "Connecting to the Pi…",
-                                id="diagnostics-status",
-                                aria_live="polite",
+                            Div(
+                                Button(
+                                    "°F",
+                                    type="button",
+                                    cls="temperature-unit",
+                                    data_temperature_unit="f",
+                                    aria_pressed="true",
+                                ),
+                                Button(
+                                    "°C",
+                                    type="button",
+                                    cls="temperature-unit",
+                                    data_temperature_unit="c",
+                                    aria_pressed="false",
+                                ),
+                                id="temperature-unit-toggle",
+                                cls="temperature-toggle",
+                                role="group",
+                                aria_label="Temperature unit",
                             ),
-                            cls="diagnostics-state",
+                            Div(
+                                Span(cls="diagnostics-dot", aria_hidden="true"),
+                                Span(
+                                    "Connecting to the Pi…",
+                                    id="diagnostics-status",
+                                    aria_live="polite",
+                                ),
+                                cls="diagnostics-state",
+                            ),
+                            cls="diagnostics-controls",
                         ),
                         cls="diagnostics-header",
                     ),
                     Div(
+                        Span("NEST CONDITIONS", cls="diagnostics-row-label"),
                         Div(
-                            Span("NEST AIR", cls="diagnostics-key"),
-                            P("—", id="diagnostics-habitat-temperature"),
-                            cls="diagnostics-metric",
+                            _diagnostic_metric(
+                                "NEST AIR",
+                                "diagnostics-habitat-temperature",
+                                "Air temperature shapes how easily adults and "
+                                "hatchlings regulate body heat. Watch trends; "
+                                "do not disturb the nest to chase a single reading.",
+                            ),
+                            _diagnostic_metric(
+                                "RELATIVE HUMIDITY",
+                                "diagnostics-humidity",
+                                "Humidity adds context for damp bedding, mold risk, "
+                                "and heat stress. Outdoor nests naturally swing "
+                                "through a wide range.",
+                            ),
+                            _diagnostic_metric(
+                                "DAYLIGHT",
+                                "diagnostics-daylight",
+                                "Light level marks the day/night rhythm that drives "
+                                "owl activity and camera night mode. A future lux "
+                                "sensor will provide this reading.",
+                            ),
+                            cls="diagnostics-row diagnostics-row-habitat",
                         ),
+                        Span("PI HEALTH", cls="diagnostics-row-label"),
                         Div(
-                            Span("HUMIDITY", cls="diagnostics-key"),
-                            P("—", id="diagnostics-humidity"),
-                            cls="diagnostics-metric",
+                            _diagnostic_metric(
+                                "PI TEMPERATURE",
+                                "diagnostics-temperature",
+                                "The processor temperature is not the nest "
+                                "temperature. It warns when the camera computer may "
+                                "throttle or stop streaming.",
+                            ),
+                            _diagnostic_metric(
+                                "MEMORY AVAILABLE",
+                                "diagnostics-memory",
+                                "Free working memory helps the Pi encode and serve "
+                                "video without interruption.",
+                            ),
+                            _diagnostic_metric(
+                                "1-MINUTE LOAD",
+                                "diagnostics-load",
+                                "Recent processor demand. Sustained high load can "
+                                "make the live view stutter or fall behind.",
+                            ),
+                            _diagnostic_metric(
+                                "STREAMING PROCESSES",
+                                "diagnostics-processes",
+                                "The camera, encoder, and media server must all be "
+                                "running for observers to watch without approaching "
+                                "the nest.",
+                            ),
+                            cls="diagnostics-row diagnostics-row-system",
                         ),
-                        Div(
-                            Span("PI TEMPERATURE", cls="diagnostics-key"),
-                            P("—", id="diagnostics-temperature"),
-                            cls="diagnostics-metric",
-                        ),
-                        Div(
-                            Span("MEMORY AVAILABLE", cls="diagnostics-key"),
-                            P("—", id="diagnostics-memory"),
-                            cls="diagnostics-metric",
-                        ),
-                        Div(
-                            Span("1-MINUTE LOAD", cls="diagnostics-key"),
-                            P("—", id="diagnostics-load"),
-                            cls="diagnostics-metric",
-                        ),
-                        Div(
-                            Span("STREAMING PROCESSES", cls="diagnostics-key"),
-                            P("—", id="diagnostics-processes"),
-                            cls="diagnostics-metric",
-                        ),
-                        cls="diagnostics-grid",
+                        cls="diagnostics-groups",
                     ),
                     Small("Waiting for first sample", id="diagnostics-updated"),
                     id="diagnostics",
@@ -351,14 +415,26 @@ def render_about_page() -> str:
             _nav(active="about"),
             Main(
                 Section(
-                    Span("ABOUT", cls="live-label"),
-                    H1("Chris Carver.", Span("Good dude.", cls="accent")),
-                    P(
-                        "This nest camera exists so friends, family, and "
-                        "anyone who will linger a minute can share a quiet "
-                        "look at the woods with Chris. Enjoy his love of "
-                        "nature. Share the OwlCam moments with him.",
-                        cls="lede",
+                    Div(
+                        Span("ABOUT", cls="live-label"),
+                        H1("Chris Carver.", Span("Good dude.", cls="accent")),
+                        P(
+                            "This nest camera exists so friends, family, and "
+                            "anyone who will linger a minute can share a quiet "
+                            "look at the woods with Chris. Enjoy his love of "
+                            "nature. Share the OwlCam moments with him.",
+                            cls="lede",
+                        ),
+                    ),
+                    Div(
+                        Img(
+                            src="/assets/chris-carver.webp",
+                            alt="Chris Carver outdoors by a pool",
+                            width="750",
+                            height="562",
+                            decoding="async",
+                        ),
+                        cls="about-portrait",
                     ),
                     cls="about-intro",
                 ),

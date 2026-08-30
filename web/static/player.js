@@ -21,7 +21,7 @@
   };
 
   const showOffline = () => {
-    setState("offline", "Private feed unavailable");
+    setState("offline", "Live feed unavailable");
   };
 
   const scheduleReconnect = () => {
@@ -45,7 +45,7 @@
 
   const connect = () => {
     const source = video.dataset.streamUrl;
-    setState("", "Checking private feed…");
+    setState("", "Checking live feed…");
     clearTimeout(reconnectTimer);
     reconnectTimer = undefined;
 
@@ -57,7 +57,7 @@
     // hls.js must be tried before the native check. Chrome answers
     // canPlayType("application/vnd.apple.mpegurl") with "maybe" — truthy — but
     // cannot decode HLS on the desktop, so probing native support first strands
-    // every browser except Safari on "Checking private feed…" forever.
+    // every browser except Safari on "Checking live feed…" forever.
     if (window.Hls?.isSupported()) {
       hls = new window.Hls({
         manifestLoadingTimeOut: 8000,

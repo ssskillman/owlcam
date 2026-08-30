@@ -315,6 +315,41 @@ video:focus-visible {
   text-align: right;
 }
 
+.diagnostics-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.temperature-toggle {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.temperature-unit {
+  min-width: 2.6rem;
+  padding: 0.45rem 0.7rem;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.temperature-unit[aria-pressed="true"] {
+  background: var(--amber);
+  color: var(--forest);
+}
+
+.temperature-unit:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: -3px;
+}
+
 .diagnostics-dot {
   flex: 0 0 auto;
   width: 0.58rem;
@@ -332,30 +367,83 @@ video:focus-visible {
   background: var(--danger);
 }
 
-.diagnostics-grid {
+.diagnostics-groups {
   display: grid;
+}
+
+.diagnostics-row-label {
+  padding: 0.75rem clamp(1.25rem, 3vw, 2.4rem);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.diagnostics-row-label:not(:first-child) {
+  border-top: 1px solid var(--line);
+}
+
+.diagnostics-row {
+  display: grid;
+}
+
+.diagnostics-row-habitat {
   grid-template-columns: repeat(3, 1fr);
 }
 
+.diagnostics-row-system {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .diagnostics-metric {
+  position: relative;
   min-width: 0;
   padding: clamp(1.25rem, 3vw, 2.4rem);
   border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
 }
 
-.diagnostics-metric:nth-child(3n) {
+.diagnostics-row .diagnostics-metric:last-child {
   border-right: 0;
-}
-
-.diagnostics-metric:nth-child(n + 4) {
-  border-bottom: 0;
 }
 
 .diagnostics-metric p {
   margin: 1.4rem 0 0;
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(1.45rem, 2.8vw, 2.5rem);
+}
+
+.diagnostics-help {
+  position: absolute;
+  z-index: 4;
+  right: 1rem;
+  bottom: calc(100% - 1rem);
+  left: 1rem;
+  visibility: hidden;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--amber);
+  background: #111a13;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 35%);
+  color: var(--paper);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(0.35rem);
+  transition: opacity 140ms ease, transform 140ms ease, visibility 140ms;
+}
+
+.diagnostics-metric:hover .diagnostics-help,
+.diagnostics-metric:focus .diagnostics-help,
+.diagnostics-metric:focus-within .diagnostics-help {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.diagnostics-metric:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: -3px;
 }
 
 #diagnostics-updated {
@@ -414,11 +502,28 @@ footer {
 }
 
 .about-intro {
-  max-width: 38rem;
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(22rem, 1.2fr);
+  gap: clamp(2rem, 6vw, 6rem);
+  align-items: center;
 }
 
 .about-intro h1 {
   max-width: 12ch;
+}
+
+.about-portrait {
+  position: relative;
+  border: 1px solid var(--amber);
+  box-shadow: 14px 14px 0 var(--moss);
+}
+
+.about-portrait img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
 }
 
 .about-grid {
@@ -670,28 +775,25 @@ footer {
     grid-template-columns: 1fr;
   }
 
-  .diagnostics-grid {
+  .diagnostics-row-system {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .diagnostics-metric:nth-child(3n) {
-    border-right: 1px solid var(--line);
-  }
-
-  .diagnostics-metric:nth-child(2n) {
+  .diagnostics-row-system .diagnostics-metric:nth-child(2n) {
     border-right: 0;
   }
 
-  .diagnostics-metric {
+  .diagnostics-row-system .diagnostics-metric:nth-child(-n + 2) {
     border-bottom: 1px solid var(--line);
   }
 
-  .diagnostics-metric:nth-child(n + 5) {
-    border-bottom: 0;
-  }
-
+  .about-intro,
   .about-grid {
     grid-template-columns: 1fr;
+  }
+
+  .about-portrait {
+    max-width: 46rem;
   }
 
   .moment-card {
@@ -748,22 +850,27 @@ footer {
     flex-direction: column;
   }
 
+  .diagnostics-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .diagnostics-state {
     text-align: left;
   }
 
-  .diagnostics-grid {
+  .diagnostics-row-habitat,
+  .diagnostics-row-system {
     grid-template-columns: 1fr;
   }
 
-  .diagnostics-metric,
-  .diagnostics-metric:nth-child(2n),
-  .diagnostics-metric:nth-child(3n) {
+  .diagnostics-row .diagnostics-metric,
+  .diagnostics-row-system .diagnostics-metric:nth-child(2n) {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
 
-  .diagnostics-metric:last-child {
+  .diagnostics-row .diagnostics-metric:last-child {
     border-bottom: 0;
   }
 }

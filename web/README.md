@@ -13,15 +13,16 @@ Production URL: <https://carver-owlcam-72343.web.app>
 About Chris: <https://carver-owlcam-72343.web.app/about>
 Owl Moments: <https://carver-owlcam-72343.web.app/moments>
 
-The page is public, but the video remains private. It requests:
+The page and nature-camera video are public. The player requests:
 
 ```text
 https://owlcam.tail31318f.ts.net/owl/index.m3u8
 ```
 
-That URL requires an authorized Tailscale client and HTTPS serving on the Pi,
-for example by proxying local MediaMTX HLS through Tailscale Serve. Until that
-is enabled and reachable, the page displays its offline state.
+Tailscale Funnel proxies only local MediaMTX HLS and the read-only diagnostics
+endpoint; the Pi still has no router port forwarding. Switch exposure with
+`pi/scripts/publish-feed.sh --public` or `--private`. When the endpoint is not
+reachable, the page displays its offline state and retries automatically.
 
 The static bundle in `public/` is generated and intentionally ignored by Git.
 
