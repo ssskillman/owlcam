@@ -56,4 +56,4 @@ def build_site(output: Path = DEFAULT_OUTPUT) -> None:
 
 if __name__ == "__main__":
     build_site()
-    print(f"Built Firebase site at {DEFAULT_OUTPUT}")
+    print(f"Built site at {DEFAULT_OUTPUT}")

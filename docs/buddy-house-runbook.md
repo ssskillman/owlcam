@@ -4,7 +4,8 @@ No Ethernet, monitor, keyboard, or public port forwarding is required.
 The camera needs *some* internet (buddy Wi-Fi or your phone hotspot) so
 Tailscale, Funnel, and the live page can answer.
 
-Watch URL: <https://owlcam.tail31318f.ts.net/>
+Watch URL: <https://carver-owlcam-72343.web.app> (redirects to the Pi at
+<https://owlcam.tail31318f.ts.net/>; either address works)
 
 That is the same public page you use at home. HLS never binds to the LAN, so
 do **not** open `http://100.123.8.55:8888/owl` — that port is loopback-only.
@@ -98,8 +99,9 @@ sudo nmcli dev wifi connect "PHONE_HOTSPOT_SSID" \
 ## Viewer access
 
 **Funnel on (`publish-feed.sh --public`):** send the buddy
-<https://owlcam.tail31318f.ts.net/>. No Tailscale account, no IP sharing.
-That is the intended path for a nature cam.
+<https://carver-owlcam-72343.web.app>. No Tailscale account, no IP sharing.
+That is the intended path for a nature cam. The redirect is the better link to
+text someone, since it survives a hostname change on the Pi.
 
 **Funnel off (`publish-feed.sh --private`):** share only the `owlcam`
 Tailscale *machine* with the buddy's own Tailscale account. Do not share the
