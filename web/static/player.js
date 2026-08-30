@@ -22,6 +22,19 @@
     setState("offline", "Private feed unavailable");
   };
 
+  // hls.js buffers but never starts playback on its own. Without this the panel
+  // hides, the status reads online, and the viewer stares at a paused first
+  // frame — the stream is fine and nothing says so.
+  const start = () => {
+    const attempt = video.play();
+    if (!attempt?.catch) return;
+    attempt.catch(() => {
+      // Muted playback is normally allowed to autoplay. If a browser refuses
+      // anyway, say so, because the controls are the only way forward.
+      if (video.paused) setState("online", "OwlCam online — press play");
+    });
+  };
+
   const connect = () => {
     const source = video.dataset.streamUrl;
     setState("", "Checking private feed…");
@@ -43,6 +56,7 @@
       });
       hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
         setState("online", "OwlCam online");
+        start();
       });
       hls.on(window.Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) showOffline();
@@ -65,7 +79,12 @@
 
   video.addEventListener("loadedmetadata", () => {
     setState("online", "OwlCam online");
+    start();
   });
+
+  // A live edge that stalls behind the playlist window never recovers on its
+  // own, and a paused live stream is indistinguishable from a dead one.
+  video.addEventListener("stalled", start);
   video.addEventListener("error", showOffline);
   retry.addEventListener("click", connect);
   connect();

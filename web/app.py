@@ -134,6 +134,7 @@ def _head(*, title: str, description: str, include_player: bool) -> Head:
         Meta(name="viewport", content="width=device-width, initial-scale=1"),
         Meta(name="description", content=description),
         Title(title),
+        Link(rel="icon", href="/assets/favicon.svg", type="image/svg+xml"),
         Link(rel="preconnect", href="https://cdn.jsdelivr.net"),
         Link(rel="stylesheet", href="/assets/styles.css"),
         *scripts,
@@ -197,6 +198,7 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                             Video(
                                 id="owlcam-player",
                                 controls=True,
+                                autoplay=True,
                                 muted=True,
                                 playsinline=True,
                                 preload="metadata",

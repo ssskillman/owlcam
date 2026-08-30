@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="OwlCam">
+  <title>OwlCam</title>
+  <!-- Two oversized eyes carry the whole silhouette. At 16px in a crowded tab
+       strip, detail disappears and only this shape and the amber survive. -->
+  <rect width="64" height="64" rx="14" fill="#0b100d"/>
+  <path d="M13 25 L19.5 9 L26.5 22 Z" fill="#e8a43a"/>
+  <path d="M51 25 L44.5 9 L37.5 22 Z" fill="#e8a43a"/>
+  <circle cx="22.5" cy="34" r="9.5" fill="#e8a43a"/>
+  <circle cx="41.5" cy="34" r="9.5" fill="#e8a43a"/>
+  <circle cx="22.5" cy="34" r="4.2" fill="#0b100d"/>
+  <circle cx="41.5" cy="34" r="4.2" fill="#0b100d"/>
+  <circle cx="20.9" cy="32.2" r="1.5" fill="#f2ead8"/>
+  <circle cx="39.9" cy="32.2" r="1.5" fill="#f2ead8"/>
+  <path d="M32 51 L28.7 43.6 L35.3 43.6 Z" fill="#f2ead8"/>
+</svg>

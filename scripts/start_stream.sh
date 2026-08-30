@@ -35,10 +35,23 @@ done
 # loudly: the web page just reports no stream on path 'owl', which is
 # indistinguishable from the camera being off, while systemd restarts the unit
 # every few seconds forever.
-if systemctl --user is-active owlcam-stream.service >/dev/null 2>&1; then
+#
+# Checking is-active alone is not enough. It reports failure while the unit is
+# 'activating', which is exactly the state a thrashing unit spends most of its
+# time in, so the script would sail past the guard during the very situation the
+# guard exists to prevent. An installed unit is treated as owning the camera.
+service_owns_camera() {
+  systemctl --user is-enabled owlcam-stream.service >/dev/null 2>&1 && return 0
+  case "$(systemctl --user show owlcam-stream.service -p ActiveState --value 2>/dev/null)" in
+    active|activating|reloading|deactivating) return 0 ;;
+  esac
+  return 1
+}
+
+if service_owns_camera; then
   if ! "${force}"; then
     cat >&2 <<EOF
-Refusing to start: the owlcam-stream service is running and owns the camera.
+Refusing to start: the owlcam-stream service owns the camera.
 
 Starting this would take the sensor, and the web page would go dark while
 systemd restarts the service in a loop.
@@ -47,6 +60,9 @@ To watch in VLC without stopping the web page, open the same HLS feed the
 browser uses. MediaMTX serves any number of readers at once:
 
   https://${STREAM_HOST}/owl/index.m3u8
+
+Note: quitting VLC does not stop this script. UDP is fire-and-forget, so the Pi
+keeps sending to a closed player and keeps holding the camera. Stop it here.
 
 To take the camera anyway:
 

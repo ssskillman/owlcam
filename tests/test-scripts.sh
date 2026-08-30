@@ -106,8 +106,17 @@ fi
 
 # Silently stealing the sensor from the service reads as a dead camera on the
 # web page while systemd restarts the unit in a loop.
-grep -F -- 'systemctl --user is-active owlcam-stream.service' "${udp_script}" >/dev/null \
-  || fail "UDP script does not check for the running service"
+grep -F -- 'service_owns_camera' "${udp_script}" >/dev/null \
+  || fail "UDP script does not check whether the service owns the camera"
+# is-active reports failure while a unit is 'activating', which is where a
+# thrashing unit spends most of its time, so that check alone lets the script
+# through during exactly the situation the guard exists to prevent.
+grep -F -- 'is-enabled owlcam-stream.service' "${udp_script}" >/dev/null \
+  || fail "UDP guard misses an installed unit that is mid-restart"
+grep -F -- 'activating' "${udp_script}" >/dev/null \
+  || fail "UDP guard does not treat a restarting unit as owning the camera"
+grep -F -- 'quitting VLC does not stop this script' "${udp_script}" >/dev/null \
+  || fail "UDP script does not explain that closing the player leaves it running"
 grep -F -- 'Refusing to start' "${udp_script}" >/dev/null \
   || fail "UDP script does not refuse when the service owns the camera"
 grep -F -- '/owl/index.m3u8' "${udp_script}" >/dev/null \

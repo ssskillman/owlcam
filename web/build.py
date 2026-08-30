@@ -10,7 +10,7 @@ DEFAULT_OUTPUT = WEB_ROOT / "public"
 # CSS and JS change with every deploy, so their URLs carry a content hash.
 # Without it a browser keeps a cached stylesheet and renders the new markup
 # unstyled until the old TTL expires.
-FINGERPRINTED = ("styles.css", "player.js", "moments.js")
+FINGERPRINTED = ("styles.css", "player.js", "moments.js", "favicon.svg")
 PAGES = {
     "index.html": render_page,
     "about.html": render_about_page,

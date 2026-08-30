@@ -8,7 +8,7 @@ from app import (
     render_moments_page,
     render_page,
 )
-from build import WEB_ROOT, build_site
+from build import FINGERPRINTED, WEB_ROOT, build_site
 
 
 def test_page_uses_private_https_stream_and_accessible_player():
@@ -89,6 +89,41 @@ def test_photo_moments_load_thumbnails_that_open_full_size():
     assert 'src="/assets/moments/nest-box-build.jpg"' not in html
     assert 'src="/assets/moments/adult-barred-owl.jpg"' not in html
     assert html.count("View full size") == 4
+
+
+def test_player_starts_playback_rather_than_only_reporting_online():
+    source = (WEB_ROOT / "static" / "player.js").read_text()
+
+    # hls.js buffers but never plays on its own. Without an explicit play() the
+    # panel hides and the status reads online while a paused frame sits there,
+    # which looks exactly like a broken stream.
+    assert "video.play()" in source, "player never starts playback"
+    assert source.index("setState(\"online\", \"OwlCam online\")") < source.index(
+        "video.addEventListener(\"stalled\", start)"
+    ), "playback start must be wired to the online transition"
+
+
+def test_livestream_element_can_autoplay():
+    html = render_page()
+
+    # Autoplay is only permitted while muted, so the two attributes travel
+    # together; dropping muted silently reintroduces the paused-forever bug.
+    video = html[html.index("<video") : html.index(">", html.index("<video"))]
+    assert "autoplay" in video, "livestream would sit paused until clicked"
+    assert "muted" in video, "autoplay is blocked unless the video is muted"
+    assert "playsinline" in video, "iOS would take the video fullscreen"
+
+
+def test_pages_declare_the_favicon():
+    for markup in (render_page(), render_about_page(), render_moments_page()):
+        assert '/assets/favicon.svg' in markup, "page is missing the tab icon"
+        assert 'type="image/svg+xml"' in markup, "favicon type hint is missing"
+
+
+def test_favicon_is_fingerprinted():
+    # Browsers cache favicons far past the response headers, so the URL has to
+    # change when the icon does.
+    assert "favicon.svg" in FINGERPRINTED
 
 
 def test_player_never_adds_an_empty_class_token():
