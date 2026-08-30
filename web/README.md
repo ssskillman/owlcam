@@ -1,28 +1,42 @@
 # Carver OwlCam web demo
 
-FastHTML generates the static page deployed to Firebase Hosting:
+FastHTML generates the static page, which the Pi serves beside the stream:
 
 ```bash
 uv sync --frozen
 uv run python -m pytest
 uv run python build.py
-firebase deploy --only hosting --project carver-owlcam-72343
+make pi-deploy          # from the repo root: builds and stages the site to the Pi
 ```
 
-Production URL: <https://carver-owlcam-72343.web.app>
-About Chris: <https://carver-owlcam-72343.web.app/about>
-Owl Moments: <https://carver-owlcam-72343.web.app/moments>
+Production URL: <https://owlcam.tail31318f.ts.net/>
+About Chris: <https://owlcam.tail31318f.ts.net/about>
+Owl Moments: <https://owlcam.tail31318f.ts.net/moments>
 
-The page and nature-camera video are public. The player requests:
+<https://carver-owlcam-72343.web.app> only redirects there now. `make deploy`
+still publishes those redirects to Firebase.
+
+The page and nature-camera video are public, and both come from the same origin
+so the player can request relative paths:
 
 ```text
-https://owlcam.tail31318f.ts.net/owl/index.m3u8
+/owl/index.m3u8
+/diagnostics
 ```
 
-Tailscale Funnel proxies only local MediaMTX HLS and the read-only diagnostics
-endpoint; the Pi still has no router port forwarding. Switch exposure with
-`pi/scripts/publish-feed.sh --public` or `--private`. When the endpoint is not
-reachable, the page displays its offline state and retries automatically.
+That is load-bearing, not cosmetic. Hosting the page on a different origin made
+the video unplayable on every device running Tailscale, because a public page is
+not permitted to reach the private address MagicDNS returns. See
+[`../docs/live-feed.md`](../docs/live-feed.md).
+
+Tailscale Funnel proxies only the built site, MediaMTX HLS, and the read-only
+diagnostics endpoint; the Pi still has no router port forwarding. Switch exposure
+with `pi/scripts/publish-feed.sh --public` or `--private`. When the stream is not
+reachable, the page names the failure it hit and retries automatically.
+
+Because the Pi serves the page, `pi/scripts/site_server.py` sends the security
+headers Firebase used to add, and `web/tests` no longer asserts them from
+`firebase.json`.
 
 The static bundle in `public/` is generated and intentionally ignored by Git.
 

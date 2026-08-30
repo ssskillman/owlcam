@@ -1,32 +1,44 @@
 # OwlCam
 
-A Raspberry Pi wildlife camera on a barred owl nest box, with a public web page
-and a private video stream. The Pi captures and encodes on-device, publishes
-HLS on localhost only, and Tailscale provides the single HTTPS door that
-viewers come through.
+A Raspberry Pi wildlife camera on a barred owl nest box. The Pi captures and
+encodes on-device, serves the page and HLS on localhost only, and Tailscale
+provides the single HTTPS door that viewers come through — no router port
+forwarding and no viewer accounts.
 
 ![OwlCam architecture: the Pi captures and serves HLS on localhost, Tailscale is the only permitted route to viewers, Firebase serves the page separately, and router port-forwarding and direct LAN access are blocked outside the Pi.](docs/architecture-diagram.png)
 
 <sub>Diagram sources: [`docs/architecture-diagram.html`](docs/architecture-diagram.html) (interactive) ·
 [`.png`](docs/architecture-diagram.png) · [`.jpg`](docs/architecture-diagram.jpg)</sub>
 
-## The two halves
+<sub>**Stale:** the diagram still shows Firebase serving the page. The page moved
+to the Pi on 2026-08-30 so it shares an origin with the stream
+([why](docs/live-feed.md#why-one-origin)); Firebase now only redirects.</sub>
 
-OwlCam is deliberately split, and the split is the whole security design.
+## One origin, three mounts
 
-| | Public page | Video stream |
+Everything a viewer touches comes from a single Tailscale hostname, and
+Tailscale remains the only ingress. The page, the video, and the vitals are
+separate mounts on port 443, each proxied from loopback:
+
+| Mount | Backed by | Contains |
 |---|---|---|
-| Served by | Firebase Hosting | MediaMTX on the Pi, via Tailscale |
-| Contains | HTML, CSS, photos, the player | Live H.264 / HLS |
-| Reachable by | anyone | tailnet now, public once Funnel is approved |
-| If the Pi is off | still up | page shows "Camera is resting" |
+| `/` | `owlcam-site` on `127.0.0.1:8080` | HTML, CSS, photos, the player |
+| `/owl` | MediaMTX on `127.0.0.1:8888` | Live H.264 / HLS |
+| `/diagnostics` | `owlcam-diagnostics` on `127.0.0.1:8765` | Read-only health JSON |
 
-The page never proxies video. It asks the browser to fetch HLS directly from
-the Tailscale hostname, so the site can be fully public while the camera stays
-private.
+The page still never proxies video — the browser fetches HLS itself. It just
+fetches it from the same origin that served the page, and that is load-bearing:
+a page on any other origin is refused access to the private address MagicDNS
+returns for this host, so the feed was dead on every device running Tailscale.
+See [`docs/live-feed.md`](docs/live-feed.md#why-one-origin).
 
-- Site: <https://carver-owlcam-72343.web.app>
+- Site: <https://owlcam.tail31318f.ts.net/>
 - Stream: `https://owlcam.tail31318f.ts.net/owl/index.m3u8`
+- <https://carver-owlcam-72343.web.app> now only redirects to the site.
+
+The trade is availability: the page used to stay up when the Pi was off, and now
+it does not. Firebase's redirects are 302 and `no-store` so that stays a config
+change rather than a migration.
 
 ## Bring up the feed
 
@@ -59,13 +71,14 @@ cd /home/shawn/owlcam/deploy
 ./pi/scripts/install-services.sh --uninstall  # remove
 ```
 
-That gives you `owlcam-mediamtx`, `owlcam-stream`, and `owlcam-diagnostics`.
-They start at boot and restart within about five seconds of a failure. The
-diagnostics service exposes a small read-only health payload at the tailnet-only
-`/diagnostics` route for the live browser panel.
+That gives you `owlcam-mediamtx`, `owlcam-stream`, `owlcam-site`, and
+`owlcam-diagnostics`. They start at boot and restart within about five seconds
+of a failure. `owlcam-site` serves the built page, and the diagnostics service
+exposes a small read-only health payload at `/diagnostics` for the live browser
+panel.
 
 ```bash
-systemctl --user status owlcam-stream owlcam-mediamtx owlcam-diagnostics
+systemctl --user status owlcam-stream owlcam-mediamtx owlcam-site owlcam-diagnostics
 journalctl --user -u owlcam-stream -n 50
 systemctl --user restart owlcam-stream
 ```
@@ -103,13 +116,15 @@ home upload after two or three of them. Override with `OWLCAM_BITRATE`.
 
 - RTSP (`8554`) and HLS (`8888`) bind to `127.0.0.1`. Nothing on the LAN or the
   tailnet reaches them directly.
-- Port 443 via Tailscale is the only ingress, and it only serves HLS.
+- Port 443 via Tailscale is the only ingress, and it serves exactly three
+  read-only mounts: the built page, HLS, and the diagnostics payload.
 - RTMP, WebRTC, SRT, the admin API, metrics, pprof, and playback are disabled.
 - No router port forwarding, ever. That is what the blocked paths in the
   diagram mean.
 - Funnel is on, so the video is public and needs no Tailscale account to watch.
-  Only two things sit behind it: MediaMTX HLS and the read-only diagnostics
-  payload, both proxied from loopback. Funnel is bandwidth-throttled and
+  Only three things sit behind it: the built site, MediaMTX HLS, and the
+  read-only diagnostics payload, all proxied from loopback. Funnel is
+  bandwidth-throttled and
   unauthenticated by design, so restreaming outbound is the answer if the
   audience outgrows home upload. Flip back with
   `pi/scripts/publish-feed.sh --private`. The reasoning is in
@@ -119,19 +134,22 @@ More in [`docs/security.md`](docs/security.md).
 
 ## Web app
 
-The page is generated by FastHTML into static files, then deployed to Firebase
-Hosting. CSS and JS are content-fingerprinted, so a deploy can never be shadowed
-by a stale cached stylesheet.
+The page is generated by FastHTML into static files, which the Pi serves. CSS
+and JS are content-fingerprinted, so a deploy can never be shadowed by a stale
+cached stylesheet.
 
 ```bash
 cd web
 uv run --frozen python -m pytest    # tests
 uv run --frozen python build.py     # build to web/public
-make deploy                         # build then deploy, from the repo root
+make pi-deploy                      # build then stage to the Pi, from the repo root
+make deploy                         # publish the Firebase redirects
 ```
 
-Use `make deploy` rather than a bare `firebase deploy`. It pins the account, so a
-stale directory default cannot publish as the wrong identity.
+A web change is live once `make pi-deploy` finishes; `make deploy` only
+republishes the redirects that send Firebase visitors to the Pi. Use `make
+deploy` rather than a bare `firebase deploy` — it pins the account, so a stale
+directory default cannot publish as the wrong identity.
 
 See [`web/README.md`](web/README.md).
 
@@ -195,7 +213,7 @@ in this order:
 ```bash
 # 1. On the Mac, from the repo root
 git checkout main && git pull
-OWLCAM_SSH_IDENTITY=~/.ssh/owlcam_pi ./pi/scripts/deploy.sh
+OWLCAM_SSH_IDENTITY=~/.ssh/owlcam_pi make pi-deploy   # builds the site, then stages
 
 # 2. On the Pi
 ssh shawn@owlcam.local
@@ -215,7 +233,7 @@ Two traps worth knowing:
 - **A running unit keeps its old binary.** `systemctl enable --now` does nothing
   to an already-active service, which is why staged code can appear installed
   while the endpoint still serves the previous payload. The installer now
-  restarts all three units for this reason. To confirm what is actually running:
+  restarts all four units for this reason. To confirm what is actually running:
 
 ```bash
 curl -sS https://owlcam.tail31318f.ts.net/diagnostics

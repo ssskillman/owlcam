@@ -14,11 +14,17 @@ identity, future upload credentials, camera footage, and future stream keys.
 - Funnel is the **intended** exposure so anyone can watch without a tailnet
   account, pending one-time approval of the `funnel` node attribute.
   It publishes port 443 with no authentication and no rate limit, so it must
-  keep proxying only MediaMTX HLS and the read-only diagnostics payload. Never
-  point a funnelled mount at anything that writes, and never add a mount that
-  exposes the admin API, RTSP, or the filesystem. Revert with
+  keep proxying only the built site, MediaMTX HLS, and the read-only diagnostics
+  payload. Never point a funnelled mount at anything that writes, and never add
+  a mount that exposes the admin API, RTSP, or the filesystem. Revert with
   `pi/scripts/publish-feed.sh --private`. Reasoning and the bandwidth ceiling
   are in [`live-feed.md`](live-feed.md).
+- The site mount is read-only by construction: `site_server.py` serves `GET` and
+  `HEAD` only, refuses any path that resolves outside the site root, and binds
+  to loopback so Tailscale is the only way in. It also sends the CSP,
+  `Referrer-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, and
+  `Permissions-Policy` headers that `firebase.json` used to apply — they moved
+  with the page, so changing one file no longer silently drops them.
 - Treat the diagnostics payload as public. It is an allowlist of temperature,
   memory, load, process booleans, and nest climate; adding PIDs, paths,
   usernames, or IP addresses to it would publish them to the internet.

@@ -1,20 +1,26 @@
 # Getting the live feed visible
 
-The public page at <https://carver-owlcam-72343.web.app> already contains a
-working HLS player. It requests:
+The page lives at <https://owlcam.tail31318f.ts.net/> and is served by the Pi,
+beside the stream. It asks for the video and the vitals as relative paths:
 
 ```text
-https://owlcam.tail31318f.ts.net/owl/index.m3u8
+/owl/index.m3u8
+/diagnostics
 ```
 
-Until that URL answers, the page shows "Camera is resting". Nothing on the web
-side needs to change to light it up.
+<https://carver-owlcam-72343.web.app> redirects there and serves nothing else.
+See [Why one origin](#why-one-origin) for why the page moved off Firebase.
+
+When the stream does not answer, the page now names the failure it actually hit
+— connecting, resting, interrupted, unreachable, or an unsupported browser —
+instead of always reporting a sleeping camera.
 
 ## What has to be true
 
 1. The Pi is capturing and MediaMTX is serving HLS on port 8888.
-2. Port 443 on the Pi answers HTTPS for that HLS, via Tailscale.
-3. The viewer's device is allowed to reach that hostname.
+2. `owlcam-site` is serving the built page on port 8080.
+3. Port 443 on the Pi answers HTTPS for all three mounts, via Tailscale.
+4. The viewer's device is allowed to reach that hostname.
 
 Point 3 is the decision that matters. Tailscale offers two ways to publish:
 
@@ -52,13 +58,28 @@ that comes back on its own, install the units instead:
 ./pi/scripts/install-services.sh
 ```
 
-`owlcam-mediamtx`, `owlcam-stream`, and `owlcam-diagnostics` then start at boot
-and restart within about five seconds of a failure. They are user units rather
+`owlcam-mediamtx`, `owlcam-stream`, `owlcam-site`, and `owlcam-diagnostics` then
+start at boot and restart within about five seconds of a failure. They are user units rather
 than system units because the Pi has no passwordless sudo; the installer enables
 lingering so they survive the SSH session ending and start without a login.
 
-The diagnostics service binds to `127.0.0.1:8765`. Tailscale Serve maps the
-tailnet-only `/diagnostics` path to it without changing the root HLS proxy. Its
+### Updating the page
+
+The Pi serves the page, so a web change is not live until the built site reaches
+the Pi. From a workstation:
+
+```bash
+make pi-deploy      # builds web/public and stages it to /home/shawn/owlcam/site
+```
+
+`deploy.sh` syncs with `--delete`, which is required rather than tidy: every
+build fingerprints CSS and JS under a new name, so without it old copies pile up
+on the SD card forever. The installer refuses to finish if the site directory has
+no `index.html`, because a site server with no files answers `404` while still
+looking like a healthy unit.
+
+The diagnostics service binds to `127.0.0.1:8765`, and Tailscale maps
+`/diagnostics` to it. Its
 allowlisted JSON contract contains SoC temperature, available memory,
 one-minute load, three process-health booleans, optional nest climate
 (`climate.temperatureC` / `humidityPercent` from a BME280 on I2C), and a
@@ -165,8 +186,9 @@ ever does hang, `pkill -f "tailscale funnel"` clears it; check
 `tailscale serve status` afterwards, because "No serve config" means the feed is
 down and needs `publish-feed.sh --private` to come back.
 
-Serve and Funnel apply per **port**, not per mount point, so the HLS root and
-the `/diagnostics` mount are always declared together in the same mode. Going
+Serve and Funnel apply per **port**, not per mount point, so all three mounts —
+the page at `/`, the stream at `/owl`, and `/diagnostics` — are always declared
+together in the same mode. Going
 public therefore also publishes the vitals payload. That payload is an allowlist
 by design — no PIDs, paths, usernames, or addresses — which is what makes this
 acceptable. Keep it that way.
@@ -216,10 +238,41 @@ home-upload scaling problem. `security.md` already anticipates it by listing
 Facebook stream keys as never-commit material. Funnel is the right trade only
 while the audience is small enough that home upload is not the constraint.
 
-## Cross-origin note
+## Why one origin
 
-The page is served from `web.app` while the video comes from `ts.net`, so the
-HLS response must allow the cross-origin read. The Pi's MediaMTX config sets
-`hlsAllowOrigins: ['*']`, which satisfies this. If the feed loads by `curl` but
-the player still reports it offline, check that setting first, then confirm the
-Firebase CSP still lists the Tailscale host in `media-src` and `connect-src`.
+**Decided 2026-08-30.** The page is served by the Pi, from the same host as the
+stream. Hosting it on Firebase while the video came from `ts.net` was not merely
+untidy — it was unplayable on any device running Tailscale.
+
+MagicDNS resolves `owlcam.tail31318f.ts.net` to the Pi's private address
+(`100.123.8.55`) for tailnet devices, and public DNS resolves it to Tailscale's
+Funnel ingress (`209.177.145.x`) for everyone else. A page on a public origin is
+not allowed to reach a private address space, so on tailnet devices the browser
+refused both requests outright:
+
+```text
+Access to fetch at 'https://owlcam.tail31318f.ts.net/diagnostics' from origin
+'https://carver-owlcam-72343.web.app' has been blocked by CORS policy:
+Permission was denied for this request to access the `local` address space.
+```
+
+The video and the vitals fail together, which is indistinguishable from a
+sleeping camera. Desktop Chrome works only because it prompts once and the
+prompt was approved; mobile browsers never offer that prompt, so the feed is
+simply dead there. Serving both from one origin removes the cross-origin request
+entirely, so there is nothing left to block: tailnet devices load page and video
+from the private address, everyone else from the public one.
+
+Consequences worth knowing:
+
+- **Firebase no longer serves the site**, only 302 redirects to the Pi. The
+  page's availability is now the Pi's availability plus the home connection.
+  Reverting means restoring absolute URLs and removing the redirects; the
+  redirects are 302 and `no-store` precisely so that stays a config change.
+- **The Pi serves ~6 MB of page assets** in addition to video, over the same
+  Funnel bandwidth. Small next to a 2.5 Mbps stream, but not free.
+- **CSP and the other security headers now come from `site_server.py`**, not
+  `firebase.json`. They moved with the page; see [`security.md`](security.md).
+- **MediaMTX's `hlsAllowOrigins` and its cross-site cookie no longer matter.**
+  Requests are same-origin. If the manifest loads by `curl` but the player still
+  reports offline, the panel now names the reason instead of guessing.
