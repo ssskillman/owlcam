@@ -117,6 +117,19 @@ grep -F -- 'activating' "${udp_script}" >/dev/null \
   || fail "UDP guard does not treat a restarting unit as owning the camera"
 grep -F -- 'quitting VLC does not stop this script' "${udp_script}" >/dev/null \
   || fail "UDP script does not explain that closing the player leaves it running"
+# Killing the unit's capture without stopping the unit just triggers
+# Restart=always, and the two pipelines take turns knocking each other over.
+grep -F -- 'systemctl --user stop owlcam-stream.service' "${udp_script}" >/dev/null \
+  || fail "UDP --force does not stop the unit before taking the camera"
+# A prompt with no terminal blocks forever under nohup, a unit, or piped SSH.
+grep -F -- '[[ ! -t 0 ]]' "${udp_script}" >/dev/null \
+  || fail "UDP script would block on a prompt with no terminal attached"
+# pkill -f matches the script's own command line and can kill the caller.
+if grep -E -- 'pkill .*-f "rpicam' "${udp_script}" >/dev/null 2>&1; then
+  fail "UDP script matches rpicam on the full command line and can kill its own shell"
+fi
+[[ "${udp_help}" == *"--yes"* ]] \
+  || fail "UDP help does not document the non-interactive flag"
 grep -F -- 'Refusing to start' "${udp_script}" >/dev/null \
   || fail "UDP script does not refuse when the service owns the camera"
 grep -F -- '/owl/index.m3u8' "${udp_script}" >/dev/null \
