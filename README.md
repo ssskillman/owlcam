@@ -126,10 +126,17 @@ gets a `403`; a bare `firebase deploy` fails to find the project.
 make setup-identity
 ```
 
-That sets the repo-local commit identity, routes git credentials through the `gh`
-CLI's personal account, and pins the Firebase account for this directory only —
+That sets the repo-local commit identity, pins git credentials to the personal
+GitHub account by name, and pins the Firebase account for this directory only —
 nothing global changes, so work projects are unaffected. **Re-run it after
 cloning**, because repo-local git config is not carried by a clone.
+
+The credential helper names the account explicitly rather than deferring to
+`gh auth git-credential`, which serves whichever account `gh` is currently
+switched to. Doing anything in a work repo flips that global, and the next push
+here fails with `Permission to ssskillman/owlcam.git denied to
+skillman-iterable` even though the repo-local identity is correct. If that error
+appears anyway, re-run `make setup-identity`.
 
 ## Validation
 
