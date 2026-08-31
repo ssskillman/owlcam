@@ -170,6 +170,8 @@ grep -F -- 'tailscale "${verb}" --bg --yes --https=443' "${publish_script}" \
 # in the same mode or it disappears when exposure changes.
 grep -F -- '--set-path=/diagnostics' "${publish_script}" >/dev/null \
   || fail "publish script drops the diagnostics mount when exposure changes"
+grep -F -- '--set-path=/admin' "${publish_script}" >/dev/null \
+  || fail "publish script drops the authenticated admin API mount"
 grep -F -- 'AllowFunnel' "${publish_script}" >/dev/null \
   || fail "publish script cannot detect the current exposure"
 # A page on any other origin cannot reach this host at all: MagicDNS resolves it
@@ -229,6 +231,8 @@ grep -F -- 'The local site never answered' "${install_script}" >/dev/null \
   || fail "installer does not verify that the page itself serves"
 grep -F -- 'owlcam-diagnostics.service' "${install_script}" >/dev/null \
   || fail "installer does not manage the diagnostics service"
+grep -F -- 'owlcam-admin.service' "${install_script}" >/dev/null \
+  || fail "installer does not manage the admin service"
 # Reinstalling must not quietly drag a deliberately public feed back to
 # tailnet-only, so exposure setup is delegated rather than hardcoded to serve.
 grep -F -- 'publish-feed.sh" --preserve' "${install_script}" >/dev/null \
@@ -237,9 +241,11 @@ grep -F -- 'publish-feed.sh" --preserve' "${install_script}" >/dev/null \
 stream_unit="${REPO_ROOT}/pi/systemd/owlcam-stream.service"
 mediamtx_unit="${REPO_ROOT}/pi/systemd/owlcam-mediamtx.service"
 diagnostics_unit="${REPO_ROOT}/pi/systemd/owlcam-diagnostics.service"
+admin_unit="${REPO_ROOT}/pi/systemd/owlcam-admin.service"
 [[ -r "${stream_unit}" ]] || fail "owlcam-stream.service is missing"
 [[ -r "${mediamtx_unit}" ]] || fail "owlcam-mediamtx.service is missing"
 [[ -r "${diagnostics_unit}" ]] || fail "owlcam-diagnostics.service is missing"
+[[ -r "${admin_unit}" ]] || fail "owlcam-admin.service is missing"
 
 grep -F -- 'Restart=always' "${stream_unit}" >/dev/null \
   || fail "stream unit does not restart after a failure"
@@ -253,6 +259,21 @@ grep -F -- 'ProtectHome=read-only' "${diagnostics_unit}" >/dev/null \
   || fail "diagnostics unit can write to the user's home directory"
 grep -F -- 'DeviceAllow=/dev/i2c-1 rw' "${diagnostics_unit}" >/dev/null \
   || fail "diagnostics unit cannot open the nest climate I2C bus"
+grep -F -- 'EnvironmentFile=-%h/.config/owlcam/admin.env' "${admin_unit}" >/dev/null \
+  || fail "admin unit does not load its private credential file"
+grep -F -- 'NoNewPrivileges=true' "${admin_unit}" >/dev/null \
+  || fail "admin service can gain privileges"
+grep -F -- 'ProtectSystem=strict' "${admin_unit}" >/dev/null \
+  || fail "admin service can write to the system"
+grep -F -- 'HOST = "127.0.0.1"' "${REPO_ROOT}/pi/scripts/admin_server.py" >/dev/null \
+  || fail "admin API is not bound to loopback"
+
+configure_admin="${REPO_ROOT}/pi/scripts/configure-admin.sh"
+[[ -x "${configure_admin}" ]] || fail "admin credential setup script is missing"
+grep -F -- 'umask 077' "${configure_admin}" >/dev/null \
+  || fail "admin credential setup does not default to private file permissions"
+grep -F -- 'OWLCAM_ADMIN_PASSWORD_HASH' "${configure_admin}" >/dev/null \
+  || fail "admin credential setup does not persist a password hash"
 # Capture published before MediaMTX is listening leaves the page on "resting".
 site_unit="${REPO_ROOT}/pi/systemd/owlcam-site.service"
 [[ -r "${site_unit}" ]] || fail "owlcam-site.service is missing"

@@ -13,12 +13,14 @@ identity, future upload credentials, camera footage, and future stream keys.
 - Share only the `owlcam` Tailscale machine with viewers.
 - Funnel is the **intended** exposure so anyone can watch without a tailnet
   account, pending one-time approval of the `funnel` node attribute.
-  It publishes port 443 with no authentication and no rate limit, so it must
-  keep proxying only the built site, MediaMTX HLS, and the read-only diagnostics
-  payload. Never point a funnelled mount at anything that writes, and never add
-  a mount that exposes the admin API, RTSP, or the filesystem. Revert with
-  `pi/scripts/publish-feed.sh --private`. Reasoning and the bandwidth ceiling
-  are in [`live-feed.md`](live-feed.md).
+  It publishes port 443 with no network-level authentication or rate limit, so
+  it must keep proxying only the built site, MediaMTX HLS, read-only diagnostics,
+  and the narrowly authenticated admin API. Never expose RTSP, SSH, an arbitrary
+  command runner, or the filesystem. Revert with
+  `pi/scripts/publish-feed.sh --private`. The admin exception uses fixed
+  allowlisted operations, a scrypt password hash, server-side expiring sessions,
+  Secure/HttpOnly/SameSite cookies, CSRF and same-origin write checks, bounded
+  logs, and login throttling. See [`admin-panel.md`](admin-panel.md).
 - The site mount is read-only by construction: `site_server.py` serves `GET` and
   `HEAD` only, refuses any path that resolves outside the site root, and binds
   to loopback so Tailscale is the only way in. It also sends the CSP,
@@ -28,6 +30,9 @@ identity, future upload credentials, camera footage, and future stream keys.
 - Treat the diagnostics payload as public. It is an allowlist of temperature,
   memory, load, process booleans, and nest climate; adding PIDs, paths,
   usernames, or IP addresses to it would publish them to the internet.
+- Keep `~/.config/owlcam/admin.env` mode `600`. It contains a password hash, not
+  plaintext, but still enables offline password guessing if copied. Never stage
+  it through repository deployment.
 - Keep runtime configuration under `/etc/owlcam`, readable only as required.
 - Review MediaMTX authentication settings before every configuration commit.
 - Download MediaMTX over HTTPS and verify the release checksum before install.

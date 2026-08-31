@@ -21,7 +21,7 @@ instead of always reporting a sleeping camera.
 
 1. The Pi is capturing and MediaMTX is serving HLS on port 8888.
 2. `owlcam-site` is serving the built page on port 8080.
-3. Port 443 on the Pi answers HTTPS for all three mounts, via Tailscale.
+3. Port 443 on the Pi answers HTTPS for all four mounts, via Tailscale.
 4. The viewer's device is allowed to reach that hostname.
 
 Point 3 is the decision that matters. Tailscale offers two ways to publish:
@@ -60,10 +60,11 @@ that comes back on its own, install the units instead:
 ./pi/scripts/install-services.sh
 ```
 
-`owlcam-mediamtx`, `owlcam-stream`, `owlcam-site`, and `owlcam-diagnostics` then
-start at boot and restart within about five seconds of a failure. They are user units rather
-than system units because the Pi has no passwordless sudo; the installer enables
-lingering so they survive the SSH session ending and start without a login.
+`owlcam-mediamtx`, `owlcam-stream`, `owlcam-site`, `owlcam-diagnostics`, and
+`owlcam-admin` then start at boot and restart within about five seconds of a
+failure. They are user units rather than system units because the Pi has no
+passwordless sudo; the installer enables lingering so they survive the SSH
+session ending and start without a login.
 
 ### Updating the page
 
@@ -188,12 +189,13 @@ ever does hang, `pkill -f "tailscale funnel"` clears it; check
 `tailscale serve status` afterwards, because "No serve config" means the feed is
 down and needs `publish-feed.sh --private` to come back.
 
-Serve and Funnel apply per **port**, not per mount point, so all three mounts —
-the page at `/`, the stream at `/owl`, and `/diagnostics` — are always declared
-together in the same mode. Going
-public therefore also publishes the vitals payload. That payload is an allowlist
-by design — no PIDs, paths, usernames, or addresses — which is what makes this
-acceptable. Keep it that way.
+Serve and Funnel apply per **port**, not per mount point, so all four mounts —
+the page at `/`, stream at `/owl`, vitals at `/diagnostics`, and authenticated
+API at `/admin` — are always declared together in the same mode. Going public
+therefore also exposes the admin login endpoint, but status, logs, and controls
+remain behind the hashed-password session boundary described in
+[`admin-panel.md`](admin-panel.md). Vitals remain intentionally public and
+allowlisted — no PIDs, paths, usernames, or addresses. Keep it that way.
 
 `install-services.sh` calls `publish-feed.sh --preserve`, so reinstalling does
 not quietly pull a public feed back to private.

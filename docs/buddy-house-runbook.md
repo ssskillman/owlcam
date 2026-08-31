@@ -24,19 +24,50 @@ do **not** open `http://100.123.8.55:8888/owl` — that port is loopback-only.
    nmcli connection show
    rpicam-hello --list-cameras
    systemctl --user is-active \
-     owlcam-mediamtx owlcam-stream owlcam-site owlcam-diagnostics
+     owlcam-mediamtx owlcam-stream owlcam-site owlcam-diagnostics owlcam-admin
    /home/shawn/owlcam/deploy/pi/scripts/publish-feed.sh --status
    ```
 
    `--public` means anyone with the URL can watch, including phones with no
    Tailscale. `--private` means only devices signed into the tailnet.
 
-To preload the rescue hotspot:
+To preload the rescue hotspot. `--ask` prompts for the password instead of
+leaving it in shell history:
 
 ```bash
-sudo nmcli dev wifi connect "PHONE_HOTSPOT_SSID" \
-  password "PHONE_HOTSPOT_PASSWORD"
+sudo nmcli --ask device wifi connect "PHONE_HOTSPOT_SSID" ifname wlan0
+sudo nmcli connection modify "PHONE_HOTSPOT_SSID" \
+  connection.autoconnect yes connection.autoconnect-priority 10
+sudo nmcli connection modify "HOME_WIFI_SSID" \
+  connection.autoconnect yes connection.autoconnect-priority 50
 ```
+
+Priority picks the winner when both are in range, so home Wi-Fi stays preferred
+and the hotspot is the fallback.
+
+**Step 1 is not optional.** NetworkManager never joins an SSID it has no saved
+profile for, so a hotspot that was never preloaded is indistinguishable from a
+dead Pi: Tailscale offline, no SSH, no `.local`. Preloading is the whole reason
+the trip works.
+
+**Do not run `nmcli device wifi connect` over SSH on a Wi-Fi-only Pi.** It drops
+the connection carrying your session before it knows the new network works, and
+a failed join leaves the Pi stranded with no network and no way back in. Plug in
+Ethernet first as a lifeline, or create the profile without activating it:
+
+```bash
+read -rsp 'Hotspot password: ' PSK; echo
+sudo nmcli connection add type wifi con-name rescue-hotspot ifname wlan0 \
+  ssid "PHONE_HOTSPOT_SSID" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PSK" \
+  connection.autoconnect yes connection.autoconnect-priority 10
+unset PSK
+```
+
+iOS specifics worth knowing: turn on **Maximize Compatibility** so the hotspot
+broadcasts 2.4 GHz, which reaches further than 5 GHz, and keep the Personal
+Hotspot screen open while the Pi boots, because iOS powers the radio down when
+no client is connected. That screen's device count is the fastest way to tell
+whether the Pi joined.
 
 ## At the buddy's house
 
@@ -70,7 +101,7 @@ sudo nmcli dev wifi connect "PHONE_HOTSPOT_SSID" \
    nmcli connection show --active
    rpicam-hello --list-cameras
    systemctl --user is-active \
-     owlcam-mediamtx owlcam-stream owlcam-site owlcam-diagnostics
+     owlcam-mediamtx owlcam-stream owlcam-site owlcam-diagnostics owlcam-admin
    curl -sSL -o /dev/null -w '%{http_code}\n' \
      http://127.0.0.1:8080/
    curl -sSL -o /dev/null -w '%{http_code}\n' \
@@ -95,6 +126,30 @@ sudo nmcli dev wifi connect "PHONE_HOTSPOT_SSID" \
 
    Do not also run `serve-stream.sh` or the UDP publisher. They fight the unit
    for the sensor.
+
+## If the Pi has no network
+
+Tailscale reporting `offline` together with `ssh: owlcam.local: Unknown host`
+means the Pi has no network at all, not that a service crashed. There is no
+remote path in, because SSH, Tailscale, and mDNS all depend on the thing that is
+missing. `owlcam.local` also only resolves on the same LAN, so it can never
+reach a Pi on a hotspot from a laptop on house Wi-Fi — use the Tailscale
+address, which works across networks.
+
+Recover with physical access, cheapest first:
+
+1. **Ethernet.** Plug the Pi into any router with a free port. DHCP and
+   Tailscale come up within a minute or two, then `ssh shawn@100.123.8.55`.
+   Leave the cable in while fixing Wi-Fi so a failed join cannot strand it
+   again.
+2. **Hotspot, but only if a profile already exists.** Maximize Compatibility on,
+   Personal Hotspot screen open, then power cycle the Pi and wait two minutes.
+3. **Local console.** micro-HDMI, a monitor, and a USB keyboard.
+
+Editing the SD card on a Mac is not a shortcut. This Pi runs Debian 13 with
+NetworkManager, so a `wpa_supplicant.conf` dropped in the boot partition is
+ignored, and the profiles live on an ext4 root filesystem that macOS cannot
+mount without extra software.
 
 ## Viewer access
 

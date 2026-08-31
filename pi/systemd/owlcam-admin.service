@@ -1,0 +1,26 @@
+[Unit]
+Description=Authenticated OwlCam administration API
+Documentation=https://github.com/ssskillman/owlcam/blob/main/docs/live-feed.md
+After=network-online.target owlcam-site.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/owlcam-admin
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-%h/.config/owlcam/admin.env
+Restart=always
+RestartSec=5
+
+# The service controls only user units through fixed systemctl arguments. It
+# needs AF_UNIX for the per-user systemd manager and AF_INET/6 for its loopback
+# listener and the fixed Firebase edge-health probe.
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=default.target
