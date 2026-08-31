@@ -4,12 +4,14 @@ set -euo pipefail
 # Controls who can reach the OwlCam feed, without touching capture.
 #
 # Tailscale applies Serve and Funnel per *port*, not per mount point: whichever
-# command ran last decides the exposure of everything on 443. Both the HLS root
-# and the /diagnostics mount therefore have to be declared together, in the same
-# mode, or changing exposure silently drops one of them.
+# command ran last decides the exposure of everything on 443. The site, HLS,
+# diagnostics, and admin mounts therefore have to be declared together in the
+# same mode or changing exposure silently drops one. The admin API remains
+# authenticated even when the port uses Funnel.
 
 readonly HLS_PORT="${OWLCAM_HLS_PORT:-8888}"
 readonly DIAGNOSTICS_PORT="${OWLCAM_DIAGNOSTICS_PORT:-8765}"
+readonly ADMIN_PORT="${OWLCAM_ADMIN_PORT:-8766}"
 readonly SITE_PORT="${OWLCAM_SITE_PORT:-8080}"
 readonly STREAM_PATH="${OWLCAM_STREAM_PATH:-owl}"
 
@@ -23,17 +25,18 @@ Usage: publish-feed.sh [--public | --private | --preserve | --status]
               URL can watch, including phones that have never used Tailscale.
               The /diagnostics vitals become publicly readable too.
   --private   Publish over Tailscale Serve. Tailnet devices only.
-  --preserve  Re-declare both mounts in whichever mode is already active,
+  --preserve  Re-declare all mounts in whichever mode is already active,
               defaulting to private. Used by install-services.sh.
   --status    Show the current exposure and mounts (default).
 
-Every mode declares all three mounts together: the page at /, the stream under
-/owl, and the vitals at /diagnostics. The page and the stream must stay on one
-origin or browsers block the video on any device running Tailscale.
+Every mode declares all four mounts together: the page at /, the stream under
+/owl, vitals at /diagnostics, and the authenticated API at /admin. The page and
+stream must stay on one origin or browsers block video on Tailscale devices.
 
 Optional environment:
   OWLCAM_HLS_PORT            MediaMTX HLS port, default 8888
   OWLCAM_DIAGNOSTICS_PORT    diagnostics port, default 8765
+  OWLCAM_ADMIN_PORT          authenticated admin API port, default 8766
   OWLCAM_SITE_PORT           site server port, default 8080
   OWLCAM_STREAM_PATH         stream mount and MediaMTX path, default owl
 EOF
@@ -115,6 +118,8 @@ apply() {
     "http://127.0.0.1:${HLS_PORT}/${STREAM_PATH}"
   tailscale "${verb}" --bg --yes --https=443 --set-path=/diagnostics \
     "http://127.0.0.1:${DIAGNOSTICS_PORT}"
+  tailscale "${verb}" --bg --yes --https=443 --set-path=/admin \
+    "http://127.0.0.1:${ADMIN_PORT}"
 }
 
 case "${mode}" in
@@ -144,4 +149,5 @@ fi
 printf 'Watch page: https://%s/\n' "${host}"
 printf 'Stream URL: https://%s/%s/index.m3u8\n' "${host}" "${STREAM_PATH}"
 printf 'Vitals URL: https://%s/diagnostics\n' "${host}"
+printf 'Admin API: https://%s/admin/api/session\n' "${host}"
 tailscale serve status 2>/dev/null || true

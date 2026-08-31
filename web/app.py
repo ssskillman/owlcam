@@ -2,22 +2,31 @@ from fasthtml.common import (
     A,
     Body,
     Button,
+    Dialog,
     Div,
     Footer,
+    Form,
     H1,
     H2,
     Head,
+    Header,
     Html,
     Img,
+    Input,
+    Label,
     Link,
     Main,
     Meta,
     Nav,
+    Option,
     P,
+    Pre,
     Script,
     Section,
+    Select,
     Small,
     Span,
+    Strong,
     Title,
     Video,
     to_xml,
@@ -138,7 +147,7 @@ def _diagnostic_metric(
 
 
 def _head(*, title: str, description: str, include_player: bool) -> Head:
-    scripts = []
+    scripts = [Script(src="/assets/admin.js", defer=True)]
     if include_player:
         scripts = [
             Script(
@@ -152,6 +161,7 @@ def _head(*, title: str, description: str, include_player: bool) -> Head:
             ),
             Script(src="/assets/player.js", defer=True),
             Script(src="/assets/diagnostics.js", defer=True),
+            *scripts,
         ]
     return Head(
         Meta(charset="utf-8"),
@@ -174,10 +184,180 @@ def _nav(*, active: str) -> Div:
         Nav(
             A("Moments", href="/moments", **moments),
             A("About", href="/about", **about),
+            Button(
+                "?",
+                type="button",
+                id="admin-open",
+                cls="admin-open",
+                aria_label="Open admin login",
+            ),
             cls="site-nav",
             aria_label="Site",
         ),
         cls="utility-bar",
+    )
+
+
+def _admin_panel() -> Dialog:
+    return Dialog(
+        Header(
+            Div(
+                Span("FIELD STATION CONTROL", cls="admin-kicker"),
+                H2("OwlCam admin", id="admin-panel-title"),
+            ),
+            Button(
+                "Close",
+                type="button",
+                id="admin-close",
+                cls="admin-close",
+                aria_label="Close admin panel",
+            ),
+            cls="admin-header",
+        ),
+        Div(
+            P(
+                "Sign in to inspect services, read bounded logs, and control "
+                "the camera feed.",
+                cls="admin-intro",
+            ),
+            Form(
+                Label("Username", fr="admin-username"),
+                Input(
+                    id="admin-username",
+                    name="username",
+                    value="admin",
+                    autocomplete="username",
+                    maxlength="64",
+                    required=True,
+                ),
+                Label("Password", fr="admin-password"),
+                Input(
+                    id="admin-password",
+                    name="password",
+                    type="password",
+                    autocomplete="current-password",
+                    maxlength="1024",
+                    required=True,
+                ),
+                Button("Sign in", type="submit"),
+                id="admin-login-form",
+                cls="admin-login-form",
+            ),
+            P(
+                "",
+                id="admin-login-status",
+                cls="admin-message",
+                role="status",
+                aria_live="polite",
+            ),
+            id="admin-login",
+        ),
+        Div(
+            Div(
+                Div(
+                    Span("SYSTEM STATE", cls="admin-kicker"),
+                    Strong("Loading…", id="admin-overall-status"),
+                ),
+                Div(
+                    Button(
+                        "Refresh",
+                        type="button",
+                        id="admin-refresh",
+                        cls="admin-secondary",
+                    ),
+                    Button(
+                        "Sign out",
+                        type="button",
+                        id="admin-logout",
+                        cls="admin-secondary",
+                    ),
+                    cls="admin-actions",
+                ),
+                cls="admin-toolbar",
+            ),
+            Section(
+                Div(
+                    Span("LIVE VIDEO", cls="admin-kicker"),
+                    H2("Camera feed"),
+                    P("Checking the stream unit…", id="admin-stream-state"),
+                    cls="admin-control-copy",
+                ),
+                Button(
+                    "Turn feed off",
+                    type="button",
+                    id="admin-stream-toggle",
+                    cls="admin-danger",
+                    disabled=True,
+                ),
+                cls="admin-control",
+                aria_label="Live video control",
+            ),
+            Section(
+                H2("Services"),
+                Div(id="admin-services", cls="admin-service-grid"),
+                cls="admin-section",
+            ),
+            Section(
+                H2("Pi health"),
+                Div(id="admin-host-status", cls="admin-metric-grid"),
+                cls="admin-section",
+            ),
+            Section(
+                H2("Firebase edge"),
+                P(
+                    "Checking redirect health…",
+                    id="admin-firebase-status",
+                    cls="admin-firebase",
+                ),
+                Small(
+                    "Analytics is not configured. This verifies that Firebase "
+                    "is reachable and still redirects to the Pi."
+                ),
+                cls="admin-section",
+            ),
+            Section(
+                Div(
+                    H2("Service logs"),
+                    Div(
+                        Label("Unit", fr="admin-log-service"),
+                        Select(
+                            Option("Stream", value="stream"),
+                            Option("MediaMTX", value="media"),
+                            Option("Site", value="site"),
+                            Option("Diagnostics", value="diagnostics"),
+                            Option("Admin", value="admin"),
+                            id="admin-log-service",
+                        ),
+                        Button(
+                            "Load logs",
+                            type="button",
+                            id="admin-load-logs",
+                            cls="admin-secondary",
+                        ),
+                        cls="admin-log-controls",
+                    ),
+                    cls="admin-section-heading",
+                ),
+                Pre(
+                    "Choose a service to load its latest 100 journal lines.",
+                    id="admin-log-output",
+                    tabindex="0",
+                ),
+                cls="admin-section admin-logs",
+            ),
+            P(
+                "",
+                id="admin-action-status",
+                cls="admin-message",
+                role="status",
+                aria_live="polite",
+            ),
+            id="admin-dashboard",
+            hidden=True,
+        ),
+        id="admin-dialog",
+        cls="admin-dialog",
+        aria_labelledby="admin-panel-title",
     )
 
 
@@ -201,6 +381,7 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
         ),
         Body(
             _nav(active="live"),
+            _admin_panel(),
             Main(
                 Section(
                     Div(
@@ -424,6 +605,7 @@ def render_about_page() -> str:
         ),
         Body(
             _nav(active="about"),
+            _admin_panel(),
             Main(
                 Section(
                     Div(
@@ -585,6 +767,7 @@ def render_moments_page() -> str:
         ),
         Body(
             _nav(active="moments"),
+            _admin_panel(),
             Main(
                 Section(
                     Span("FIELD LOG", cls="live-label"),

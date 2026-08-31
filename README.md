@@ -14,17 +14,18 @@ forwarding and no viewer accounts.
 to the Pi on 2026-08-30 so it shares an origin with the stream
 ([why](docs/live-feed.md#why-one-origin)); Firebase now only redirects.</sub>
 
-## One origin, three mounts
+## One origin, four mounts
 
 Everything a viewer touches comes from a single Tailscale hostname, and
-Tailscale remains the only ingress. The page, the video, and the vitals are
-separate mounts on port 443, each proxied from loopback:
+Tailscale remains the only ingress. The page, video, vitals, and authenticated
+admin API are separate mounts on port 443, each proxied from loopback:
 
 | Mount | Backed by | Contains |
 |---|---|---|
 | `/` | `owlcam-site` on `127.0.0.1:8080` | HTML, CSS, photos, the player |
 | `/owl` | MediaMTX on `127.0.0.1:8888` | Live H.264 / HLS |
 | `/diagnostics` | `owlcam-diagnostics` on `127.0.0.1:8765` | Read-only health JSON |
+| `/admin` | `owlcam-admin` on `127.0.0.1:8766` | Authenticated controls and logs |
 
 The page still never proxies video — the browser fetches HLS itself. It just
 fetches it from the same origin that served the page, and that is load-bearing:
@@ -77,17 +78,26 @@ cd /home/shawn/owlcam/deploy
 ./pi/scripts/install-services.sh --uninstall  # remove
 ```
 
-That gives you `owlcam-mediamtx`, `owlcam-stream`, `owlcam-site`, and
-`owlcam-diagnostics`. They start at boot and restart within about five seconds
-of a failure. `owlcam-site` serves the built page, and the diagnostics service
-exposes a small read-only health payload at `/diagnostics` for the live browser
-panel.
+That gives you `owlcam-mediamtx`, `owlcam-stream`, `owlcam-site`,
+`owlcam-diagnostics`, and `owlcam-admin`. They start at boot and restart within
+about five seconds of a failure. `owlcam-site` serves the built page, diagnostics
+exposes the public health payload, and admin exposes authenticated controls.
 
 ```bash
-systemctl --user status owlcam-stream owlcam-mediamtx owlcam-site owlcam-diagnostics
+systemctl --user status owlcam-stream owlcam-mediamtx owlcam-site \
+  owlcam-diagnostics owlcam-admin
 journalctl --user -u owlcam-stream -n 50
 systemctl --user restart owlcam-stream
 ```
+
+Configure the admin password once on the Pi, then click `?` on any page:
+
+```bash
+owlcam-configure-admin
+```
+
+See [`docs/admin-panel.md`](docs/admin-panel.md) for the controls, security
+boundary, and recovery steps.
 
 These are **user** units, not system units, because the Pi has no passwordless
 sudo. The installer runs `loginctl enable-linger`, without which user units stop
@@ -239,7 +249,7 @@ Two traps worth knowing:
 - **A running unit keeps its old binary.** `systemctl enable --now` does nothing
   to an already-active service, which is why staged code can appear installed
   while the endpoint still serves the previous payload. The installer now
-  restarts all four units for this reason. To confirm what is actually running:
+  restarts all five units for this reason. To confirm what is actually running:
 
 ```bash
 curl -sS https://owlcam.tail31318f.ts.net/diagnostics

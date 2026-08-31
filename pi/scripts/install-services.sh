@@ -19,8 +19,8 @@ usage() {
   cat <<'EOF'
 Usage: install-services.sh [--uninstall]
 
-  (default)    Install and start the media, stream, site, and diagnostics units.
-  --uninstall  Stop, disable, and remove all four units.
+  (default)    Install and start media, stream, site, diagnostics, and admin.
+  --uninstall  Stop, disable, and remove all five units.
 
 The site unit serves the built page from ${HOME}/owlcam/site, which deploy.sh
 stages. Build and stage it before installing, or the page will 404.
@@ -49,21 +49,25 @@ require loginctl
 if "${uninstall}"; then
   # A mount could have been declared in either mode, and clearing one does
   # not clear the other.
-  for mount_path in /diagnostics "/${OWLCAM_STREAM_PATH:-owl}"; do
+  for mount_path in /admin /diagnostics "/${OWLCAM_STREAM_PATH:-owl}"; do
     tailscale funnel --https=443 --set-path="${mount_path}" off 2>/dev/null || true
     tailscale serve --https=443 --set-path="${mount_path}" off 2>/dev/null || true
   done
   tailscale funnel --https=443 off 2>/dev/null || true
   tailscale serve --https=443 off 2>/dev/null || true
+  systemctl --user disable --now owlcam-admin.service 2>/dev/null || true
   systemctl --user disable --now owlcam-diagnostics.service 2>/dev/null || true
   systemctl --user disable --now owlcam-site.service 2>/dev/null || true
   systemctl --user disable --now owlcam-stream.service 2>/dev/null || true
   systemctl --user disable --now owlcam-mediamtx.service 2>/dev/null || true
   rm -f "${UNIT_DIR}/owlcam-diagnostics.service" \
+        "${UNIT_DIR}/owlcam-admin.service" \
         "${UNIT_DIR}/owlcam-site.service" \
         "${UNIT_DIR}/owlcam-stream.service" \
         "${UNIT_DIR}/owlcam-mediamtx.service" \
         "${BIN_DIR}/owlcam-diagnostics" \
+        "${BIN_DIR}/owlcam-admin" \
+        "${BIN_DIR}/owlcam-configure-admin" \
         "${BIN_DIR}/owlcam-site" \
         "${BIN_DIR}/owlcam-start-stream"
   systemctl --user daemon-reload
@@ -84,8 +88,11 @@ loginctl enable-linger "${USER}"
 mkdir -p "${UNIT_DIR}" "${BIN_DIR}"
 install -m 0755 "${SCRIPT_DIR}/start-stream.sh" "${BIN_DIR}/owlcam-start-stream"
 install -m 0755 "${SCRIPT_DIR}/diagnostics_server.py" "${BIN_DIR}/owlcam-diagnostics"
+install -m 0755 "${SCRIPT_DIR}/admin_server.py" "${BIN_DIR}/owlcam-admin"
+install -m 0755 "${SCRIPT_DIR}/configure-admin.sh" "${BIN_DIR}/owlcam-configure-admin"
 install -m 0755 "${SCRIPT_DIR}/site_server.py" "${BIN_DIR}/owlcam-site"
 install -m 0644 "${UNIT_SRC}/owlcam-diagnostics.service" "${UNIT_DIR}/"
+install -m 0644 "${UNIT_SRC}/owlcam-admin.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-mediamtx.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-site.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-stream.service" "${UNIT_DIR}/"
@@ -112,6 +119,7 @@ systemctl --user enable owlcam-mediamtx.service
 systemctl --user enable owlcam-stream.service
 systemctl --user enable owlcam-site.service
 systemctl --user enable owlcam-diagnostics.service
+systemctl --user enable owlcam-admin.service
 
 # Restart rather than "enable --now": an already-running unit keeps executing the
 # binary it started with, so freshly staged code would not take effect until the
@@ -121,6 +129,7 @@ sleep 3
 systemctl --user restart owlcam-stream.service
 systemctl --user restart owlcam-site.service
 systemctl --user restart owlcam-diagnostics.service
+systemctl --user restart owlcam-admin.service
 
 printf '\nWaiting for local HLS...\n'
 hls_url="http://127.0.0.1:${OWLCAM_HLS_PORT:-8888}/${OWLCAM_STREAM_PATH:-owl}/index.m3u8"
@@ -178,6 +187,22 @@ if [[ "${site_ready:-false}" != true ]]; then
   exit 1
 fi
 
+printf '\nWaiting for the local admin API...\n'
+admin_url="http://127.0.0.1:${OWLCAM_ADMIN_PORT:-8766}/api/session"
+for _ in $(seq 1 10); do
+  if curl -fsS -m 3 -o /dev/null "${admin_url}"; then
+    admin_ready=true
+    break
+  fi
+  sleep 1
+done
+
+if [[ "${admin_ready:-false}" != true ]]; then
+  printf 'The local admin API never answered. Check:\n' >&2
+  printf '  systemctl --user status owlcam-admin\n' >&2
+  exit 1
+fi
+
 # Declares the HLS root and the diagnostics mount together, keeping whatever
 # exposure is already in effect so a reinstall cannot pull a deliberately public
 # feed back to tailnet-only. Tailscale persists this across reboots.
@@ -188,4 +213,5 @@ systemctl --user is-enabled \
   owlcam-mediamtx.service \
   owlcam-stream.service \
   owlcam-site.service \
-  owlcam-diagnostics.service
+  owlcam-diagnostics.service \
+  owlcam-admin.service

@@ -27,6 +27,11 @@ so the player can request relative paths:
 /diagnostics
 ```
 
+The `?` navigation control opens the authenticated admin panel. Its browser
+client calls `/admin/api`; the Pi maps that path to the separate loopback-only
+admin service. Configure credentials on the Pi with `owlcam-configure-admin`.
+See [`../docs/admin-panel.md`](../docs/admin-panel.md).
+
 That is load-bearing, not cosmetic. Hosting the page on a different origin made
 the video unplayable on every device running Tailscale, because a public page is
 not permitted to reach the private address MagicDNS returns. See

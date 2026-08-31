@@ -186,6 +186,38 @@ def test_pages_declare_the_favicon():
         assert 'type="image/svg+xml"' in markup, "favicon type hint is missing"
 
 
+def test_every_page_has_an_accessible_admin_login_and_panel():
+    for markup in (render_page(), render_about_page(), render_moments_page()):
+        assert 'id="admin-open"' in markup
+        assert 'aria-label="Open admin login"' in markup
+        assert 'id="admin-dialog"' in markup
+        assert 'id="admin-login-form"' in markup
+        assert 'autocomplete="username"' in markup
+        assert 'autocomplete="current-password"' in markup
+        assert 'id="admin-dashboard"' in markup
+        assert 'id="admin-stream-toggle"' in markup
+        assert 'id="admin-log-output"' in markup
+        assert 'id="admin-firebase-status"' in markup
+        assert 'src="/assets/admin.js"' in markup
+
+
+def test_admin_client_uses_cookie_sessions_csrf_and_safe_text_rendering():
+    source = (WEB_ROOT / "static" / "admin.js").read_text()
+
+    assert 'const API = "/admin/api"' in source
+    assert 'credentials: "same-origin"' in source
+    assert '"X-Owlcam-Csrf": csrfToken' in source
+    assert 'api("/session"' in source
+    assert 'api("/stream"' in source
+    assert "`/logs?service=${encodeURIComponent(" in source
+    assert 'api("/firebase"' in source
+    assert ".textContent =" in source
+    assert ".innerHTML" not in source
+    assert "localStorage" not in source
+    assert "sessionStorage" not in source
+    assert "confirm(" in source
+
+
 def test_favicon_is_fingerprinted():
     # Browsers cache favicons far past the response headers, so the URL has to
     # change when the icon does.
@@ -339,6 +371,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert not (assets / "player.js").exists()
     assert not (assets / "diagnostics.js").exists()
     assert not (assets / "moments.js").exists()
+    assert not (assets / "admin.js").exists()
 
     hashed = {p.name for p in assets.glob("*.*.css")} | {
         p.name for p in assets.glob("*.*.js")
@@ -347,12 +380,15 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert any(n.startswith("player.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("diagnostics.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("moments.") and n.endswith(".js") for n in hashed)
+    assert any(n.startswith("admin.") and n.endswith(".js") for n in hashed)
 
     index = (output / "index.html").read_text()
     assert '"/assets/styles.css"' not in index
     referenced = [n for n in hashed if f"/assets/{n}" in index]
     assert sorted(referenced) == sorted(
-        n for n in hashed if n.startswith(("styles.", "player.", "diagnostics."))
+        n
+        for n in hashed
+        if n.startswith(("styles.", "player.", "diagnostics.", "admin."))
     )
 
     # A content change must produce a different URL.
