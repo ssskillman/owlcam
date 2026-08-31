@@ -38,12 +38,15 @@ FINGERPRINTED = re.compile(r"\.[0-9a-f]{12}\.[^.]+$")
 
 CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
-    "script-src 'self' https://cdn.jsdelivr.net; "
+    "script-src 'self' https://cdn.jsdelivr.net https://www.gstatic.com "
+    "https://www.googletagmanager.com; "
     "worker-src 'self' blob:; "
     "style-src 'self'; "
     "img-src 'self' data:; "
     "media-src 'self' blob:; "
-    "connect-src 'self'; "
+    "connect-src 'self' https://firebase.googleapis.com "
+    "https://firebaseinstallations.googleapis.com "
+    "https://www.google-analytics.com https://region1.google-analytics.com; "
     "object-src 'none'; "
     "base-uri 'self'; "
     "frame-ancestors 'none'"

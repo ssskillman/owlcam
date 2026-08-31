@@ -9,12 +9,14 @@ After authentication, an administrator can:
 - inspect the state of all OwlCam user services;
 - see Pi uptime, available memory, disk space, load, and active Wi-Fi;
 - read the latest 100 journal lines from one allowlisted OwlCam service;
-- verify Firebase redirect status, target, and response time.
+- verify Firebase redirect status, target, and response time;
+- open the linked Google Analytics visitor reports.
 
-Firebase Analytics is not configured, so the panel does not invent traffic
-counts. The Firebase card reports operational redirect health. Actual visitor
-metrics would require enabling Analytics and adding a server-side Google
-Analytics Data API credential; no Google credential belongs in browser code.
+Firebase Analytics uses the `OwlCam Web` stream in GA4 property `552084140`.
+The card reports operational redirect health; visitor counts stay in the
+Firebase/GA4 console because rendering them in this panel would require a
+server-side Google Analytics Data API credential. No Google credential belongs
+on the public Funnel control path.
 
 ## Configure login
 

@@ -33,6 +33,16 @@ identity, future upload credentials, camera footage, and future stream keys.
 - Keep `~/.config/owlcam/admin.env` mode `600`. It contains a password hash, not
   plaintext, but still enables offline password guessing if copied. Never stage
   it through repository deployment.
+- Visitor analytics uses the registered `OwlCam Web` Firebase app and GA4
+  measurement ID `G-WMSVQJWJQR`. Firebase's browser configuration (including
+  its API key) identifies the public app and is not a server credential. Never
+  add a service-account key or Google Analytics Data API token to the site or
+  Pi admin service.
+- Analytics initialization respects the browser's Do Not Track setting and
+  fails open: an ad blocker, offline Google endpoint, or unsupported browser
+  cannot affect the page, camera stream, or admin controls. GA4 uses first-party
+  identifiers and activity data; do not send names, emails, admin actions,
+  camera contents, or other personally identifiable information as events.
 - Keep runtime configuration under `/etc/owlcam`, readable only as required.
 - Review MediaMTX authentication settings before every configuration commit.
 - Download MediaMTX over HTTPS and verify the release checksum before install.
