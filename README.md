@@ -47,6 +47,22 @@ The trade is availability: the page used to stay up when the Pi was off, and now
 it does not. Firebase's redirects are 302 and `no-store` so that stays a config
 change rather than a migration.
 
+### Visitor analytics
+
+The registered Firebase web app `OwlCam Web` sends automatic page activity to
+GA4 property `552084140` using measurement ID `G-WMSVQJWJQR`. Tracking runs on
+the Pi-served page—the Firebase redirect cannot execute JavaScript—and is
+skipped when the browser sends Do Not Track.
+
+The static site uses Firebase's documented CDN module setup:
+<https://firebase.google.com/docs/web/alt-setup#from-the-cdn>. Google documents
+that GA4 discards IP addresses before logging them:
+<https://support.google.com/analytics/answer/11598602>.
+
+Open reports from the admin panel's Firebase section. The panel continues to
+show redirect health rather than proxying report data, because that would put a
+Google Analytics Data API credential on the public Funnel path.
+
 ## Bring up the feed
 
 On the Pi, one command does the whole chain — MediaMTX, camera capture, and

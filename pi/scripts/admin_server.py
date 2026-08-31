@@ -290,14 +290,14 @@ def firebase_edge_status() -> dict[str, Any]:
             "status": None,
             "redirectTarget": None,
             "latencyMs": round((time.monotonic() - started) * 1000),
-            "note": "Firebase Analytics is not configured; this checks redirect health.",
+            "note": "Visitor Analytics is linked; this card checks redirect health.",
         }
     return {
         "reachable": True,
         "status": status,
         "redirectTarget": location,
         "latencyMs": round((time.monotonic() - started) * 1000),
-        "note": "Firebase Analytics is not configured; this checks redirect health.",
+        "note": "Visitor Analytics is linked; this card checks redirect health.",
     }
 
 

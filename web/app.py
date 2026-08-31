@@ -147,7 +147,10 @@ def _diagnostic_metric(
 
 
 def _head(*, title: str, description: str, include_player: bool) -> Head:
-    scripts = [Script(src="/assets/admin.js", defer=True)]
+    scripts = [
+        Script(src="/assets/admin.js", defer=True),
+        Script(src="/assets/analytics.js", type="module"),
+    ]
     if include_player:
         scripts = [
             Script(
@@ -310,8 +313,20 @@ def _admin_panel() -> Dialog:
                     cls="admin-firebase",
                 ),
                 Small(
-                    "Analytics is not configured. This verifies that Firebase "
-                    "is reachable and still redirects to the Pi."
+                    "Redirect health is shown here. Visitor counts and page "
+                    "activity live in the linked GA4 property."
+                ),
+                P(
+                    A(
+                        "Open visitor analytics",
+                        href=(
+                            "https://console.firebase.google.com/project/"
+                            "carver-owlcam-72343/analytics"
+                        ),
+                        target="_blank",
+                        rel="noopener noreferrer",
+                    ),
+                    cls="admin-analytics-link",
                 ),
                 cls="admin-section",
             ),

@@ -186,6 +186,22 @@ def test_pages_declare_the_favicon():
         assert 'type="image/svg+xml"' in markup, "favicon type hint is missing"
 
 
+def test_every_page_initializes_the_registered_firebase_analytics_app():
+    for markup in (render_page(), render_about_page(), render_moments_page()):
+        assert 'src="/assets/analytics.js"' in markup
+        assert 'type="module"' in markup
+
+    source = (WEB_ROOT / "static" / "analytics.js").read_text()
+    assert "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js" in source
+    assert "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js" in source
+    assert 'measurementId: "G-WMSVQJWJQR"' in source
+    assert "initializeApp(firebaseConfig)" in source
+    assert "getAnalytics(app)" in source
+    assert 'navigator.doNotTrack === "1"' in source
+    assert "localStorage" not in source
+    assert "sessionStorage" not in source
+
+
 def test_every_page_has_an_accessible_admin_login_and_panel():
     for markup in (render_page(), render_about_page(), render_moments_page()):
         assert 'id="admin-open"' in markup
@@ -198,6 +214,8 @@ def test_every_page_has_an_accessible_admin_login_and_panel():
         assert 'id="admin-stream-toggle"' in markup
         assert 'id="admin-log-output"' in markup
         assert 'id="admin-firebase-status"' in markup
+        assert "Analytics is not configured" not in markup
+        assert "Open visitor analytics" in markup
         assert 'src="/assets/admin.js"' in markup
 
 
@@ -372,6 +390,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert not (assets / "diagnostics.js").exists()
     assert not (assets / "moments.js").exists()
     assert not (assets / "admin.js").exists()
+    assert not (assets / "analytics.js").exists()
 
     hashed = {p.name for p in assets.glob("*.*.css")} | {
         p.name for p in assets.glob("*.*.js")
@@ -381,6 +400,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert any(n.startswith("diagnostics.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("moments.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("admin.") and n.endswith(".js") for n in hashed)
+    assert any(n.startswith("analytics.") and n.endswith(".js") for n in hashed)
 
     index = (output / "index.html").read_text()
     assert '"/assets/styles.css"' not in index
@@ -388,7 +408,9 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert sorted(referenced) == sorted(
         n
         for n in hashed
-        if n.startswith(("styles.", "player.", "diagnostics.", "admin."))
+        if n.startswith(
+            ("styles.", "player.", "diagnostics.", "admin.", "analytics.")
+        )
     )
 
     # A content change must produce a different URL.

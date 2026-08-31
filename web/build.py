@@ -16,6 +16,7 @@ FINGERPRINTED = (
     "diagnostics.js",
     "moments.js",
     "admin.js",
+    "analytics.js",
     "favicon.svg",
 )
 PAGES = {

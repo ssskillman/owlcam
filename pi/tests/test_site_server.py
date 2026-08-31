@@ -143,6 +143,22 @@ class ServedResponseTests(unittest.TestCase):
         # longer needs to name a separate media host.
         self.assertIn("media-src 'self' blob:", headers["Content-Security-Policy"])
         self.assertIn("connect-src 'self'", headers["Content-Security-Policy"])
+        self.assertIn(
+            "https://www.gstatic.com",
+            headers["Content-Security-Policy"],
+        )
+        self.assertIn(
+            "https://www.googletagmanager.com",
+            headers["Content-Security-Policy"],
+        )
+        self.assertIn(
+            "https://www.google-analytics.com",
+            headers["Content-Security-Policy"],
+        )
+        self.assertIn(
+            "https://firebaseinstallations.googleapis.com",
+            headers["Content-Security-Policy"],
+        )
 
     def test_advertises_and_honours_byte_ranges_so_safari_plays_video(self):
         expected = (self.root / "assets" / "clip.webm").read_bytes()
