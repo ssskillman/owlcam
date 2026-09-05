@@ -3,6 +3,15 @@
 Living roadmap. The live feed, systemd units, and diagnostics panel are already
 on `main`. Work below is what is left to do on the Pi, the site, and the nest.
 
+## Waiting on a public domain
+
+Always-up Firebase pages and a second USB camera (Arducam B0506) are
+specified and **parked** until a buddy buys a public hostname for live
+video. Do not ship Firebase HTML that still fetches `*.ts.net` — Tailscale
+devices will not play. Full order, constraints, and e2e gates:
+
+[`next-steps/always-up-and-camera-2.md`](next-steps/always-up-and-camera-2.md)
+
 ## Phase: hardware enhancements
 
 Add physical sensors to the same Pi that already runs capture, MediaMTX, and
@@ -41,7 +50,7 @@ Candidates that fit the nest-box job, in likely order:
 
 | Sensor | Why | How it should land |
 | --- | --- | --- |
-| IR illuminator / IR-cut | Night watch inside a dark box | GPIO or camera module control; document power draw |
+| IR illuminator / IR-cut | Night watch inside a dark box | Prefer Arducam B0506 (onboard IR-cut + 850 nm LEDs) as camera #2 after the public domain; see [`next-steps/always-up-and-camera-2.md`](next-steps/always-up-and-camera-2.md) |
 | Light / lux | Know dusk vs a blocked lens | I2C (e.g. VEML7700) on the same bus as the BME280 |
 | Occupancy / PIR or break-beam | Optional nest-visit cue, not a substitute for video | Debounce in diagnostics or a future snapshot trigger |
 | Waterproof housing / cable gland | Wooded box, weather | Mechanical; keep I2C leads short and strain-relieved |
