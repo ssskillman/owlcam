@@ -2,7 +2,7 @@ from hashlib import sha256
 from pathlib import Path
 from shutil import copytree, rmtree
 
-from app import render_about_page, render_moments_page, render_page
+from app import render_about_page, render_identify_page, render_moments_page, render_page
 
 WEB_ROOT = Path(__file__).parent
 DEFAULT_OUTPUT = WEB_ROOT / "public"
@@ -16,12 +16,14 @@ FINGERPRINTED = (
     "diagnostics.js",
     "moments.js",
     "admin.js",
+    "identify.js",
     "analytics.js",
     "favicon.svg",
 )
 PAGES = {
     "index.html": render_page,
     "about.html": render_about_page,
+    "identify.html": render_identify_page,
     "moments.html": render_moments_page,
 }
 

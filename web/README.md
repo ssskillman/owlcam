@@ -12,6 +12,7 @@ make pi-deploy          # from the repo root: builds and stages the site to the 
 Link to share: <https://carver-owlcam-72343.web.app>
 About Chris: <https://carver-owlcam-72343.web.app/about>
 Owl Moments: <https://carver-owlcam-72343.web.app/moments>
+Identify: <https://carver-owlcam-72343.web.app/identify>
 
 Those 302 to the Pi with the path preserved, so the address bar ends on
 <https://owlcam.tail31318f.ts.net/> — the origin that actually serves the page.

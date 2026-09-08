@@ -277,6 +277,8 @@ grep -F -- 'OWLCAM_ADMIN_PASSWORD_HASH' "${configure_admin}" >/dev/null \
 # Capture published before MediaMTX is listening leaves the page on "resting".
 site_unit="${REPO_ROOT}/pi/systemd/owlcam-site.service"
 [[ -r "${site_unit}" ]] || fail "owlcam-site.service is missing"
+grep -F -- 'EnvironmentFile=-%h/.config/owlcam/site.env' "${site_unit}" >/dev/null \
+  || fail "site unit cannot read OWLCAM_ANIMAL_ID_ORIGIN from site.env"
 grep -F -- 'Restart=always' "${site_unit}" >/dev/null \
   || fail "site unit does not restart after a failure"
 grep -F -- 'WantedBy=default.target' "${site_unit}" >/dev/null \

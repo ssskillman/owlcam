@@ -1038,6 +1038,103 @@ footer {
   margin-top: 0.5rem;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.identify-page {
+  display: grid;
+  gap: 1.5rem;
+  padding: 2.5rem 0 4rem;
+}
+
+.identify-intro .lede {
+  max-width: 42rem;
+}
+
+.identify-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.identify-drop {
+  padding: 1.5rem;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  background: var(--forest);
+  cursor: pointer;
+}
+
+.identify-drop.is-over {
+  border-color: var(--amber);
+}
+
+.identify-form input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.identify-thumbs {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.identify-thumbs li {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.identify-thumbs img,
+.identify-card img {
+  width: 100%;
+  height: auto;
+}
+
+.identify-results {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.identify-card {
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  background: var(--forest);
+}
+
+.identify-card h2 {
+  margin: 0.8rem 0 0.3rem;
+  font-size: 1.25rem;
+}
+
+.identify-disclaimer,
+.identify-score {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.identify-feedback,
+.identify-correction {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.3;
@@ -1077,6 +1174,11 @@ footer {
   .about-intro,
   .about-grid {
     grid-template-columns: 1fr;
+  }
+
+  .identify-results,
+  .identify-thumbs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .about-portrait {
@@ -1124,6 +1226,11 @@ footer {
 
   .site-nav {
     gap: 0.8rem;
+  }
+
+  .identify-results,
+  .identify-thumbs {
+    grid-template-columns: 1fr;
   }
 
   .admin-dialog {

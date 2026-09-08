@@ -36,31 +36,45 @@ CHUNK_SIZE = 64 * 1024
 # fingerprint has a stable URL and must not be.
 FINGERPRINTED = re.compile(r"\.[0-9a-f]{12}\.[^.]+$")
 
-CONTENT_SECURITY_POLICY = (
-    "default-src 'self'; "
-    "script-src 'self' https://cdn.jsdelivr.net https://www.gstatic.com "
-    "https://www.googletagmanager.com; "
-    "worker-src 'self' blob:; "
-    "style-src 'self'; "
-    "img-src 'self' data:; "
-    "media-src 'self' blob:; "
-    "connect-src 'self' https://firebase.googleapis.com "
-    "https://firebaseinstallations.googleapis.com "
-    "https://www.google-analytics.com https://region1.google-analytics.com; "
-    "object-src 'none'; "
-    "base-uri 'self'; "
-    "frame-ancestors 'none'"
-)
 
-# Firebase applied these as hosting headers. Serving the page ourselves means
-# sending them ourselves, or the move to one origin quietly drops them.
-SECURITY_HEADERS = {
-    "Content-Security-Policy": CONTENT_SECURITY_POLICY,
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-}
+def animal_id_origin() -> str:
+    return os.environ.get("OWLCAM_ANIMAL_ID_ORIGIN", "").rstrip("/")
+
+
+def content_security_policy() -> str:
+    extra = animal_id_origin()
+    connect = (
+        "connect-src 'self' https://firebase.googleapis.com "
+        "https://firebaseinstallations.googleapis.com "
+        "https://www.google-analytics.com https://region1.google-analytics.com"
+    )
+    images = "img-src 'self' data:"
+    if extra:
+        connect = f"{connect} {extra}"
+        images = f"{images} {extra}"
+    return (
+        "default-src 'self'; "
+        "script-src 'self' https://cdn.jsdelivr.net https://www.gstatic.com "
+        "https://www.googletagmanager.com; "
+        "worker-src 'self' blob:; "
+        "style-src 'self'; "
+        f"{images}; "
+        "media-src 'self' blob:; "
+        f"{connect}; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'"
+    )
+
+
+def security_headers() -> dict[str, str]:
+    return {
+        "Content-Security-Policy": content_security_policy(),
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    }
 
 # mimetypes is incomplete on a minimal Debian image, and a webm served as
 # application/octet-stream does not play.
@@ -168,7 +182,7 @@ class SiteHandler(BaseHTTPRequestHandler):
         self._serve(include_body=False)
 
     def _send_headers(self, target: Path | None) -> None:
-        for name, value in SECURITY_HEADERS.items():
+        for name, value in security_headers().items():
             self.send_header(name, value)
         if target is not None:
             self.send_header("Cache-Control", cache_control(target))

@@ -38,6 +38,13 @@ identity, future upload credentials, camera footage, and future stream keys.
   its API key) identifies the public app and is not a server credential. Never
   add a service-account key or Google Analytics Data API token to the site or
   Pi admin service.
+- Animal identification runs on a Tailscale machine that is **not** the Pi
+  (Mac now, gaming PC later). The Pi only serves the Identify page. Uploads
+  go to `ANIMAL_ID_API_ORIGIN`; set `OWLCAM_ANIMAL_ID_ORIGIN` in
+  `~/.config/owlcam/site.env` so CSP can `connect-src` and `img-src` that
+  host. Rate-limit the API, strip EXIF, never return filesystem paths, and
+  do not train on visitor photos without an opt-in. See
+  [`next-steps/animal-id-inference-host.md`](next-steps/animal-id-inference-host.md).
 - Analytics initialization respects the browser's Do Not Track setting and
   fails open: an ad blocker, offline Google endpoint, or unsupported browser
   cannot affect the page, camera stream, or admin controls. GA4 uses first-party

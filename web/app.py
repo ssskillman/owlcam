@@ -28,9 +28,11 @@ from fasthtml.common import (
     Span,
     Strong,
     Title,
+    Ul,
     Video,
     to_xml,
 )
+import os
 
 # Relative on purpose. The Pi serves this page beside the stream, so both come
 # from one origin and the browser has no cross-origin request to block. Naming
@@ -40,6 +42,7 @@ from fasthtml.common import (
 # the vitals together.
 DEFAULT_STREAM_URL = "/owl/index.m3u8"
 DEFAULT_DIAGNOSTICS_URL = "/diagnostics"
+ANIMAL_ID_API_ORIGIN = os.environ.get("ANIMAL_ID_API_ORIGIN", "").rstrip("/")
 OWLCAM_GROUP_URL = "https://www.facebook.com/groups/619431688614242/"
 MOMENTS = (
     {
@@ -146,11 +149,13 @@ def _diagnostic_metric(
     )
 
 
-def _head(*, title: str, description: str, include_player: bool) -> Head:
+def _head(*, title: str, description: str, include_player: bool, include_identify: bool = False) -> Head:
     scripts = [
         Script(src="/assets/admin.js", defer=True),
         Script(src="/assets/analytics.js", type="module"),
     ]
+    if include_identify:
+        scripts = [Script(src="/assets/identify.js", defer=True), *scripts]
     if include_player:
         scripts = [
             Script(
@@ -180,11 +185,13 @@ def _head(*, title: str, description: str, include_player: bool) -> Head:
 
 def _nav(*, active: str) -> Div:
     home = {"aria_current": "page"} if active == "live" else {}
+    identify = {"aria_current": "page"} if active == "identify" else {}
     moments = {"aria_current": "page"} if active == "moments" else {}
     about = {"aria_current": "page"} if active == "about" else {}
     return Div(
         A("CARVER FIELD STATION", href="/", cls="eyebrow", **home),
         Nav(
+            A("Upload & Identify", href="/identify", **identify),
             A("Moments", href="/moments", **moments),
             A("About", href="/about", **about),
             Button(
@@ -600,6 +607,85 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                     cls="facts",
                     aria_label="About OwlCam",
                 ),
+            ),
+            _footer(),
+        ),
+        lang="en",
+    )
+    return to_xml(page)
+
+
+def render_identify_page() -> str:
+    page = Html(
+        _head(
+            title="What animal did you spot? — Carver OwlCam",
+            description=(
+                "Upload a wildlife photo and OwlCam will help identify "
+                "the animal."
+            ),
+            include_player=False,
+            include_identify=True,
+        ),
+        Body(
+            _nav(active="identify"),
+            _admin_panel(),
+            Main(
+                Section(
+                    Div(
+                        Span("COMMUNITY", cls="live-label"),
+                        H1("What animal ", Span("did you spot?", cls="accent")),
+                        P(
+                            "Upload a photo from your yard, trail camera, or "
+                            "neighborhood and OwlCam will help identify the "
+                            "animal. Clear photos with one animal work best.",
+                            cls="lede",
+                        ),
+                        cls="identify-intro",
+                    ),
+                    Form(
+                        Label("Wildlife photos", fr="identify-files", cls="sr-only"),
+                        Input(
+                            type="file",
+                            id="identify-files",
+                            name="images",
+                            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp",
+                            multiple=True,
+                        ),
+                        Div(
+                            P(
+                                "Drop JPG, PNG, or WebP photos here, or choose "
+                                "files. Up to 5 photos, 10 MB each."
+                            ),
+                            Small(
+                                "Only JPG, PNG, and WebP image files are accepted. "
+                                "Non-image and malformed uploads are rejected.",
+                                cls="identify-file-policy",
+                            ),
+                            Button(
+                                "Choose photos",
+                                type="button",
+                                id="identify-browse",
+                            ),
+                            id="identify-drop",
+                            cls="identify-drop",
+                            tabindex="0",
+                            role="button",
+                            aria_label="Drop photos or choose files",
+                        ),
+                        Ul(id="identify-thumbs", cls="identify-thumbs"),
+                        Button(
+                            "Identify animals",
+                            type="submit",
+                            id="identify-submit",
+                        ),
+                        P("", id="identify-status", aria_live="polite"),
+                        data_api_origin=ANIMAL_ID_API_ORIGIN,
+                        id="identify-form",
+                        cls="identify-form",
+                    ),
+                    Div(id="identify-results", cls="identify-results"),
+                    cls="identify-page",
+                )
             ),
             _footer(),
         ),

@@ -12,6 +12,15 @@ devices will not play. Full order, constraints, and e2e gates:
 
 [`next-steps/always-up-and-camera-2.md`](next-steps/always-up-and-camera-2.md)
 
+## Animal identifier host (Mac now, gaming PC later)
+
+Public Identify UI lives on the Pi; **models run on a Tailscale
+machine that is not the nest box**. Identify is offline if that host is
+asleep; the live feed does not depend on it. Cutover checklist for the
+gaming PC:
+
+[`next-steps/animal-id-inference-host.md`](next-steps/animal-id-inference-host.md)
+
 ## Phase: hardware enhancements
 
 Add physical sensors to the same Pi that already runs capture, MediaMTX, and
