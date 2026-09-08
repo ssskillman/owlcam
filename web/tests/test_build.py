@@ -121,6 +121,10 @@ def test_identify_page_is_public_and_hides_model_controls():
     source = (WEB_ROOT / "static" / "identify.js").read_text()
     assert "Analyzing photos…" in source
     assert "The photo-processing server is offline" in source
+    assert "response.status < 500" in source
+    assert "payload.detail" in source
+    assert "YOLO crop" not in source
+    assert "Crop of the largest animal" in source
     assert "owlcamTrack" in source
     assert ".innerHTML" not in source
 

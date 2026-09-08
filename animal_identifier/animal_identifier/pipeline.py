@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import warnings
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -73,10 +74,14 @@ def validate_image(payload: bytes, file_name: str) -> Image.Image:
     ):
         raise InvalidImage("That file is not a photo.")
     try:
-        with Image.open(io.BytesIO(payload)) as opened:
-            opened.load()
-            image = opened.convert("RGB")
-    except Image.DecompressionBombError as exc:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(io.BytesIO(payload)) as opened:
+                if opened.format not in {"JPEG", "PNG", "WEBP"}:
+                    raise InvalidImage("Use a JPG, PNG, or WebP photo.")
+                opened.load()
+                image = opened.convert("RGB")
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
         raise InvalidImage("That photo is too large to open safely.") from exc
     except OSError as exc:
         raise InvalidImage("We couldn't read that photo.") from exc
@@ -211,12 +216,23 @@ def identify_images(
     detect_fn: DetectFn | None = None,
     classify_fn: ClassifyFn | None = None,
 ) -> list[ImageResult]:
-    return [
-        classify_image(
-            payload,
-            file_name=name,
-            detect_fn=detect_fn,
-            classify_fn=classify_fn,
-        )
-        for name, payload in files
-    ]
+    results: list[ImageResult] = []
+    for name, payload in files:
+        try:
+            result = classify_image(
+                payload,
+                file_name=name,
+                detect_fn=detect_fn,
+                classify_fn=classify_fn,
+            )
+        except Exception:
+            result = ImageResult(
+                file_name=name,
+                error=(
+                    "We couldn't analyze this photo right now. "
+                    "Please try again in a moment."
+                ),
+                model_version=MODEL_VERSION,
+            )
+        results.append(result)
+    return results

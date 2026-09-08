@@ -71,7 +71,7 @@
   }
 
   const sourceLabel = (value) => {
-    if (value === "crop") return "YOLO crop of the largest animal"
+    if (value === "crop") return "Crop of the largest animal"
     if (value === "whole_image") return "The whole photo"
     return "Unavailable"
   }
@@ -256,8 +256,14 @@
         method: "POST",
         body,
       })
-      if (!response.ok) throw new Error("identify failed")
       const payload = await response.json()
+      if (!response.ok) {
+        if (response.status < 500) {
+          setStatus(payload.detail || "We couldn't accept those photos.")
+          return
+        }
+        throw new Error("photo-processing server unavailable")
+      }
       const duration = Math.round(performance.now() - started)
       for (const item of payload.results || []) {
         results.append(renderCard(item, origin))
