@@ -1,0 +1,26 @@
+barred owl
+great horned owl
+eastern screech owl
+barn owl
+red-tailed hawk
+cooper's hawk
+turkey vulture
+american crow
+wild turkey
+raccoon
+eastern gray squirrel
+flying squirrel
+virginia opossum
+white-tailed deer
+red fox
+gray fox
+coyote
+bobcat
+american black bear
+domestic cat
+domestic dog
+mouse
+rat
+snake
+frog
+unknown animal

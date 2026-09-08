@@ -5,6 +5,7 @@ from app import (
     DEFAULT_STREAM_URL,
     MOMENTS,
     render_about_page,
+    render_identify_page,
     render_moments_page,
     render_page,
 )
@@ -25,6 +26,8 @@ def test_page_uses_a_same_origin_stream_and_accessible_player():
     assert 'id="offline-title"' in html
     assert 'id="offline-message"' in html
     assert 'href="/about"' in html
+    assert 'href="/identify"' in html
+    assert "Upload &amp; Identify" in html
     assert ">Live<" not in html
     assert "Braxton" not in html
     assert "Greg Blum" not in html
@@ -100,8 +103,45 @@ def test_photo_moments_load_thumbnails_that_open_full_size():
     assert html.count("View full size") == 4
 
 
+def test_identify_page_is_public_and_hides_model_controls():
+    html = render_identify_page()
+
+    assert "What animal" in html
+    assert "did you spot?" in html
+    assert "Identify animals" in html
+    assert "Only JPG, PNG, and WebP image files are accepted." in html
+    assert "yolov8" not in html.lower()
+    assert "BioCLIP" not in html
+    assert "candidate confidence" not in html
+    assert 'id="identify-form"' in html
+    assert "data-api-origin=" in html
+    assert 'id="identify-drop"' in html
+    assert 'src="/assets/identify.js"' in html
+    assert "YOLO minimum" not in html
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+    assert "Analyzing photos…" in source
+    assert "The photo-processing server is offline" in source
+    assert "owlcamTrack" in source
+    assert ".innerHTML" not in source
+
+
+def test_identify_page_embeds_configured_api_origin(monkeypatch):
+    import app as site_app
+
+    monkeypatch.setattr(
+        site_app, "ANIMAL_ID_API_ORIGIN", "https://id.example.ts.net"
+    )
+    html = site_app.render_identify_page()
+    assert 'data-api-origin="https://id.example.ts.net"' in html
+
+
 def test_pages_do_not_advertise_ai_generated_copy():
-    for markup in (render_page(), render_about_page(), render_moments_page()):
+    for markup in (
+        render_page(),
+        render_about_page(),
+        render_moments_page(),
+        render_identify_page(),
+    ):
         lower = markup.lower()
         assert "ai-generated" not in lower
         assert "ai-assisted" not in lower
@@ -181,13 +221,23 @@ def test_diagnostics_polling_is_bounded_and_renders_as_text():
 
 
 def test_pages_declare_the_favicon():
-    for markup in (render_page(), render_about_page(), render_moments_page()):
+    for markup in (
+        render_page(),
+        render_about_page(),
+        render_moments_page(),
+        render_identify_page(),
+    ):
         assert '/assets/favicon.svg' in markup, "page is missing the tab icon"
         assert 'type="image/svg+xml"' in markup, "favicon type hint is missing"
 
 
 def test_every_page_initializes_the_registered_firebase_analytics_app():
-    for markup in (render_page(), render_about_page(), render_moments_page()):
+    for markup in (
+        render_page(),
+        render_about_page(),
+        render_moments_page(),
+        render_identify_page(),
+    ):
         assert 'src="/assets/analytics.js"' in markup
         assert 'type="module"' in markup
 
@@ -197,13 +247,20 @@ def test_every_page_initializes_the_registered_firebase_analytics_app():
     assert 'measurementId: "G-WMSVQJWJQR"' in source
     assert "initializeApp(firebaseConfig)" in source
     assert "getAnalytics(app)" in source
+    assert "logEvent" in source
+    assert "owlcamTrack" in source
     assert 'navigator.doNotTrack === "1"' in source
     assert "localStorage" not in source
     assert "sessionStorage" not in source
 
 
 def test_every_page_has_an_accessible_admin_login_and_panel():
-    for markup in (render_page(), render_about_page(), render_moments_page()):
+    for markup in (
+        render_page(),
+        render_about_page(),
+        render_moments_page(),
+        render_identify_page(),
+    ):
         assert 'id="admin-open"' in markup
         assert 'aria-label="Open admin login"' in markup
         assert 'id="admin-dialog"' in markup
@@ -357,6 +414,7 @@ def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
 
     assert (output / "index.html").is_file()
     assert (output / "about.html").is_file()
+    assert (output / "identify.html").is_file()
     assert (output / "moments.html").is_file()
     assert (output / "assets" / "chris-carver.webp").is_file()
     assert (output / "assets" / "moments" / "nest-box-build.jpg").is_file()
@@ -366,13 +424,14 @@ def test_build_writes_firebase_hosting_bundle(tmp_path: Path):
     assert not (output / "assets" / "moments" / "winter-watch.jpg").exists()
     index = (output / "index.html").read_text()
     about = (output / "about.html").read_text()
+    identify = (output / "identify.html").read_text()
     moments = (output / "moments.html").read_text()
     assert 'data-stream-url="/owl/index.m3u8"' in index
     assert "Checking private feed" not in index
 
     # An absolute camera host is the whole bug: it resolves to a private
     # address on Tailscale devices and the browser blocks the request.
-    for page in (index, about, moments):
+    for page in (index, about, moments, identify):
         assert "owlcam.tail31318f.ts.net" not in page
     assert "Chris Carver" in about
     assert "Braxton" not in about
@@ -390,6 +449,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert not (assets / "diagnostics.js").exists()
     assert not (assets / "moments.js").exists()
     assert not (assets / "admin.js").exists()
+    assert not (assets / "identify.js").exists()
     assert not (assets / "analytics.js").exists()
 
     hashed = {p.name for p in assets.glob("*.*.css")} | {
@@ -400,6 +460,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert any(n.startswith("diagnostics.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("moments.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("admin.") and n.endswith(".js") for n in hashed)
+    assert any(n.startswith("identify.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("analytics.") and n.endswith(".js") for n in hashed)
 
     index = (output / "index.html").read_text()

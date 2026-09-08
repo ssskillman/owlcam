@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.owlcam.animal-id</string>
+  <key>WorkingDirectory</key>
+  <string>/Users/REPLACE/github/owlcam/animal_identifier</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/REPLACE/github/owlcam/animal_identifier/.venv/bin/uvicorn</string>
+    <string>animal_identifier.server:app</string>
+    <string>--host</string>
+    <string>127.0.0.1</string>
+    <string>--port</string>
+    <string>8767</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/REPLACE/Library/Logs/owlcam-animal-id.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/REPLACE/Library/Logs/owlcam-animal-id.log</string>
+</dict>
+</plist>

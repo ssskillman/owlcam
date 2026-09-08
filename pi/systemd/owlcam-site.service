@@ -9,6 +9,7 @@ Type=simple
 ExecStart=%h/.local/bin/owlcam-site
 Environment=PYTHONUNBUFFERED=1
 Environment=OWLCAM_SITE_ROOT=%h/owlcam/site
+EnvironmentFile=-%h/.config/owlcam/site.env
 Restart=always
 RestartSec=5
 

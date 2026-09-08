@@ -4,6 +4,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/fireba
 import {
   getAnalytics,
   isSupported,
+  logEvent,
 } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js"
 
 const firebaseConfig = {
@@ -27,7 +28,14 @@ if (!doNotTrack) {
     .then((supported) => {
       if (!supported) return
       const app = initializeApp(firebaseConfig)
-      getAnalytics(app)
+      const analytics = getAnalytics(app)
+      window.owlcamTrack = (name, params) => {
+        try {
+          logEvent(analytics, name, params || {})
+        } catch {
+          // Tracking must never affect Identify or the live feed.
+        }
+      }
     })
     .catch(() => {
       // Analytics is non-essential. Ad blockers, offline operation, and

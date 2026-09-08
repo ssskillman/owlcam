@@ -160,6 +160,17 @@ class ServedResponseTests(unittest.TestCase):
             headers["Content-Security-Policy"],
         )
 
+    def test_csp_allows_a_configured_animal_id_origin(self):
+        with patch.dict(
+            "os.environ",
+            {"OWLCAM_ANIMAL_ID_ORIGIN": "https://id.example.ts.net"},
+            clear=False,
+        ):
+            policy = site.content_security_policy()
+        self.assertIn("https://id.example.ts.net", policy)
+        self.assertIn("img-src 'self' data: https://id.example.ts.net", policy)
+        self.assertIn("https://id.example.ts.net", policy.split("connect-src")[1])
+
     def test_advertises_and_honours_byte_ranges_so_safari_plays_video(self):
         expected = (self.root / "assets" / "clip.webm").read_bytes()
 

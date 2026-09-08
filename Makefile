@@ -8,9 +8,9 @@ GIT_NAME ?= Shawn Skillman
 GIT_EMAIL ?= ssskillman@users.noreply.github.com
 GITHUB_USER ?= ssskillman
 
-.PHONY: check syntax test deploy-dry-run web-test web-build deploy pi-deploy setup-identity
+.PHONY: check syntax test deploy-dry-run web-test web-build animal-id-test deploy pi-deploy setup-identity
 
-check: syntax test deploy-dry-run web-test web-build
+check: syntax test deploy-dry-run web-test web-build animal-id-test
 
 syntax:
 	@for script in pi/scripts/*.sh scripts/*.sh tests/*.sh; do \
@@ -34,6 +34,9 @@ web-test:
 
 web-build:
 	@cd web && uv run --frozen python build.py
+
+animal-id-test:
+	@cd animal_identifier && uv run --frozen pytest
 
 deploy: web-build
 	@firebase deploy --only hosting --account "$(FIREBASE_ACCOUNT)"
