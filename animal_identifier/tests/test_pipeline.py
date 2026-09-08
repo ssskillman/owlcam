@@ -135,11 +135,40 @@ def test_one_bad_image_does_not_fail_the_batch(monkeypatch):
     assert results[2].classification == "barred owl"
 
 
+def test_one_inference_error_does_not_fail_the_batch():
+    calls = {"n": 0}
+
+    def classify(_image, _species):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("model failed")
+        return [("barred owl", 0.91), ("crow", 0.05), ("fox", 0.04)]
+
+    from animal_identifier.pipeline import identify_images
+
+    results = identify_images(
+        [("failed.png", _png()), ("good.png", _png())],
+        detect_fn=lambda _image: [],
+        classify_fn=classify,
+    )
+
+    assert results[0].error
+    assert results[1].classification == "barred owl"
+
+
 def test_rejects_svg_and_html_even_with_image_extensions():
     with pytest.raises(InvalidImage):
         validate_image(b"<svg xmlns='http://www.w3.org/2000/svg'></svg>", "trick.png")
     with pytest.raises(InvalidImage):
         validate_image(b"<!doctype html><html></html>", "page.jpg")
+
+
+def test_rejects_disallowed_raster_format_with_allowed_extension():
+    buffer = BytesIO()
+    Image.new("RGB", (16, 16), color="green").save(buffer, format="GIF")
+
+    with pytest.raises(InvalidImage):
+        validate_image(buffer.getvalue(), "renamed.jpg")
 
 
 def test_accepts_png_and_strips_exif():

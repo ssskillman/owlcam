@@ -14,11 +14,6 @@ MAX_IMAGES = 5
 MAX_FILE_BYTES = 10 * 1024 * 1024
 MAX_IMAGE_PIXELS = 40_000_000
 ALLOWED_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
-ALLOWED_CONTENT_TYPES = {
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-}
 MODEL_VERSION = os.environ.get("ANIMAL_ID_MODEL_VERSION", "yolov8n+bioclip")
 BIOCLIP_MODEL = "hf-hub:imageomics/bioclip"
 PROMPT = "a wildlife camera photograph of a {name}"
