@@ -1,8 +1,8 @@
 # OwlCam animal identifier
 
 Python service that identifies wildlife photos with YOLOv8 + BioCLIP.
-**Never run this on the nest Pi.** v1 is the Mac; later the gaming PC.
-The public page lives on the Pi and POSTs here.
+**Never run this on the nest Pi.** v1 is the Mac; the long-term host is the
+gaming PC. The public page lives on the Pi and POSTs here.
 
 ## Install (inference host)
 
@@ -14,8 +14,31 @@ uv sync --extra inference
 uv run uvicorn animal_identifier.server:app --host 127.0.0.1 --port 8767
 ```
 
+On the **Windows gaming PC**, Torch must stay the CUDA build (`+cu130` on the
+RTX 5070). Do **not** run a plain `uv lock` from this repo's PyPI pin — that
+replaces CUDA Torch with CPU Torch. Keep the existing `.venv` after `git pull`.
+
 First start downloads `yolov8n.pt` and BioCLIP weights. Bind loopback only.
-Publish with Tailscale Funnel on **this machine**, not the Pi:
+YOLO and BioCLIP use CUDA when `torch.cuda.is_available()`.
+
+### Prove one image on the gaming PC (before Funnel)
+
+```powershell
+uv run python -c "import torch; assert torch.cuda.is_available() and '+cu' in torch.__version__; print(torch.__version__, torch.cuda.get_device_name(0))"
+uv run uvicorn animal_identifier.server:app --host 127.0.0.1 --port 8767
+```
+
+In another PowerShell: `nvidia-smi -l 1`
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8767/api/animal-identification" -F "images=@C:\Users\sskil\Pictures\owl.jpg"
+```
+
+Swagger may label `images` as `array<string>`; OpenAPI still marks each item as
+a binary file. Prefer curl for the first real POST.
+
+Publish with Tailscale Funnel on **this machine**, not the Pi, **after** that
+POST returns JSON and `nvidia-smi` shows the RTX 5070 in use:
 
 ```bash
 tailscale funnel --bg --https=443 http://127.0.0.1:8767
