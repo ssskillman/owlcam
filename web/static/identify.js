@@ -40,7 +40,9 @@
       name.textContent = file.name
       const remove = document.createElement("button")
       remove.type = "button"
+      remove.className = "identify-quiet"
       remove.textContent = "Remove"
+      remove.setAttribute("aria-label", `Remove ${file.name}`)
       remove.addEventListener("click", () => {
         selected.splice(index, 1)
         refreshThumbs()
@@ -79,6 +81,9 @@
 
   const percent = (value) => `${Math.round(Number(value) * 100)}% match`
 
+  // Anything that rounds to 0% is not a possibility worth printing.
+  const ALTERNATIVE_FLOOR = 0.005
+
   const renderCard = (item, jobOrigin) => {
     const card = document.createElement("article")
     card.className = "identify-card"
@@ -107,13 +112,25 @@
       ? `We could not identify this one confidently. Our closest match was ${item.best_candidate || "unknown"} at ${Math.round(Number(item.confidence) * 100)}%. Try a clearer or closer photo.`
       : percent(item.confidence)
     const alts = document.createElement("p")
-    if (item.alternatives?.length) {
-      alts.textContent = `Other possibilities: ${item.alternatives
+    alts.className = "identify-score"
+    const worthShowing = (item.alternatives || []).filter(
+      (row) => Number(row.confidence) >= ALTERNATIVE_FLOOR,
+    )
+    if (worthShowing.length) {
+      alts.textContent = `Other possibilities: ${worthShowing
         .map((row) => `${row.species} ${Math.round(row.confidence * 100)}%`)
         .join(", ")}`
+    } else {
+      alts.hidden = true
     }
     const decided = document.createElement("p")
-    decided.textContent = `How we decided: ${sourceLabel(item.selected_source)}`
+    decided.className = "identify-score"
+    // The whole photo is the default, so naming it on every card says nothing.
+    if (item.selected_source === "crop") {
+      decided.textContent = `Identified from a ${sourceLabel(item.selected_source).toLowerCase()}`
+    } else {
+      decided.hidden = true
+    }
     const disclaimer = document.createElement("p")
     disclaimer.className = "identify-disclaimer"
     disclaimer.textContent =
@@ -125,6 +142,9 @@
     const wrong = document.createElement("button")
     wrong.type = "button"
     wrong.textContent = "Not quite"
+    // Matched on purpose: making one of them the primary action would push
+    // people toward that answer, and the answer is the data we want.
+    right.className = wrong.className = "identify-quiet"
     const actions = document.createElement("div")
     actions.className = "identify-feedback"
     actions.append(right, wrong)
@@ -139,6 +159,7 @@
     input.setAttribute("list", "identify-species")
     const unknown = document.createElement("button")
     unknown.type = "button"
+    unknown.className = "identify-quiet"
     unknown.textContent = "I don't know"
     const note = document.createElement("textarea")
     note.rows = 2
