@@ -323,6 +323,22 @@ grep -F -- '-include deploy.env' "${REPO_ROOT}/Makefile" >/dev/null \
   || fail "Makefile does not load the local deploy.env settings"
 grep -E '^ANIMAL_ID_API_ORIGIN=' "${REPO_ROOT}/deploy.env.example" >/dev/null \
   || fail "deploy.env.example does not document the API origin"
+# Identifier Funnel on 443 would miss the baked :8443 origin and collide with
+# the Pi's public site. Pin the docs that operators actually copy from.
+grep -F -- 'tailscale funnel --bg --yes --https=8443 http://127.0.0.1:8767' \
+  "${REPO_ROOT}/docs/next-steps/animal-id-inference-host.md" >/dev/null \
+  || fail "inference-host cutover still Funnels the identifier on a port other than 8443"
+grep -F -- 'OWLCAM_ANIMAL_ID_ORIGIN=https://<pc-name>.tail31318f.ts.net:8443' \
+  "${REPO_ROOT}/docs/next-steps/animal-id-inference-host.md" >/dev/null \
+  || fail "inference-host cutover drops :8443 from the Pi CSP origin"
+if grep -E -- 'funnel --bg.*--https=443 http://127.0.0.1:8767' \
+  "${REPO_ROOT}/docs/next-steps/animal-id-inference-host.md" \
+  "${REPO_ROOT}/animal_identifier/README.md" >/dev/null; then
+  fail "identifier docs still Funnel uvicorn on 443"
+fi
+grep -F -- 'tailscale funnel --bg --yes --https=8443 http://127.0.0.1:8767' \
+  "${REPO_ROOT}/animal_identifier/README.md" >/dev/null \
+  || fail "animal identifier README still Funnels uvicorn on a port other than 8443"
 # .env.example is the Pi's /etc/owlcam/owlcam.env template. If the deploy
 # settings move into it, one file feeds two machines.
 grep -F -- '/etc/owlcam/owlcam.env' "${REPO_ROOT}/.env.example" >/dev/null \

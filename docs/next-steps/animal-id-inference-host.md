@@ -65,16 +65,19 @@ On the **gaming PC**:
    ```
 
    First run downloads YOLO and BioCLIP weights.
-3. Funnel **only** that port on this PC:
+3. Funnel **8443** on this PC (not 443 — that is the Pi site, and the
+   Identify origin is `:8443`):
 
    ```bash
-   tailscale funnel --bg --https=443 http://127.0.0.1:8767
+   tailscale funnel --bg --yes --https=8443 http://127.0.0.1:8767
    ```
 
-4. Note this PC’s MagicDNS name, e.g.
-   `https://<pc-name>.tail31318f.ts.net`.
-5. If you want “Looks right / Not quite” history, copy
-   `~/.owlcam/animal-id/feedback.sqlite` from the Mac to the same path here.
+4. Note this PC’s origin, e.g.
+   `https://<pc-name>.tail31318f.ts.net:8443`.
+5. If you want “Looks right / Not quite” history and the animals-identified
+   chart, copy `feedback.sqlite` and `identifications.sqlite` from
+   `~/.owlcam/animal-id/` on the Mac to the same path here. The chart
+   otherwise starts at zero.
 
 On the **Mac / laptop that deploys the site**:
 
@@ -97,16 +100,23 @@ On the **Mac / laptop that deploys the site**:
    offline while the build and the deploy both look fine. `pi-deploy`
    refuses to run when it is unset.
 
-2. On the Pi, put the same origin in `~/.config/owlcam/site.env`:
+2. On the Pi, put the **same** origin, including `:8443`, in
+   `~/.config/owlcam/site.env`:
 
    ```bash
-   OWLCAM_ANIMAL_ID_ORIGIN=https://<pc-name>.tail31318f.ts.net
+   OWLCAM_ANIMAL_ID_ORIGIN=https://<pc-name>.tail31318f.ts.net:8443
    ```
 
    then `systemctl --user restart owlcam-site.service` so CSP allows
-   `connect-src` / `img-src` for that host.
-3. Turn **off** Funnel (or the API process) on the Mac so you do not
-   have two identifiers.
+   `connect-src` / `img-src` for that host. Dropping the port makes the
+   page load and the uploads fail.
+3. On the Mac, stop uvicorn and drop its `:8443` publish so there is
+   only one identifier:
+
+   ```bash
+   tailscale funnel --https=8443 off
+   tailscale serve --https=8443 off
+   ```
 
 ## Prove it
 
