@@ -7,9 +7,23 @@ cooper's hawk
 turkey vulture
 american crow
 wild turkey
+canada goose
+great blue heron
+northern cardinal
+blue jay
+woodpecker
+mourning dove
+bald eagle
+osprey
 raccoon
 eastern gray squirrel
 flying squirrel
+chipmunk
+groundhog
+beaver
+river otter
+skunk
+armadillo
 virginia opossum
 white-tailed deer
 red fox
@@ -19,8 +33,36 @@ bobcat
 american black bear
 domestic cat
 domestic dog
+rabbit
+bat
 mouse
 rat
 snake
+turtle
+lizard
 frog
+fish
+insect
+spider
+chicken
+duck
+goose
+peacock
+ostrich
+emu
+flamingo
+penguin
+parrot
+horse
+cow
+sheep
+goat
+pig
+elephant
+giraffe
+lion
+tiger
+zebra
+kangaroo
+camel
 unknown animal

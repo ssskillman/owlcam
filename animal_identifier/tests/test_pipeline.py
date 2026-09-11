@@ -28,6 +28,14 @@ def test_species_list_is_server_owned_and_includes_unknown():
     assert "human" not in species
 
 
+def test_species_list_covers_animals_from_outside_north_carolina():
+    # A closed NC-only list forces visitor uploads into the nearest local
+    # species: an ostrich came back as "wild turkey" at 0.99 confidence.
+    species = load_species()
+    for name in ("ostrich", "elephant", "kangaroo", "chicken", "penguin"):
+        assert name in species
+
+
 def test_display_name_title_cases_without_yelling_apostrophes():
     assert display_name("cooper's hawk") == "Cooper's hawk"
     assert display_name("barred owl") == "Barred owl"
