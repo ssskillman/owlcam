@@ -44,9 +44,11 @@ POST returns JSON and `nvidia-smi` shows the RTX 5070 in use:
 tailscale funnel --bg --https=443 http://127.0.0.1:8767
 ```
 
-Then set `ANIMAL_ID_API_ORIGIN` to this host's `https://<name>.tail31318f.ts.net`
-when building the site, and `OWLCAM_ANIMAL_ID_ORIGIN` on the Pi site unit so
-CSP can `connect-src` / `img-src` that origin.
+Then put this host's origin in `ANIMAL_ID_API_ORIGIN` in the repo-root
+`deploy.env` (gitignored, read by the Makefile — see `deploy.env.example`) so
+every `make pi-deploy` builds the page against it, and set
+`OWLCAM_ANIMAL_ID_ORIGIN` on the Pi site unit so CSP can `connect-src` /
+`img-src` that origin.
 
 macOS keepalive: copy `launchd/com.owlcam.animal-id.plist.example` to
 `~/Library/LaunchAgents/`, replace `REPLACE` with your home path, then

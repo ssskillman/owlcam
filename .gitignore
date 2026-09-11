@@ -1,6 +1,8 @@
 .env
 .env.*
 !.env.example
+deploy.env
+!deploy.env.example
 *.secret
 *.key
 *.pem
