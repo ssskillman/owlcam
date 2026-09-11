@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 from app import (
@@ -150,6 +151,45 @@ def test_identify_page_has_a_hidden_flying_owl_progress_indicator():
     assert "identify-loader" in source
     assert "loader.hidden = false" in source
     assert "loader.hidden = true" in source
+
+
+def _css_block(css: str, header: str) -> str:
+    """Body of one rule, brace-matched because keyframes nest their own."""
+    start = css.index(header) + len(header)
+    depth = 0
+    for index in range(start, len(css)):
+        if css[index] == "{":
+            depth += 1
+        elif css[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return css[start : index + 1]
+    raise AssertionError(f"unbalanced braces after {header}")
+
+
+def test_flying_owl_crosses_the_loader_rather_than_the_viewport():
+    css = (WEB_ROOT / "static" / "styles.css").read_text()
+    fly = _css_block(css, "@keyframes owl-fly")
+
+    # Travel was 105vw inside a container that main caps at 1440px, so on a
+    # wide monitor the owl covered far more ground in the same time and spent
+    # much of each lap off the right edge. Percentages of the loader do not
+    # drift with the viewport.
+    assert "vw" not in fly
+    assert "100%" in fly
+
+
+def test_flying_owl_glides_rather_than_darts():
+    css = (WEB_ROOT / "static" / "styles.css").read_text()
+    owl = _css_block(css, ".identify-owl {")
+    wing = _css_block(css, ".identify-owl-wing {")
+
+    lap = float(re.search(r"owl-fly (\d+(?:\.\d+)?)s", owl).group(1))
+    flap = float(re.search(r"owl-flap (\d+(?:\.\d+)?)s", wing).group(1))
+    # One lap in 3.2s read as darting. A wingbeat has to stay slow enough to
+    # match the glide, or the owl looks like it is panicking.
+    assert lap >= 6.0
+    assert 0.4 <= flap <= 0.8
 
 
 def test_identify_page_embeds_configured_api_origin(monkeypatch):

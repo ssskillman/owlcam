@@ -619,18 +619,31 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
 # Inline so the progress owl costs no extra request and can inherit the theme
 # colours. Wings come first so the body paints over their hinges.
 IDENTIFY_OWL_SVG = """
-<svg class="identify-owl" viewBox="0 0 72 48" width="58" height="39" focusable="false">
-  <path class="identify-owl-wing identify-owl-wing-left"
-        d="M30 26C20 16 10 16 2 24c8 6 18 8 28 6z" />
-  <path class="identify-owl-wing identify-owl-wing-right"
-        d="M42 26c10-10 20-10 28-2-8 6-18 8-28 6z" />
-  <path class="identify-owl-body" d="M25 9 22 1l9 4z" />
-  <path class="identify-owl-body" d="M47 9 50 1l-9 4z" />
+<svg class="identify-owl" viewBox="0 0 96 64" width="64" height="43" focusable="false">
+  <g class="identify-owl-wing identify-owl-wing-left">
+    <path class="identify-owl-body"
+          d="M41 27C35 21 28 17 20 17C13 17 7 20 3 25C6 27 9 28 13 28C10 30 7 32 4 33C11 35 19 34 26 31C25 34 22 36 19 38C28 39 37 35 43 29Z" />
+    <path class="identify-owl-quill" d="M19 22C24 26 30 29 35 31" />
+  </g>
+  <g class="identify-owl-wing identify-owl-wing-right">
+    <path class="identify-owl-body"
+          d="M55 27C61 21 68 17 76 17C83 17 89 20 93 25C90 27 87 28 83 28C86 30 89 32 92 33C85 35 77 34 70 31C71 34 74 36 77 38C68 39 59 35 53 29Z" />
+    <path class="identify-owl-quill" d="M77 22C72 26 66 29 61 31" />
+  </g>
+  <path class="identify-owl-body" d="M42 50L43 58C46 60 50 60 53 58L54 50Z" />
   <path class="identify-owl-body"
-        d="M36 6c8 0 14 7 14 16s-6 20-14 20-14-11-14-20S28 6 36 6z" />
-  <circle class="identify-owl-eye" cx="31" cy="19" r="3.4" />
-  <circle class="identify-owl-eye" cx="41" cy="19" r="3.4" />
-  <path class="identify-owl-eye" d="M36 22l-2.6 3.6h5.2z" />
+        d="M48 26C40 26 36 33 36 40C36 47 41 52 48 54C55 52 60 47 60 40C60 33 56 26 48 26Z" />
+  <path class="identify-owl-body" d="M37 12C35 8 34 5 34 2C38 4 41 7 43 10Z" />
+  <path class="identify-owl-body" d="M59 12C61 8 62 5 62 2C58 4 55 7 53 10Z" />
+  <path class="identify-owl-body"
+        d="M48 7C41 7 35 13 35 21C35 29 41 34 48 34C55 34 61 29 61 21C61 13 55 7 48 7Z" />
+  <path class="identify-owl-face"
+        d="M48 14C46.5 11.5 42 12.5 40 15.5C37.5 18.5 37.5 24.5 40 27.5C42 30 46.5 30.5 48 28.5C49.5 30.5 54 30 56 27.5C58.5 24.5 58.5 18.5 56 15.5C54 12.5 49.5 11.5 48 14Z" />
+  <circle class="identify-owl-eye" cx="43" cy="21" r="3.9" />
+  <circle class="identify-owl-eye" cx="53" cy="21" r="3.9" />
+  <circle class="identify-owl-glint" cx="44.3" cy="19.7" r="1.2" />
+  <circle class="identify-owl-glint" cx="54.3" cy="19.7" r="1.2" />
+  <path class="identify-owl-beak" d="M48 24.5L45.8 29.5H50.2Z" />
 </svg>
 """
 
