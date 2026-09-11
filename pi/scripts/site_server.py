@@ -48,7 +48,8 @@ def content_security_policy() -> str:
         "https://firebaseinstallations.googleapis.com "
         "https://www.google-analytics.com https://region1.google-analytics.com"
     )
-    images = "img-src 'self' data:"
+    # blob: covers the object-URL previews identify.js builds for picked files.
+    images = "img-src 'self' data: blob:"
     if extra:
         connect = f"{connect} {extra}"
         images = f"{images} {extra}"

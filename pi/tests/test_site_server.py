@@ -160,6 +160,11 @@ class ServedResponseTests(unittest.TestCase):
             headers["Content-Security-Policy"],
         )
 
+    def test_csp_allows_blob_images_so_upload_thumbnails_render(self):
+        # identify.js previews picked files with URL.createObjectURL, which
+        # yields a blob: URL. Without blob: the thumbnail is a broken icon.
+        self.assertIn("img-src 'self' data: blob:", site.content_security_policy())
+
     def test_csp_allows_a_configured_animal_id_origin(self):
         with patch.dict(
             "os.environ",
@@ -168,7 +173,7 @@ class ServedResponseTests(unittest.TestCase):
         ):
             policy = site.content_security_policy()
         self.assertIn("https://id.example.ts.net", policy)
-        self.assertIn("img-src 'self' data: https://id.example.ts.net", policy)
+        self.assertIn("img-src 'self' data: blob: https://id.example.ts.net", policy)
         self.assertIn("https://id.example.ts.net", policy.split("connect-src")[1])
 
     def test_advertises_and_honours_byte_ranges_so_safari_plays_video(self):
