@@ -78,13 +78,24 @@ On the **gaming PC**:
 
 On the **Mac / laptop that deploys the site**:
 
-1. Set `ANIMAL_ID_API_ORIGIN` to the **PC** Funnel/MagicDNS origin
-   (no trailing slash) and rebuild:
+1. Point `ANIMAL_ID_API_ORIGIN` at the **PC** MagicDNS origin (no
+   trailing slash) in `deploy.env`, which is gitignored and read by the
+   Makefile, then rebuild:
 
    ```bash
-   export ANIMAL_ID_API_ORIGIN='https://<pc-name>.tail31318f.ts.net'
+   # deploy.env — see deploy.env.example
+   ANIMAL_ID_API_ORIGIN=https://<pc-name>.tail31318f.ts.net:8443
+   ```
+
+   ```bash
    make pi-deploy
    ```
+
+   A file rather than an `export` because the value has to survive a new
+   shell: `make pi-deploy` without it rebuilds `/identify` with an empty
+   origin, and the page then reports the photo-processing server as
+   offline while the build and the deploy both look fine. `pi-deploy`
+   refuses to run when it is unset.
 
 2. On the Pi, put the same origin in `~/.config/owlcam/site.env`:
 

@@ -297,4 +297,37 @@ grep -F -- 'WantedBy=default.target' "${stream_unit}" >/dev/null \
 grep -F -- 'WantedBy=default.target' "${mediamtx_unit}" >/dev/null \
   || fail "mediamtx unit would not start at boot"
 
+# A deploy without ANIMAL_ID_API_ORIGIN rebuilds /identify with no API origin,
+# which silently reverts the page to "the photo-processing server is offline".
+# It has to refuse rather than warn, because a warning scrolls past.
+# Assigned as a make argument, not an environment variable: a local deploy.env
+# is read by the Makefile, and file assignments outrank the environment, so
+# `ANIMAL_ID_API_ORIGIN= make ...` would still see the configured value.
+origin_guard="$(cd "${REPO_ROOT}" && make --no-print-directory require-api-origin ANIMAL_ID_API_ORIGIN= 2>&1 || true)"
+[[ "${origin_guard}" == *"ANIMAL_ID_API_ORIGIN"* ]] \
+  || fail "deploy guard does not name the missing variable"
+# A guard that points at the wrong file is how the variable stays unset.
+[[ "${origin_guard}" == *"deploy.env"* ]] \
+  || fail "deploy guard does not say where to set the origin"
+if (cd "${REPO_ROOT}" && make --no-print-directory require-api-origin ANIMAL_ID_API_ORIGIN= >/dev/null 2>&1); then
+  fail "deploy guard passed with no API origin set"
+fi
+if ! (cd "${REPO_ROOT}" && make --no-print-directory require-api-origin ANIMAL_ID_API_ORIGIN=https://id.example.ts.net >/dev/null 2>&1); then
+  fail "deploy guard rejected a configured API origin"
+fi
+# The guard has to run before the site is built, or the offline page is already
+# on disk by the time the deploy stops.
+grep -E '^pi-deploy: require-api-origin web-build' "${REPO_ROOT}/Makefile" >/dev/null \
+  || fail "pi-deploy builds the site before checking the API origin"
+grep -F -- '-include deploy.env' "${REPO_ROOT}/Makefile" >/dev/null \
+  || fail "Makefile does not load the local deploy.env settings"
+grep -E '^ANIMAL_ID_API_ORIGIN=' "${REPO_ROOT}/deploy.env.example" >/dev/null \
+  || fail "deploy.env.example does not document the API origin"
+# .env.example is the Pi's /etc/owlcam/owlcam.env template. If the deploy
+# settings move into it, one file feeds two machines.
+grep -F -- '/etc/owlcam/owlcam.env' "${REPO_ROOT}/.env.example" >/dev/null \
+  || fail ".env.example is no longer the Pi capture env template"
+grep -F -- 'deploy.env' "${REPO_ROOT}/.gitignore" >/dev/null \
+  || fail "deploy.env is not gitignored and could be committed"
+
 printf 'Script checks passed.\n'
