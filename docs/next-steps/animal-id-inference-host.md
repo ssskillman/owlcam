@@ -24,19 +24,43 @@ Until the PC is the live host, skip to “While you wait.”
 5. Leave disk space for Hugging Face / Ultralytics caches (BioCLIP +
    `yolov8n.pt`, on the order of a few GB).
 
-Do **not** point Funnel at random ports yet. Wait for the repo’s run
-script and port.
+Do **not** point Funnel at random ports yet. Wait until a local image POST
+classifies on the RTX 5070 (`nvidia-smi` shows Python using the GPU).
+
+### Prove local GPU inference (do this before Funnel)
+
+The PC already has Python 3.12, `uv`, and CUDA Torch (`2.14.0+cu130`).
+Keep that `.venv`. After pulling this repo:
+
+```powershell
+cd C:\Users\sskil\github\owlcam
+git pull
+cd animal_identifier
+uv run python -c "import torch; assert torch.cuda.is_available() and '+cu' in torch.__version__; print(torch.__version__, torch.cuda.get_device_name(0))"
+uv run uvicorn animal_identifier.server:app --host 127.0.0.1 --port 8767
+```
+
+Do **not** run `uv lock` or a fresh `uv sync --extra inference` against
+PyPI — the git lockfile is CPU Torch and would wipe `+cu130`.
+
+Other PowerShell: `nvidia-smi -l 1`
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8767/api/animal-identification" -F "images=@C:\Users\sskil\Pictures\owl.jpg"
+```
+
+First POST may download YOLO and BioCLIP weights. Success is JSON
+`results` plus GPU memory/util on the RTX 5070.
 
 ## Cutover (when the service is in the repo)
 
 On the **gaming PC**:
 
 1. Clone `https://github.com/ssskillman/owlcam` (or pull `main`).
-2. Install and start:
+2. Start (skip `uv sync` if CUDA Torch is already installed):
 
    ```bash
    cd animal_identifier
-   uv sync --extra inference
    uv run uvicorn animal_identifier.server:app --host 127.0.0.1 --port 8767
    ```
 

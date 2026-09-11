@@ -9,6 +9,7 @@ from animal_identifier.pipeline import (
     classify_image,
     display_name,
     load_species,
+    move_to_device,
     select_primary_detection,
     validate_image,
 )
@@ -169,6 +170,72 @@ def test_rejects_disallowed_raster_format_with_allowed_extension():
 
     with pytest.raises(InvalidImage):
         validate_image(buffer.getvalue(), "renamed.jpg")
+
+
+def test_inference_device_prefers_cuda_when_available(monkeypatch):
+    import types
+
+    fake_torch = types.SimpleNamespace(
+        cuda=types.SimpleNamespace(is_available=lambda: True),
+        device=lambda name: name,
+    )
+    monkeypatch.setitem(__import__("sys").modules, "torch", fake_torch)
+
+    from animal_identifier.models import inference_device
+
+    assert inference_device() == "cuda"
+
+
+def test_load_bioclip_moves_model_onto_the_inference_device(monkeypatch):
+    import sys
+    import types
+
+    from animal_identifier import models
+
+    captured = {}
+
+    class FakeModel:
+        def eval(self):
+            captured["eval"] = True
+            return self
+
+        def to(self, device):
+            captured["device"] = device
+            return self
+
+    fake_torch = types.SimpleNamespace(
+        cuda=types.SimpleNamespace(is_available=lambda: True),
+        device=lambda name: name,
+    )
+    fake_open_clip = types.SimpleNamespace(
+        create_model_and_transforms=lambda *_args, **_kwargs: (
+            FakeModel(),
+            object(),
+            object(),
+        ),
+        get_tokenizer=lambda *_args, **_kwargs: object(),
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setitem(sys.modules, "open_clip", fake_open_clip)
+    models.load_bioclip.cache_clear()
+
+    model, _preprocess, _tokenizer = models.load_bioclip()
+
+    assert captured["eval"] is True
+    assert captured["device"] == "cuda"
+    assert model is not None
+    models.load_bioclip.cache_clear()
+
+
+def test_move_to_device_sends_tensors_to_cuda():
+    class FakeTensor:
+        def to(self, device):
+            self.device = device
+            return self
+
+    tensor = FakeTensor()
+    moved = move_to_device(tensor, "cuda")
+    assert moved.device == "cuda"
 
 
 def test_accepts_png_and_strips_exif():

@@ -20,6 +20,7 @@ from animal_identifier.config import (
     YOLO_MIN_CONFIDENCE,
     YOLO_MODEL,
 )
+from animal_identifier.models import inference_device
 from animal_identifier.schemas import Alternative, Detection, ImageResult
 
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
@@ -105,11 +106,22 @@ def annotate(image: Image.Image, detections: Sequence[Detection]) -> bytes:
     return buffer.getvalue()
 
 
+def move_to_device(tensor, device):
+    if hasattr(tensor, "to"):
+        return tensor.to(device)
+    return tensor
+
+
 def default_detect(image: Image.Image) -> list[Detection]:
     from animal_identifier.models import load_yolo
 
     model = load_yolo(YOLO_MODEL)
-    result = model.predict(image, conf=YOLO_MIN_CONFIDENCE, verbose=False)[0]
+    result = model.predict(
+        image,
+        conf=YOLO_MIN_CONFIDENCE,
+        verbose=False,
+        device=inference_device(),
+    )[0]
     detections: list[Detection] = []
     for box in result.boxes:
         class_id = int(box.cls.item())
@@ -126,9 +138,10 @@ def default_classify(image: Image.Image, species: Sequence[str]) -> list[tuple[s
     from animal_identifier.models import load_bioclip
 
     model, preprocess, tokenizer = load_bioclip()
+    device = inference_device()
     prompts = [PROMPT.format(name=name) for name in species]
-    image_tensor = preprocess(image.convert("RGB")).unsqueeze(0)
-    text_tokens = tokenizer(prompts)
+    image_tensor = move_to_device(preprocess(image.convert("RGB")).unsqueeze(0), device)
+    text_tokens = move_to_device(tokenizer(prompts), device)
     with torch.inference_mode():
         image_features = model.encode_image(image_tensor)
         text_features = model.encode_text(text_tokens)
