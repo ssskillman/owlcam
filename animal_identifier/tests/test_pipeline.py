@@ -9,6 +9,7 @@ from animal_identifier.pipeline import (
     classify_image,
     display_name,
     load_species,
+    load_taxonomy,
     move_to_device,
     select_primary_detection,
     validate_image,
@@ -26,6 +27,19 @@ def test_species_list_is_server_owned_and_includes_unknown():
     assert "barred owl" in species
     assert "unknown animal" in species
     assert "human" not in species
+
+
+def test_every_species_has_a_broad_animal_category():
+    taxonomy = load_taxonomy()
+
+    assert taxonomy["barred owl"] == "bird"
+    assert taxonomy["copperhead"] == "reptile"
+    assert taxonomy["largemouth bass"] == "fish"
+    assert taxonomy["red fox"] == "mammal"
+    assert taxonomy["american bullfrog"] == "amphibian"
+    assert taxonomy["spider"] == "invertebrate"
+    assert taxonomy["unknown animal"] == "unknown"
+    assert set(load_species()) == set(taxonomy)
 
 
 def test_species_list_covers_animals_from_outside_north_carolina():

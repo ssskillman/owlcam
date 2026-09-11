@@ -1,3 +1,4 @@
+# bird
 barred owl
 great horned owl
 eastern screech owl
@@ -93,6 +94,7 @@ common yellowthroat
 barn swallow
 tree swallow
 purple martin
+# mammal
 virginia opossum
 nine-banded armadillo
 eastern mole
@@ -129,6 +131,7 @@ red wolf
 bobcat
 white-tailed deer
 elk
+# reptile
 eastern worm snake
 scarlet snake
 ring-necked snake
@@ -204,6 +207,7 @@ leatherback sea turtle
 kemp's ridley sea turtle
 hawksbill sea turtle
 american alligator
+# fish
 largemouth bass
 smallmouth bass
 spotted bass
@@ -234,6 +238,7 @@ southern flounder
 spotted seatrout
 bluefish
 sheepshead
+# amphibian
 american bullfrog
 green frog
 southern leopard frog
@@ -243,10 +248,12 @@ fowler's toad
 eastern newt
 spotted salamander
 marbled salamander
+# bird
 chicken
 domestic duck
 domestic goose
 peacock
+# mammal
 horse
 cow
 sheep
@@ -254,11 +261,13 @@ goat
 pig
 domestic cat
 domestic dog
+# bird
 ostrich
 emu
 flamingo
 penguin
 parrot
+# mammal
 elephant
 giraffe
 lion
@@ -266,6 +275,8 @@ tiger
 zebra
 kangaroo
 camel
+# invertebrate
 insect
 spider
+# unknown
 unknown animal

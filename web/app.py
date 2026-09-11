@@ -723,6 +723,26 @@ def render_identify_page() -> str:
                         id="identify-form",
                         cls="identify-form",
                     ),
+                    Section(
+                        H2("Animals identified"),
+                        P(
+                            Strong("0", id="identify-summary-total"),
+                            Span(
+                                " animals identified so far",
+                                id="identify-summary-total-label",
+                            ),
+                            cls="identify-summary-total",
+                            aria_live="polite",
+                        ),
+                        P(
+                            "Select an animal group to see the species.",
+                            cls="identify-summary-hint",
+                        ),
+                        Div(id="identify-chart", cls="identify-chart"),
+                        id="identify-summary",
+                        cls="identify-summary",
+                        hidden=True,
+                    ),
                     Div(id="identify-results", cls="identify-results"),
                     cls="identify-page",
                 )

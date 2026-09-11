@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
+import sqlite3
 import threading
 import time
 from collections import defaultdict, deque
@@ -27,9 +29,9 @@ from animal_identifier.config import (
     RATE_LIMIT_WINDOW_SECONDS,
     UNKNOWN_THRESHOLD,
 )
-from animal_identifier.pipeline import identify_images, load_species
+from animal_identifier.pipeline import identify_images, load_species, load_taxonomy
 from animal_identifier.schemas import ImageResult
-from animal_identifier.store import FeedbackStore, JobStore
+from animal_identifier.store import FeedbackStore, IdentificationStore, JobStore
 
 FAILURE = "We couldn't analyze this photo right now. Please try again in a moment."
 DATA_DIR = Path(
@@ -40,6 +42,7 @@ DATA_DIR = Path(
 )
 MAX_REQUEST_BYTES = MAX_IMAGES * MAX_FILE_BYTES + 1_000_000
 MAX_FEEDBACK_BYTES = 16 * 1024
+logger = logging.getLogger(__name__)
 
 
 class RequestTooLarge(Exception):
@@ -141,6 +144,7 @@ app.openapi = custom_openapi
 
 jobs = JobStore()
 feedback = FeedbackStore(DATA_DIR / "feedback.sqlite")
+identifications = IdentificationStore(DATA_DIR / "identifications.sqlite")
 _hits: dict[str, deque[float]] = defaultdict(deque)
 _hits_lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="animal-id")
@@ -156,6 +160,22 @@ class FeedbackBody(BaseModel):
     i_dont_know: bool = False
     train_opt_in: bool = False
     model_version: str | None = Field(default=None, max_length=120)
+
+
+class SummarySpecies(BaseModel):
+    species: str
+    count: int
+
+
+class SummaryCategory(BaseModel):
+    category: str
+    count: int
+    species: list[SummarySpecies]
+
+
+class IdentificationSummary(BaseModel):
+    total: int
+    categories: list[SummaryCategory]
 
 
 def _client_ip(request: Request) -> str:
@@ -188,6 +208,14 @@ def health() -> dict[str, str]:
 @app.get("/api/animal-identification/species")
 def species_list() -> dict[str, list[str]]:
     return {"species": [name for name in load_species() if name != "unknown animal"]}
+
+
+@app.get(
+    "/api/animal-identification/summary",
+    response_model=IdentificationSummary,
+)
+def identification_summary() -> dict:
+    return identifications.summary()
 
 
 def _failure(file_name: str) -> ImageResult:
@@ -275,6 +303,25 @@ async def identify(request: Request, images: list[UploadFile] = File(default=[])
         if result.error is None and not result.annotated_jpeg:
             result.error = FAILURE
     job_id = jobs.put(stored) if stored else uuid.uuid4().hex
+
+    taxonomy = load_taxonomy()
+    history_rows = [
+        (
+            result.classification,
+            taxonomy[result.classification],
+            result.model_version or MODEL_VERSION,
+        )
+        for result in results
+        if result.error is None
+        and not result.is_unknown
+        and result.classification in taxonomy
+    ]
+    try:
+        identifications.add_many(history_rows)
+    except sqlite3.Error:
+        # Anonymous history is optional; never discard a completed inference
+        # because the aggregate database is briefly locked or unavailable.
+        logger.exception("Could not record identification summary")
 
     payload = []
     for index, result in enumerate(results, start=1):

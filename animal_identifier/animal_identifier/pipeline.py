@@ -34,15 +34,24 @@ class InvalidImage(ValueError):
     """Uploaded bytes are not a usable raster image."""
 
 
-def load_species(path: Path = SPECIES_FILE) -> list[str]:
-    names: list[str] = []
-    seen: set[str] = set()
+def load_taxonomy(path: Path = SPECIES_FILE) -> dict[str, str]:
+    taxonomy: dict[str, str] = {}
+    category: str | None = None
     for raw in path.read_text(encoding="utf-8").splitlines():
         name = raw.strip().lower()
-        if name and name not in seen:
-            seen.add(name)
-            names.append(name)
-    return names
+        if name.startswith("# "):
+            category = name.removeprefix("# ").strip()
+        elif name:
+            if category is None:
+                raise ValueError(f"Species {name!r} has no category")
+            if name in taxonomy:
+                raise ValueError(f"Duplicate species {name!r}")
+            taxonomy[name] = category
+    return taxonomy
+
+
+def load_species(path: Path = SPECIES_FILE) -> list[str]:
+    return list(load_taxonomy(path))
 
 
 def display_name(species: str) -> str:

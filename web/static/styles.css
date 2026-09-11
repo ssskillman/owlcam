@@ -1110,6 +1110,114 @@ footer {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.identify-summary {
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.identify-summary[hidden] {
+  display: none;
+}
+
+.identify-summary h2,
+.identify-summary-total,
+.identify-summary-hint {
+  margin: 0;
+}
+
+.identify-summary-total {
+  margin-top: 0.25rem;
+  font-size: 1.1rem;
+}
+
+.identify-summary-total strong {
+  color: var(--amber);
+  font-size: 1.6rem;
+}
+
+.identify-summary-hint {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.identify-chart {
+  margin-top: 1rem;
+}
+
+.identify-chart details {
+  border-top: 1px solid var(--line);
+}
+
+.identify-chart details:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.identify-chart summary {
+  display: grid;
+  grid-template-columns: 1rem minmax(7rem, 10rem) minmax(6rem, 1fr) 3ch;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.7rem 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.identify-chart summary::before {
+  content: "›";
+  color: var(--amber);
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: transform 120ms ease;
+}
+
+.identify-chart details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.identify-chart progress {
+  width: 100%;
+  min-width: 0;
+  height: 0.65rem;
+  overflow: hidden;
+  border: 0;
+  background: var(--moss);
+  accent-color: var(--amber);
+}
+
+.identify-chart progress::-webkit-progress-bar {
+  background: var(--moss);
+}
+
+.identify-chart progress::-webkit-progress-value {
+  background: var(--amber);
+}
+
+.identify-chart progress::-moz-progress-bar {
+  background: var(--amber);
+}
+
+.identify-species-counts {
+  display: grid;
+  gap: 0.4rem 1.5rem;
+  margin: 0 0 1rem 1.75rem;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.identify-species-counts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--muted);
+}
+
+.identify-species-counts strong {
+  color: var(--ink);
+}
+
 .identify-card {
   padding: 0.9rem;
   border: 1px solid var(--line);
@@ -1133,6 +1241,38 @@ footer {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.75rem;
+}
+
+/* Required, not belt-and-braces: display above outranks the hidden
+   attribute's UA display:none, so the form sat open on every card. */
+.identify-correction[hidden] {
+  display: none;
+}
+
+.identify-correction label {
+  width: 100%;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* Secondary actions. The global button is solid amber, which made a grid of
+   cards read as a wall of calls to action. */
+.identify-quiet {
+  padding: 0.45rem 0.7rem;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: transparent;
+}
+
+.identify-quiet:hover {
+  color: var(--night);
+  background: var(--ink);
+}
+
+.identify-thumbs .identify-quiet {
+  justify-self: start;
 }
 
 /* Progress owl. The track clips the flight path so the owl can enter and
@@ -1343,6 +1483,14 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .identify-chart summary {
+    grid-template-columns: 1rem minmax(6rem, 1fr) 4rem 3ch;
+  }
+
+  .identify-species-counts {
+    grid-template-columns: 1fr;
+  }
+
   .admin-dialog {
     width: 100vw;
     max-width: none;
@@ -1449,5 +1597,9 @@ footer {
 
   .identify-loader {
     animation: pulse 1.8s ease-in-out infinite;
+  }
+
+  .identify-chart summary::before {
+    transition: none;
   }
 }

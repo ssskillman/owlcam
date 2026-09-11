@@ -8,6 +8,10 @@
   const status = document.querySelector("#identify-status")
   const loader = document.querySelector("#identify-loader")
   const results = document.querySelector("#identify-results")
+  const summary = document.querySelector("#identify-summary")
+  const summaryTotal = document.querySelector("#identify-summary-total")
+  const summaryTotalLabel = document.querySelector("#identify-summary-total-label")
+  const chart = document.querySelector("#identify-chart")
   const MAX_FILES = 5
   const MAX_BYTES = 10 * 1024 * 1024
   const ACCEPT = ["image/jpeg", "image/png", "image/webp"]
@@ -40,7 +44,9 @@
       name.textContent = file.name
       const remove = document.createElement("button")
       remove.type = "button"
+      remove.className = "identify-quiet"
       remove.textContent = "Remove"
+      remove.setAttribute("aria-label", `Remove ${file.name}`)
       remove.addEventListener("click", () => {
         selected.splice(index, 1)
         refreshThumbs()
@@ -79,6 +85,23 @@
 
   const percent = (value) => `${Math.round(Number(value) * 100)}% match`
 
+  // Anything that rounds to 0% is not a possibility worth printing.
+  const ALTERNATIVE_FLOOR = 0.005
+  const CATEGORY_LABELS = {
+    amphibian: "Amphibians",
+    bird: "Birds",
+    fish: "Fish",
+    invertebrate: "Invertebrates",
+    mammal: "Mammals",
+    reptile: "Reptiles",
+  }
+
+  const nameLabel = (value) =>
+    String(value || "")
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ")
+
   const renderCard = (item, jobOrigin) => {
     const card = document.createElement("article")
     card.className = "identify-card"
@@ -107,13 +130,25 @@
       ? `We could not identify this one confidently. Our closest match was ${item.best_candidate || "unknown"} at ${Math.round(Number(item.confidence) * 100)}%. Try a clearer or closer photo.`
       : percent(item.confidence)
     const alts = document.createElement("p")
-    if (item.alternatives?.length) {
-      alts.textContent = `Other possibilities: ${item.alternatives
+    alts.className = "identify-score"
+    const worthShowing = (item.alternatives || []).filter(
+      (row) => Number(row.confidence) >= ALTERNATIVE_FLOOR,
+    )
+    if (worthShowing.length) {
+      alts.textContent = `Other possibilities: ${worthShowing
         .map((row) => `${row.species} ${Math.round(row.confidence * 100)}%`)
         .join(", ")}`
+    } else {
+      alts.hidden = true
     }
     const decided = document.createElement("p")
-    decided.textContent = `How we decided: ${sourceLabel(item.selected_source)}`
+    decided.className = "identify-score"
+    // The whole photo is the default, so naming it on every card says nothing.
+    if (item.selected_source === "crop") {
+      decided.textContent = `Identified from a ${sourceLabel(item.selected_source).toLowerCase()}`
+    } else {
+      decided.hidden = true
+    }
     const disclaimer = document.createElement("p")
     disclaimer.className = "identify-disclaimer"
     disclaimer.textContent =
@@ -125,6 +160,9 @@
     const wrong = document.createElement("button")
     wrong.type = "button"
     wrong.textContent = "Not quite"
+    // Matched on purpose: making one of them the primary action would push
+    // people toward that answer, and the answer is the data we want.
+    right.className = wrong.className = "identify-quiet"
     const actions = document.createElement("div")
     actions.className = "identify-feedback"
     actions.append(right, wrong)
@@ -139,6 +177,7 @@
     input.setAttribute("list", "identify-species")
     const unknown = document.createElement("button")
     unknown.type = "button"
+    unknown.className = "identify-quiet"
     unknown.textContent = "I don't know"
     const note = document.createElement("textarea")
     note.rows = 2
@@ -212,6 +251,71 @@
     }
   }
 
+  const renderSummary = (payload) => {
+    const total = Number(payload?.total)
+    const categories = Array.isArray(payload?.categories) ? payload.categories : []
+    if (!summary || !summaryTotal || !summaryTotalLabel || !chart || total <= 0) {
+      if (summary) summary.hidden = true
+      return
+    }
+
+    summaryTotal.textContent = String(total)
+    summaryTotalLabel.textContent =
+      total === 1 ? " animal identified so far" : " animals identified so far"
+    chart.replaceChildren()
+
+    const maximum = Math.max(
+      1,
+      ...categories.map((row) => Number(row?.count) || 0),
+    )
+    for (const row of categories) {
+      const category = String(row?.category || "")
+      const count = Number(row?.count) || 0
+      const label = CATEGORY_LABELS[category] || nameLabel(category)
+      if (!label || count <= 0 || !Array.isArray(row?.species)) continue
+
+      const group = document.createElement("details")
+      const heading = document.createElement("summary")
+      const name = document.createElement("span")
+      name.textContent = label
+      const bar = document.createElement("progress")
+      bar.max = maximum
+      bar.value = count
+      bar.textContent = `${count} of ${maximum}`
+      bar.setAttribute("aria-label", `${label}: ${count}`)
+      const amount = document.createElement("strong")
+      amount.textContent = String(count)
+      heading.append(name, bar, amount)
+
+      const species = document.createElement("ul")
+      species.className = "identify-species-counts"
+      for (const item of row.species) {
+        const itemCount = Number(item?.count) || 0
+        if (!item?.species || itemCount <= 0) continue
+        const line = document.createElement("li")
+        const speciesName = document.createElement("span")
+        speciesName.textContent = nameLabel(item.species)
+        const speciesCount = document.createElement("strong")
+        speciesCount.textContent = String(itemCount)
+        line.append(speciesName, speciesCount)
+        species.append(line)
+      }
+      group.append(heading, species)
+      chart.append(group)
+    }
+    summary.hidden = chart.children.length === 0
+  }
+
+  const loadSummary = async () => {
+    try {
+      const response = await fetch(apiUrl("/api/animal-identification/summary"))
+      if (!response.ok) return
+      renderSummary(await response.json())
+    } catch {
+      // Identification results remain useful when the optional chart fails.
+    }
+  }
+
   browse?.addEventListener("click", () => fileInput.click())
   drop?.addEventListener("click", () => fileInput.click())
   drop?.addEventListener("keydown", (event) => {
@@ -271,6 +375,7 @@
         results.append(renderCard(item, origin))
         if (item.is_unknown) track("animal_id_unknown_returned", {})
       }
+      await loadSummary()
       track("animal_id_completed", {
         file_count: (payload.results || []).length,
         processing_duration: duration,

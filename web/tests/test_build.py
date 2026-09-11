@@ -153,6 +153,61 @@ def test_identify_page_has_a_hidden_flying_owl_progress_indicator():
     assert "loader.hidden = true" in source
 
 
+def test_identify_correction_form_stays_collapsed_until_asked_for():
+    css = (WEB_ROOT / "static" / "styles.css").read_text()
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+
+    # The JS hides the block, but display on the class outranks the hidden
+    # attribute's UA display:none, so every card rendered the correction
+    # input, the note, the opt-in, and Send feedback all at once.
+    assert "extra.hidden = true" in source
+    assert ".identify-correction[hidden]" in css
+
+
+def test_identify_verdict_buttons_carry_equal_weight():
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+
+    # Styling one verdict as the primary action pushes people toward it, and
+    # the answer is the data we are collecting.
+    assert source.count('className = "identify-quiet"') >= 2
+    assert "right.className = wrong.className" in source
+
+
+def test_identify_cards_hide_rounding_noise_and_default_source():
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+
+    # Cards listed alternatives that round to 0%, which is not a possibility.
+    assert "ALTERNATIVE_FLOOR" in source
+    # "The whole photo" is the default, so saying it on every card is noise.
+    assert 'item.selected_source === "crop"' in source
+
+
+def test_identify_summary_is_above_results_and_hidden_until_loaded():
+    html = render_identify_page()
+
+    assert 'id="identify-summary"' in html
+    assert 'id="identify-summary-total"' in html
+    assert 'id="identify-chart"' in html
+    assert html.index('id="identify-summary"') < html.index('id="identify-results"')
+    summary_tag = html[html.index('id="identify-summary"') - 100 : html.index('id="identify-summary"')]
+    assert "hidden" in summary_tag
+
+
+def test_identify_summary_uses_native_drilldowns_and_semantic_bars():
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+    css = (WEB_ROOT / "static" / "styles.css").read_text()
+
+    assert 'apiUrl("/api/animal-identification/summary")' in source
+    assert 'document.createElement("details")' in source
+    assert 'document.createElement("summary")' in source
+    assert 'document.createElement("progress")' in source
+    assert "loadSummary()" in source
+    assert ".identify-chart progress" in css
+    assert ".identify-species-counts" in css
+    progress = _css_block(css, ".identify-chart progress {")
+    assert "min-width: 0" in progress
+
+
 def _css_block(css: str, header: str) -> str:
     """Body of one rule, brace-matched because keyframes nest their own."""
     start = css.index(header) + len(header)
