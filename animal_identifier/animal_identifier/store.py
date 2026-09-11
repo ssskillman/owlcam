@@ -95,3 +95,69 @@ class FeedbackStore:
                     model_version,
                 ),
             )
+
+
+class IdentificationStore:
+    """Anonymous aggregate history; no image, filename, IP, or user identifier."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(self.path) as connection:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS identifications (
+                    id INTEGER PRIMARY KEY,
+                    created_at TEXT NOT NULL,
+                    species TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    model_version TEXT NOT NULL
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS identifications_category_species
+                ON identifications (category, species)
+                """
+            )
+
+    def add_many(self, rows: list[tuple[str, str, str]]) -> None:
+        if not rows:
+            return
+        with sqlite3.connect(self.path) as connection:
+            connection.executemany(
+                """
+                INSERT INTO identifications (
+                    created_at, species, category, model_version
+                ) VALUES (datetime('now'), ?, ?, ?)
+                """,
+                rows,
+            )
+
+    def summary(self) -> dict:
+        with sqlite3.connect(self.path) as connection:
+            rows = connection.execute(
+                """
+                SELECT category, species, COUNT(*) AS count
+                FROM identifications
+                GROUP BY category, species
+                ORDER BY category, count DESC, species
+                """
+            ).fetchall()
+
+        categories: dict[str, dict] = {}
+        total = 0
+        for category, species, count in rows:
+            group = categories.setdefault(
+                category,
+                {"category": category, "count": 0, "species": []},
+            )
+            group["count"] += count
+            group["species"].append({"species": species, "count": count})
+            total += count
+        ordered = sorted(
+            categories.values(),
+            key=lambda row: (-row["count"], row["category"]),
+        )
+        return {"total": total, "categories": ordered}

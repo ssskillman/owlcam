@@ -1,6 +1,7 @@
 import asyncio
 from concurrent.futures import Future
 from io import BytesIO
+import sqlite3
 
 from PIL import Image
 from fastapi.testclient import TestClient
@@ -19,6 +20,8 @@ def _png() -> bytes:
 
 def test_identify_returns_public_payload_and_preview(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "feedback", server.FeedbackStore(tmp_path / "fb.sqlite"))
+    history = server.IdentificationStore(tmp_path / "history.sqlite")
+    monkeypatch.setattr(server, "identifications", history)
 
     def fake_identify(files):
         jpeg = BytesIO()
@@ -52,6 +55,79 @@ def test_identify_returns_public_payload_and_preview(monkeypatch, tmp_path):
     assert client.get(url).status_code == 200
     assert "local/" not in url
     assert "/Users/" not in str(body)
+    assert client.get("/api/animal-identification/summary").json() == {
+        "total": 1,
+        "categories": [
+            {
+                "category": "bird",
+                "count": 1,
+                "species": [{"species": "barred owl", "count": 1}],
+            }
+        ],
+    }
+
+
+def test_unknown_results_do_not_inflate_identified_animal_history(monkeypatch, tmp_path):
+    history = server.IdentificationStore(tmp_path / "history.sqlite")
+    monkeypatch.setattr(server, "identifications", history)
+
+    def fake_identify(files):
+        jpeg = BytesIO()
+        Image.new("RGB", (8, 8), color="gray").save(jpeg, format="JPEG")
+        return [
+            ImageResult(
+                file_name=files[0][0],
+                classification="unknown",
+                display_name="Unknown animal",
+                confidence=0.42,
+                is_unknown=True,
+                selected_source="whole_image",
+                annotated_jpeg=jpeg.getvalue(),
+                model_version="test",
+            )
+        ]
+
+    monkeypatch.setattr(server, "identify_images", fake_identify)
+    response = TestClient(server.app).post(
+        "/api/animal-identification",
+        files=[("images", ("unclear.jpg", _png(), "image/jpeg"))],
+    )
+
+    assert response.status_code == 200
+    assert history.summary() == {"total": 0, "categories": []}
+
+
+def test_history_write_failure_does_not_discard_identification(monkeypatch):
+    class BrokenHistory:
+        @staticmethod
+        def add_many(_rows):
+            raise sqlite3.OperationalError("database is locked")
+
+    def fake_identify(files):
+        jpeg = BytesIO()
+        Image.new("RGB", (8, 8), color="orange").save(jpeg, format="JPEG")
+        return [
+            ImageResult(
+                file_name=files[0][0],
+                classification="barred owl",
+                display_name="Barred owl",
+                confidence=0.96,
+                is_unknown=False,
+                selected_source="whole_image",
+                annotated_jpeg=jpeg.getvalue(),
+                model_version="test",
+            )
+        ]
+
+    monkeypatch.setattr(server, "identifications", BrokenHistory())
+    monkeypatch.setattr(server, "identify_images", fake_identify)
+    response = TestClient(server.app).post(
+        "/api/animal-identification",
+        files=[("images", ("owl.jpg", _png(), "image/jpeg"))],
+    )
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["display_name"] == "Barred owl"
 
 
 def test_feedback_endpoint_stores_without_training_by_default(monkeypatch, tmp_path):
