@@ -182,6 +182,32 @@ def test_identify_cards_hide_rounding_noise_and_default_source():
     assert 'item.selected_source === "crop"' in source
 
 
+def test_identify_summary_is_above_results_and_hidden_until_loaded():
+    html = render_identify_page()
+
+    assert 'id="identify-summary"' in html
+    assert 'id="identify-summary-total"' in html
+    assert 'id="identify-chart"' in html
+    assert html.index('id="identify-summary"') < html.index('id="identify-results"')
+    summary_tag = html[html.index('id="identify-summary"') - 100 : html.index('id="identify-summary"')]
+    assert "hidden" in summary_tag
+
+
+def test_identify_summary_uses_native_drilldowns_and_semantic_bars():
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+    css = (WEB_ROOT / "static" / "styles.css").read_text()
+
+    assert 'apiUrl("/api/animal-identification/summary")' in source
+    assert 'document.createElement("details")' in source
+    assert 'document.createElement("summary")' in source
+    assert 'document.createElement("progress")' in source
+    assert "loadSummary()" in source
+    assert ".identify-chart progress" in css
+    assert ".identify-species-counts" in css
+    progress = _css_block(css, ".identify-chart progress {")
+    assert "min-width: 0" in progress
+
+
 def _css_block(css: str, header: str) -> str:
     """Body of one rule, brace-matched because keyframes nest their own."""
     start = css.index(header) + len(header)
