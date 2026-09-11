@@ -38,17 +38,19 @@ Swagger `/docs` should show a file picker for Identify. If you still see
 `array<string>`, hard-refresh; curl remains the reliable check.
 
 Publish with Tailscale Funnel on **this machine**, not the Pi, **after** that
-POST returns JSON and `nvidia-smi` shows the RTX 5070 in use:
+POST returns JSON and `nvidia-smi` shows the RTX 5070 in use. Port **8443**,
+not 443: 443 is the Pi's public site, and the Identify page origin is baked
+with `:8443`.
 
 ```bash
-tailscale funnel --bg --https=443 http://127.0.0.1:8767
+tailscale funnel --bg --yes --https=8443 http://127.0.0.1:8767
 ```
 
 Then put this host's origin in `ANIMAL_ID_API_ORIGIN` in the repo-root
 `deploy.env` (gitignored, read by the Makefile — see `deploy.env.example`) so
 every `make pi-deploy` builds the page against it, and set
-`OWLCAM_ANIMAL_ID_ORIGIN` on the Pi site unit so CSP can `connect-src` /
-`img-src` that origin.
+`OWLCAM_ANIMAL_ID_ORIGIN` on the Pi site unit to the **same** origin, including
+the `:8443`, so CSP can `connect-src` / `img-src` that origin.
 
 macOS keepalive: copy `launchd/com.owlcam.animal-id.plist.example` to
 `~/Library/LaunchAgents/`, replace `REPLACE` with your home path, then
