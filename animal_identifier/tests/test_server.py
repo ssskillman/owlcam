@@ -214,15 +214,12 @@ def test_timeout_preserves_completed_card_and_does_not_queue_remaining(monkeypat
 
 
 def test_openapi_marks_uploaded_images_as_binary_files():
+    server.app.openapi_schema = None
     schema = server.app.openapi()
     body = schema["components"]["schemas"][
         "Body_identify_api_animal_identification_post"
     ]
     items = body["properties"]["images"]["items"]
     assert items["type"] == "string"
-    assert items.get("format") == "binary" or items.get("contentMediaType") in {
-        "application/octet-stream",
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-    }
+    assert items.get("format") == "binary"
+    assert schema["openapi"].startswith("3.0")

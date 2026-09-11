@@ -34,8 +34,8 @@ In another PowerShell: `nvidia-smi -l 1`
 curl.exe -X POST "http://127.0.0.1:8767/api/animal-identification" -F "images=@C:\Users\sskil\Pictures\owl.jpg"
 ```
 
-Swagger may label `images` as `array<string>`; OpenAPI still marks each item as
-a binary file. Prefer curl for the first real POST.
+Swagger `/docs` should show a file picker for Identify. If you still see
+`array<string>`, hard-refresh; curl remains the reliable check.
 
 Publish with Tailscale Funnel on **this machine**, not the Pi, **after** that
 POST returns JSON and `nvidia-smi` shows the RTX 5070 in use:

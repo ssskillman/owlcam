@@ -10,6 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
@@ -112,6 +113,31 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+def custom_openapi() -> dict:
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        routes=app.routes,
+    )
+    # OAS 3.1 emits contentMediaType for files; Swagger UI then treats a list
+    # of uploads as array<string>. 3.0 + format:binary restores the file picker.
+    schema["openapi"] = "3.0.2"
+    body = schema.get("components", {}).get("schemas", {}).get(
+        "Body_identify_api_animal_identification_post"
+    )
+    if body:
+        items = body["properties"]["images"]["items"]
+        items["format"] = "binary"
+        items.pop("contentMediaType", None)
+    app.openapi_schema = schema
+    return schema
+
+
+app.openapi = custom_openapi
 
 jobs = JobStore()
 feedback = FeedbackStore(DATA_DIR / "feedback.sqlite")
