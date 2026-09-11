@@ -1135,6 +1135,91 @@ footer {
   margin-top: 0.75rem;
 }
 
+/* Progress owl. The track clips the flight path so the owl can enter and
+   leave the frame instead of stopping at the edges. */
+.identify-loader {
+  position: relative;
+  overflow: hidden;
+  height: 4.75rem;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--moss), var(--forest));
+}
+
+.identify-loader[hidden] {
+  display: none;
+}
+
+.identify-owl {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  color: var(--amber);
+  animation: owl-fly 3.2s linear infinite;
+}
+
+.identify-owl-body,
+.identify-owl-wing {
+  fill: currentColor;
+}
+
+.identify-owl-eye {
+  fill: var(--night);
+}
+
+.identify-owl-wing {
+  transform-box: fill-box;
+  animation: owl-flap 0.3s ease-in-out infinite alternate;
+}
+
+.identify-owl-wing-left {
+  transform-origin: right center;
+}
+
+.identify-owl-wing-right {
+  transform-origin: left center;
+  animation-name: owl-flap-mirror;
+}
+
+/* Horizontal travel plus a gentle bob, so one animation reads as flight.
+   The vertical half is what keeps it from looking like a sliding sticker. */
+@keyframes owl-fly {
+  0% {
+    transform: translate(-5rem, -55%);
+  }
+  25% {
+    transform: translate(25vw, -40%);
+  }
+  50% {
+    transform: translate(50vw, -58%);
+  }
+  75% {
+    transform: translate(75vw, -42%);
+  }
+  100% {
+    transform: translate(105vw, -55%);
+  }
+}
+
+/* Kept under ~12deg on the upstroke: past that the wing tips rise beside the
+   ear tufts and the owl reads as a rabbit. */
+@keyframes owl-flap {
+  from {
+    transform: rotate(-24deg);
+  }
+  to {
+    transform: rotate(11deg);
+  }
+}
+
+@keyframes owl-flap-mirror {
+  from {
+    transform: rotate(24deg);
+  }
+  to {
+    transform: rotate(-11deg);
+  }
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.3;
@@ -1325,5 +1410,19 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   .live-label > span {
     animation: none;
+  }
+
+  /* Park the owl in frame and let the status text carry the progress. */
+  .identify-owl {
+    animation: none;
+    transform: translate(1.25rem, -50%);
+  }
+
+  .identify-owl-wing {
+    animation: none;
+  }
+
+  .identify-loader {
+    animation: pulse 1.8s ease-in-out infinite;
   }
 }

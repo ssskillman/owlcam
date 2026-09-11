@@ -6,6 +6,7 @@
   const thumbs = document.querySelector("#identify-thumbs")
   const submit = document.querySelector("#identify-submit")
   const status = document.querySelector("#identify-status")
+  const loader = document.querySelector("#identify-loader")
   const results = document.querySelector("#identify-results")
   const MAX_FILES = 5
   const MAX_BYTES = 10 * 1024 * 1024
@@ -247,6 +248,7 @@
     }
     track("animal_id_upload_started", { file_count: selected.length })
     setStatus("Analyzing photos…")
+    if (loader) loader.hidden = false
     submit.disabled = true
     const started = performance.now()
     const body = new FormData()
@@ -278,6 +280,7 @@
       track("animal_id_failed", { file_count: selected.length })
       setStatus(OFFLINE_MESSAGE)
     } finally {
+      if (loader) loader.hidden = true
       submit.disabled = selected.length === 0
     }
   })

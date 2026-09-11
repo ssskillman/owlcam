@@ -18,6 +18,7 @@ from fasthtml.common import (
     Main,
     Meta,
     Nav,
+    NotStr,
     Option,
     P,
     Pre,
@@ -615,6 +616,25 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
     return to_xml(page)
 
 
+# Inline so the progress owl costs no extra request and can inherit the theme
+# colours. Wings come first so the body paints over their hinges.
+IDENTIFY_OWL_SVG = """
+<svg class="identify-owl" viewBox="0 0 72 48" width="58" height="39" focusable="false">
+  <path class="identify-owl-wing identify-owl-wing-left"
+        d="M30 26C20 16 10 16 2 24c8 6 18 8 28 6z" />
+  <path class="identify-owl-wing identify-owl-wing-right"
+        d="M42 26c10-10 20-10 28-2-8 6-18 8-28 6z" />
+  <path class="identify-owl-body" d="M25 9 22 1l9 4z" />
+  <path class="identify-owl-body" d="M47 9 50 1l-9 4z" />
+  <path class="identify-owl-body"
+        d="M36 6c8 0 14 7 14 16s-6 20-14 20-14-11-14-20S28 6 36 6z" />
+  <circle class="identify-owl-eye" cx="31" cy="19" r="3.4" />
+  <circle class="identify-owl-eye" cx="41" cy="19" r="3.4" />
+  <path class="identify-owl-eye" d="M36 22l-2.6 3.6h5.2z" />
+</svg>
+"""
+
+
 def render_identify_page() -> str:
     page = Html(
         _head(
@@ -679,6 +699,13 @@ def render_identify_page() -> str:
                             id="identify-submit",
                         ),
                         P("", id="identify-status", aria_live="polite"),
+                        Div(
+                            NotStr(IDENTIFY_OWL_SVG),
+                            id="identify-loader",
+                            cls="identify-loader",
+                            hidden=True,
+                            aria_hidden="true",
+                        ),
                         data_api_origin=ANIMAL_ID_API_ORIGIN,
                         id="identify-form",
                         cls="identify-form",
