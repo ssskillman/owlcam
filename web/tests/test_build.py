@@ -129,6 +129,29 @@ def test_identify_page_is_public_and_hides_model_controls():
     assert ".innerHTML" not in source
 
 
+def test_identify_page_has_a_hidden_flying_owl_progress_indicator():
+    html = render_identify_page()
+
+    # Decorative: the aria-live status paragraph is what announces progress.
+    assert 'id="identify-loader"' in html
+    assert 'aria-hidden="true"' in html
+    assert "identify-owl" in html
+    assert "<svg" in html
+
+    css = (WEB_ROOT / "static" / "styles.css").read_text()
+    assert "@keyframes owl-fly" in css
+    assert "@keyframes owl-flap" in css
+    assert ".identify-loader[hidden]" in css
+    # Wings flapping forever is exactly what reduced-motion users opt out of.
+    reduced = css.split("@media (prefers-reduced-motion: reduce)")[1]
+    assert ".identify-owl" in reduced
+
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+    assert "identify-loader" in source
+    assert "loader.hidden = false" in source
+    assert "loader.hidden = true" in source
+
+
 def test_identify_page_embeds_configured_api_origin(monkeypatch):
     import app as site_app
 
