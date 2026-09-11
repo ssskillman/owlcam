@@ -1154,7 +1154,7 @@ footer {
   top: 50%;
   left: 0;
   color: var(--amber);
-  animation: owl-fly 3.2s linear infinite;
+  animation: owl-fly 7s linear infinite;
 }
 
 .identify-owl-body,
@@ -1162,13 +1162,28 @@ footer {
   fill: currentColor;
 }
 
-.identify-owl-eye {
+.identify-owl-face,
+.identify-owl-glint {
+  fill: var(--ink);
+}
+
+.identify-owl-eye,
+.identify-owl-beak {
   fill: var(--night);
+}
+
+/* Feather lines, not an outline: at 64px a stroked silhouette turns muddy. */
+.identify-owl-quill {
+  fill: none;
+  stroke: var(--night);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: 0.22;
 }
 
 .identify-owl-wing {
   transform-box: fill-box;
-  animation: owl-flap 0.3s ease-in-out infinite alternate;
+  animation: owl-flap 0.55s ease-in-out infinite alternate;
 }
 
 .identify-owl-wing-left {
@@ -1181,30 +1196,40 @@ footer {
 }
 
 /* Horizontal travel plus a gentle bob, so one animation reads as flight.
-   The vertical half is what keeps it from looking like a sliding sticker. */
+   The vertical half is what keeps it from looking like a sliding sticker.
+   left drives the lap rather than transform because percentage translation
+   resolves against the owl, not the loader: a vw lap outran the box on wide
+   screens, where main caps at 1440px, and the owl spent half of it offscreen.
+   The rem offsets exceed the owl's own 64px width, so it starts and ends
+   fully hidden whatever the container is doing. */
 @keyframes owl-fly {
   0% {
-    transform: translate(-5rem, -55%);
+    left: -4.5rem;
+    transform: translateY(-55%);
   }
   25% {
-    transform: translate(25vw, -40%);
+    left: 25%;
+    transform: translateY(-42%);
   }
   50% {
-    transform: translate(50vw, -58%);
+    left: 50%;
+    transform: translateY(-58%);
   }
   75% {
-    transform: translate(75vw, -42%);
+    left: 75%;
+    transform: translateY(-44%);
   }
   100% {
-    transform: translate(105vw, -55%);
+    left: 100%;
+    transform: translateY(-55%);
   }
 }
 
-/* Kept under ~12deg on the upstroke: past that the wing tips rise beside the
-   ear tufts and the owl reads as a rabbit. */
+/* A shallow beat on purpose. The wing pivots at its shoulder, so past roughly
+   35deg it swings clear of the body and the silhouette comes apart. */
 @keyframes owl-flap {
   from {
-    transform: rotate(-24deg);
+    transform: rotate(-22deg);
   }
   to {
     transform: rotate(11deg);
@@ -1213,7 +1238,7 @@ footer {
 
 @keyframes owl-flap-mirror {
   from {
-    transform: rotate(24deg);
+    transform: rotate(22deg);
   }
   to {
     transform: rotate(-11deg);
