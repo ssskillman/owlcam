@@ -4,23 +4,268 @@ eastern screech owl
 barn owl
 red-tailed hawk
 cooper's hawk
+sharp-shinned hawk
+broad-winged hawk
+red-shouldered hawk
+bald eagle
+osprey
+american kestrel
+peregrine falcon
 turkey vulture
-american crow
+black vulture
+great blue heron
+great egret
+snowy egret
+green heron
+white ibis
+wood stork
+sandhill crane
 wild turkey
-raccoon
-eastern gray squirrel
-flying squirrel
+northern bobwhite
+canada goose
+wood duck
+mallard
+american black duck
+hooded merganser
+double-crested cormorant
+brown pelican
+laughing gull
+ring-billed gull
+killdeer
+american woodcock
+mourning dove
+rock pigeon
+yellow-billed cuckoo
+eastern whip-poor-will
+chimney swift
+ruby-throated hummingbird
+belted kingfisher
+red-headed woodpecker
+red-bellied woodpecker
+yellow-bellied sapsucker
+downy woodpecker
+hairy woodpecker
+pileated woodpecker
+northern flicker
+eastern phoebe
+great crested flycatcher
+eastern kingbird
+white-eyed vireo
+red-eyed vireo
+blue jay
+american crow
+fish crow
+carolina chickadee
+tufted titmouse
+white-breasted nuthatch
+brown-headed nuthatch
+carolina wren
+house wren
+blue-gray gnatcatcher
+eastern bluebird
+american robin
+wood thrush
+gray catbird
+northern mockingbird
+brown thrasher
+european starling
+cedar waxwing
+house sparrow
+house finch
+american goldfinch
+eastern towhee
+chipping sparrow
+song sparrow
+white-throated sparrow
+dark-eyed junco
+northern cardinal
+indigo bunting
+red-winged blackbird
+common grackle
+brown-headed cowbird
+baltimore oriole
+scarlet tanager
+summer tanager
+prothonotary warbler
+yellow-rumped warbler
+pine warbler
+common yellowthroat
+barn swallow
+tree swallow
+purple martin
 virginia opossum
-white-tailed deer
+nine-banded armadillo
+eastern mole
+star-nosed mole
+eastern cottontail
+marsh rabbit
+swamp rabbit
+eastern gray squirrel
+fox squirrel
+southern flying squirrel
+eastern chipmunk
+groundhog
+beaver
+muskrat
+white-footed mouse
+hispid cotton rat
+norway rat
+eastern woodrat
+meadow vole
+big brown bat
+eastern red bat
+brazilian free-tailed bat
+american black bear
+raccoon
+striped skunk
+eastern spotted skunk
+river otter
+mink
+long-tailed weasel
 red fox
 gray fox
 coyote
+red wolf
 bobcat
-american black bear
+white-tailed deer
+elk
+eastern worm snake
+scarlet snake
+ring-necked snake
+mud snake
+rainbow snake
+eastern hognose snake
+southern hognose snake
+scarlet kingsnake
+eastern kingsnake
+mole kingsnake
+eastern milk snake
+black swamp snake
+glossy crayfish snake
+northern black racer
+eastern coachwhip
+red-bellied water snake
+banded water snake
+northern water snake
+brown water snake
+carolina watersnake
+rough green snake
+smooth green snake
+eastern rat snake
+corn snake
+pine snake
+pine woods snake
+queen snake
+dekay's brown snake
+red-bellied snake
+southeastern crowned snake
+eastern ribbon snake
+eastern garter snake
+rough earth snake
+smooth earth snake
+eastern coral snake
+copperhead
+cottonmouth
+eastern diamondback rattlesnake
+timber rattlesnake
+pigmy rattlesnake
+green anole
+eastern fence lizard
+six-lined racerunner
+five-lined skink
+southeastern five-lined skink
+broad-headed skink
+coal skink
+little brown skink
+eastern glass lizard
+slender glass lizard
+mimic glass lizard
+mediterranean gecko
+snapping turtle
+eastern mud turtle
+striped mud turtle
+eastern musk turtle
+eastern painted turtle
+spotted turtle
+chicken turtle
+bog turtle
+northern map turtle
+diamondback terrapin
+river cooter
+coastal plain cooter
+northern red-bellied cooter
+eastern box turtle
+yellow-bellied slider
+red-eared slider
+spiny softshell
+loggerhead sea turtle
+green sea turtle
+leatherback sea turtle
+kemp's ridley sea turtle
+hawksbill sea turtle
+american alligator
+largemouth bass
+smallmouth bass
+spotted bass
+striped bass
+white perch
+yellow perch
+walleye
+black crappie
+bluegill
+redear sunfish
+pumpkinseed
+warmouth
+rock bass
+chain pickerel
+brook trout
+rainbow trout
+brown trout
+channel catfish
+blue catfish
+flathead catfish
+brown bullhead
+bowfin
+longnose gar
+american eel
+american shad
+red drum
+southern flounder
+spotted seatrout
+bluefish
+sheepshead
+american bullfrog
+green frog
+southern leopard frog
+spring peeper
+american toad
+fowler's toad
+eastern newt
+spotted salamander
+marbled salamander
+chicken
+domestic duck
+domestic goose
+peacock
+horse
+cow
+sheep
+goat
+pig
 domestic cat
 domestic dog
-mouse
-rat
-snake
-frog
+ostrich
+emu
+flamingo
+penguin
+parrot
+elephant
+giraffe
+lion
+tiger
+zebra
+kangaroo
+camel
+insect
+spider
 unknown animal

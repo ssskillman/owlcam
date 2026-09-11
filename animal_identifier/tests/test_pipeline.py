@@ -28,6 +28,34 @@ def test_species_list_is_server_owned_and_includes_unknown():
     assert "human" not in species
 
 
+def test_species_list_covers_animals_from_outside_north_carolina():
+    # A closed NC-only list forces visitor uploads into the nearest local
+    # species: an ostrich came back as "wild turkey" at 0.99 confidence.
+    species = load_species()
+    for name in ("ostrich", "elephant", "kangaroo", "chicken", "penguin"):
+        assert name in species
+
+
+def test_species_list_names_north_carolina_wildlife_instead_of_generic_taxa():
+    species = load_species()
+    for name in (
+        "copperhead",
+        "cottonmouth",
+        "timber rattlesnake",
+        "eastern rat snake",
+        "eastern box turtle",
+        "green anole",
+        "american alligator",
+        "carolina chickadee",
+        "largemouth bass",
+        "red fox",
+    ):
+        assert name in species
+    # Generic buckets steal softmax from named species.
+    for name in ("snake", "lizard", "turtle", "woodpecker", "frog", "fish"):
+        assert name not in species
+
+
 def test_display_name_title_cases_without_yelling_apostrophes():
     assert display_name("cooper's hawk") == "Cooper's hawk"
     assert display_name("barred owl") == "Barred owl"
