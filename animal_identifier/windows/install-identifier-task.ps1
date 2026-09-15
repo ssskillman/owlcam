@@ -64,6 +64,21 @@ if (Test-Path $tailscale) {
     Write-Warning "tailscale CLI not found; publish 8443 yourself"
 }
 
+# A uvicorn started by hand still owns the port, and the task would otherwise
+# crash-loop against "address already in use" once a minute while the old
+# process kept serving and hid the problem.
+$listeners = Get-NetTCPConnection -LocalPort 8767 -State Listen -ErrorAction SilentlyContinue
+foreach ($listener in $listeners) {
+    $owner = Get-Process -Id $listener.OwningProcess -ErrorAction SilentlyContinue
+    if ($owner) {
+        Write-Host "Stopping existing listener on 8767: $($owner.ProcessName) (PID $($owner.Id))"
+        Stop-Process -Id $owner.Id -Force
+    }
+}
+if ($listeners) {
+    Start-Sleep -Seconds 3
+}
+
 Start-ScheduledTask -TaskName $taskName
 
 Write-Host ""
