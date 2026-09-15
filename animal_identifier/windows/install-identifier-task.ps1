@@ -59,9 +59,18 @@ if (-not $tailscale) {
     $tailscale = "C:\Program Files\Tailscale\tailscale.exe"
 }
 if (Test-Path $tailscale) {
+    # Windows runs Tailscale as the logged-in user rather than as the system,
+    # so without this the node leaves the tailnet the moment nobody is signed
+    # in. Starting the identifier reliably does not help if the network layer
+    # it is published through has gone away.
+    # https://tailscale.com/docs/how-to/run-unattended
+    & $tailscale up --unattended=true
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "could not enable unattended mode; this node will drop off the tailnet whenever nobody is logged in"
+    }
     & $tailscale funnel --bg --yes --https=8443 http://127.0.0.1:8767
 } else {
-    Write-Warning "tailscale CLI not found; publish 8443 yourself"
+    Write-Warning "tailscale CLI not found; enable unattended mode and publish 8443 yourself"
 }
 
 # A uvicorn started by hand still owns the port, and the task would otherwise
