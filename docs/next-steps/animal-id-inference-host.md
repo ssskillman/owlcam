@@ -118,6 +118,39 @@ On the **Mac / laptop that deploys the site**:
    tailscale serve --https=8443 off
    ```
 
+## Keep it running
+
+`uv run uvicorn ...` in a terminal window is fine for the first proof and
+wrong afterwards. This host is a desktop: it sleeps, it reboots for
+updates, and the window gets closed. Any of those drops the node off the
+tailnet, and every visitor to the public site sees nothing but "the
+photo-processing server is offline". Wake on LAN is not set up, so the box
+cannot be recovered remotely once it is asleep.
+
+In an **administrator** PowerShell on the PC, once:
+
+```powershell
+cd C:\Users\sskil\github\owlcam\animal_identifier\windows
+.\install-identifier-task.ps1
+```
+
+That registers a Task Scheduler task that starts the identifier at boot
+with nobody logged in (`S4U`, so no stored password), restarts it if it
+dies, stops the machine sleeping on AC power, and re-asserts the `:8443`
+publish. Logs land in `%LOCALAPPDATA%\owlcam\identifier.log`.
+
+Check it took:
+
+```powershell
+Get-ScheduledTask -TaskName 'OwlCam animal identifier'
+Get-Content "$env:LOCALAPPDATA\owlcam\identifier.log" -Tail 20
+curl.exe http://127.0.0.1:8767/api/health
+```
+
+If inference works by hand but fails under the task, CUDA is refusing a
+non-interactive session. Re-register with `-LogonType Interactive` and an
+`-AtLogOn` trigger, and turn on automatic sign-in.
+
 ## Prove it
 
 - PC on: Identify on
