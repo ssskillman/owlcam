@@ -1052,8 +1052,18 @@ footer {
 
 .identify-page {
   display: grid;
-  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+  gap: 1.5rem 2.5rem;
   padding: 2.5rem 0 4rem;
+  align-items: start;
+}
+
+/* Everything except the intro and the chart spans the full width; the two
+   of them share the first row. */
+.identify-page > .identify-form,
+.identify-page > .identify-disclaimer,
+.identify-page > .identify-results {
+  grid-column: 1 / -1;
 }
 
 .identify-intro .lede {
@@ -1129,10 +1139,15 @@ footer {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* The headline is only a few words, so at desktop widths it left a large
+   empty block to its right. The all-time chart fills it and is readable
+   before anyone uploads anything. */
 .identify-summary {
-  padding: 1.25rem 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  grid-column: 2;
+  grid-row: 1;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  background: var(--forest);
 }
 
 .identify-summary[hidden] {
@@ -1420,6 +1435,17 @@ footer {
 @media (max-width: 900px) {
   .hero {
     grid-template-columns: 1fr;
+  }
+
+  /* One column: the chart falls below the form so uploading stays the
+     first thing on the page. */
+  .identify-page {
+    grid-template-columns: 1fr;
+  }
+
+  .identify-summary {
+    grid-column: 1;
+    grid-row: auto;
   }
 
   h1 {
