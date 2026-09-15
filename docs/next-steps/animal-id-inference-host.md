@@ -136,8 +136,17 @@ cd C:\Users\sskil\github\owlcam\animal_identifier\windows
 
 That registers a Task Scheduler task that starts the identifier at boot
 with nobody logged in (`S4U`, so no stored password), restarts it if it
-dies, stops the machine sleeping on AC power, and re-asserts the `:8443`
-publish. Logs land in `%LOCALAPPDATA%\owlcam\identifier.log`.
+dies, stops the machine sleeping on AC power, turns on Tailscale
+unattended mode, and re-asserts the `:8443` publish. Logs land in
+`%LOCALAPPDATA%\owlcam\identifier.log`.
+
+Unattended mode is not optional here. Windows runs Tailscale as the
+logged-in user rather than as the system, so a rebooted PC sitting at the
+lock screen is **off the tailnet entirely** — the identifier can be
+running perfectly and still be unreachable, and the public site shows
+only "the photo-processing server is offline". Starting the service
+reliably does not help if the network layer it is published through is
+gone. See <https://tailscale.com/docs/how-to/run-unattended>.
 
 Check it took:
 

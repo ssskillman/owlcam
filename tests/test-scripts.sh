@@ -354,6 +354,11 @@ grep -F -- '-LogonType S4U' "${WINDOWS_DIR}/install-identifier-task.ps1" >/dev/n
   || fail "Windows task needs a logged-in user or a stored password"
 # Starting the task while a hand-started uvicorn holds 8767 crash-loops the
 # task once a minute while the old process keeps serving and hides it.
+# Windows runs Tailscale as the logged-in user, so a boot-time identifier is
+# unreachable until someone signs in unless unattended mode is on.
+grep -F -- 'up --unattended=true' \
+  "${WINDOWS_DIR}/install-identifier-task.ps1" >/dev/null \
+  || fail "Windows task install leaves the node off the tailnet when logged out"
 grep -F -- 'Get-NetTCPConnection -LocalPort 8767' \
   "${WINDOWS_DIR}/install-identifier-task.ps1" >/dev/null \
   || fail "Windows task install races an existing listener on 8767"
