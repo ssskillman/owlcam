@@ -67,6 +67,7 @@
 
   const addFiles = (fileList) => {
     const startingCount = selected.length
+    const offered = fileList ? fileList.length : 0
     for (const file of fileList) {
       if (selected.length >= MAX_FILES) {
         setStatus("You can send up to 5 photos at a time.")
@@ -84,6 +85,9 @@
       selected.push(file)
     }
     if (selection && selected.length > startingCount) selection.open = true
+    // A picker that hands back nothing used to skip the loop and say nothing,
+    // so a failed selection looked identical to never having tapped.
+    if (offered === 0) setStatus("No photos were added. Tap Choose photos and try again.")
     refreshThumbs()
   }
 
@@ -370,8 +374,17 @@
   }
 
   browse?.addEventListener("click", () => fileInput.click())
-  drop?.addEventListener("click", () => fileInput.click())
+  // The button lives inside the drop zone, so its click bubbles here as well.
+  // Opening the picker twice in one gesture makes iOS Safari abandon the first
+  // session and fire change with an empty file list.
+  drop?.addEventListener("click", (event) => {
+    if (event.target.closest("#identify-browse")) return
+    fileInput.click()
+  })
   drop?.addEventListener("keydown", (event) => {
+    // Same double-open by keyboard: the button turns Enter and Space into its
+    // own click, and this keydown bubbles up from it.
+    if (event.target.closest("#identify-browse")) return
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault()
       fileInput.click()

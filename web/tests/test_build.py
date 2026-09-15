@@ -218,6 +218,32 @@ def test_each_result_can_retry_only_its_original_photo():
     assert "submittedFiles[index]" in source
 
 
+def test_choose_photos_opens_the_picker_once_per_tap():
+    html = render_identify_page()
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+
+    # The button sits inside the drop zone, so its click bubbles there too.
+    # Two programmatic clicks in one gesture leave iOS Safari delivering a
+    # change event with no files: no thumbnails, no message, nothing.
+    drop = html.index('id="identify-drop"')
+    zone = html[drop : html.index("</div>", drop)]
+    assert 'id="identify-browse"' in zone, (
+        "test assumes the button is nested inside the drop zone"
+    )
+
+    assert 'drop?.addEventListener("click", () => fileInput.click())' not in source
+    # Both the tap path and the keyboard path bubble up from the button.
+    assert source.count('closest("#identify-browse")') >= 2
+
+
+def test_a_selection_that_yields_no_files_says_so():
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+
+    # Every reject path sets a status, but an empty list skipped the loop
+    # entirely and failed silently, which is why the phone showed nothing.
+    assert "No photos were added" in source
+
+
 def test_identify_summary_is_above_results_and_hidden_until_loaded():
     html = render_identify_page()
 
