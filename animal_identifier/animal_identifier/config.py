@@ -9,6 +9,9 @@ SPECIES_FILE = PACKAGE_ROOT / "species.txt"
 YOLO_MODEL = os.environ.get("ANIMAL_ID_YOLO_MODEL", "yolov8n.pt")
 YOLO_MIN_CONFIDENCE = float(os.environ.get("ANIMAL_ID_YOLO_MIN_CONFIDENCE", "0.20"))
 UNKNOWN_THRESHOLD = float(os.environ.get("ANIMAL_ID_UNKNOWN_THRESHOLD", "0.60"))
+# Fraction of the frame below which the subject is too small for the
+# whole-image pass to resolve, and the crop is worth trusting over it.
+SMALL_SUBJECT_FRACTION = float(os.environ.get("ANIMAL_ID_SMALL_SUBJECT", "0.10"))
 ALTERNATIVES = 3
 MAX_IMAGES = 5
 MAX_FILE_BYTES = 10 * 1024 * 1024

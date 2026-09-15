@@ -1274,6 +1274,13 @@ footer {
   font-size: 0.88rem;
 }
 
+/* The flex row would otherwise sit this beside the note field. */
+.identify-correction small {
+  width: 100%;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 /* Secondary actions. The global button is solid amber, which made a grid of
    cards read as a wall of calls to action. */
 .identify-quiet {

@@ -135,6 +135,70 @@ def test_whole_image_wins_when_its_top_score_is_higher():
     ]
 
 
+def test_a_confident_crop_cannot_outvote_the_whole_image_on_a_large_subject():
+    # A raccoon on a tree trunk came back "Tiger" at 95%. The crop tightened
+    # onto ringed fur, and a texture patch stripped of shape and surroundings
+    # outscores the full scene without being more correct, so a higher score
+    # is not evidence the crop is right.
+    def detect(_image):
+        return [Detection("cat", 0.83, (1, 1, 25, 25))]
+
+    def classify(image, _species):
+        if image.size == (24, 24):
+            return [("tiger", 0.95), ("cow", 0.03), ("lion", 0.02)]
+        return [("raccoon", 0.71), ("tiger", 0.2), ("cow", 0.05)]
+
+    result = classify_image(
+        _png(32, 32),
+        file_name="raccoon-on-a-tree.jpg",
+        detect_fn=detect,
+        classify_fn=classify,
+    )
+    assert result.classification == "raccoon"
+    assert result.selected_source == "whole_image"
+
+
+def test_a_distant_animal_still_gets_the_crop_it_needs():
+    # The crop exists for the subject that fills almost none of the frame,
+    # where the whole-image pass sees mostly trees. Keep that working.
+    def detect(_image):
+        return [Detection("bird", 0.7, (1, 1, 7, 7))]
+
+    def classify(image, _species):
+        if image.size == (6, 6):
+            return [("eastern bluebird", 0.88), ("carolina chickadee", 0.05), ("crow", 0.02)]
+        return [("crow", 0.65), ("eastern bluebird", 0.2), ("blue jay", 0.1)]
+
+    result = classify_image(
+        _png(32, 32),
+        file_name="far-away-bird.jpg",
+        detect_fn=detect,
+        classify_fn=classify,
+    )
+    assert result.classification == "eastern bluebird"
+    assert result.selected_source == "crop"
+
+
+def test_the_crop_sharpens_a_verdict_the_whole_image_already_reached():
+    def detect(_image):
+        return [Detection("bird", 0.8, (1, 1, 25, 25))]
+
+    def classify(image, _species):
+        if image.size == (24, 24):
+            return [("barred owl", 0.97), ("great horned owl", 0.02), ("crow", 0.01)]
+        return [("barred owl", 0.7), ("great horned owl", 0.2), ("crow", 0.05)]
+
+    result = classify_image(
+        _png(32, 32),
+        file_name="close-owl.jpg",
+        detect_fn=detect,
+        classify_fn=classify,
+    )
+    assert result.classification == "barred owl"
+    assert result.confidence == 0.97
+    assert result.selected_source == "crop"
+
+
 def test_below_threshold_is_unknown_and_keeps_best_candidate():
     def classify(_image, _species):
         return [("cooper's hawk", 0.48), ("barred owl", 0.3), ("crow", 0.1)]
