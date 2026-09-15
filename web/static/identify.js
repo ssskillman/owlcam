@@ -25,6 +25,7 @@
 
   const origin = (form.dataset.apiOrigin || "").replace(/\/$/, "")
   let selected = []
+  let offline = false
 
   const track = (name, params) => {
     window.owlcamTrack?.(name, params)
@@ -62,7 +63,7 @@
       selectionSummary.textContent =
         `${selected.length} selected photo${selected.length === 1 ? "" : "s"}`
     }
-    submit.disabled = selected.length === 0 || !origin
+    submit.disabled = selected.length === 0 || !origin || offline
   }
 
   const addFiles = (fileList) => {
@@ -285,6 +286,24 @@
     return card
   }
 
+  // The inference host is a desktop that sleeps, and an unreachable one used to
+  // look identical to a working page until an upload had already been attempted.
+  const checkHealth = async () => {
+    if (!origin) return
+    try {
+      const options = {}
+      if (typeof AbortSignal?.timeout === "function") {
+        options.signal = AbortSignal.timeout(8000)
+      }
+      const response = await fetch(apiUrl("/api/health"), options)
+      if (!response.ok) throw new Error(`health responded ${response.status}`)
+    } catch (error) {
+      offline = true
+      setStatus(OFFLINE_MESSAGE)
+      refreshThumbs()
+    }
+  }
+
   const loadSpecies = async () => {
     if (!origin) return
     try {
@@ -455,6 +474,7 @@
     setStatus(OFFLINE_MESSAGE)
     submit.disabled = true
   } else {
+    checkHealth()
     loadSpecies()
   }
   refreshThumbs()

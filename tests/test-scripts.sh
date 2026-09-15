@@ -339,6 +339,23 @@ fi
 grep -F -- 'tailscale funnel --bg --yes --https=8443 http://127.0.0.1:8767' \
   "${REPO_ROOT}/animal_identifier/README.md" >/dev/null \
   || fail "animal identifier README still Funnels uvicorn on a port other than 8443"
+# The identifier host is a desktop, so an unsupervised uvicorn in a terminal
+# window takes /identify down for the whole public site the moment it sleeps.
+readonly WINDOWS_DIR="${REPO_ROOT}/animal_identifier/windows"
+grep -F -- '--host 127.0.0.1 --port 8767' "${WINDOWS_DIR}/run-identifier.ps1" >/dev/null \
+  || fail "Windows runner does not bind the loopback port Tailscale publishes"
+grep -F -- 'New-ScheduledTaskTrigger -AtStartup' \
+  "${WINDOWS_DIR}/install-identifier-task.ps1" >/dev/null \
+  || fail "Windows task does not start the identifier at boot"
+grep -F -- 'standby-timeout-ac 0' "${WINDOWS_DIR}/install-identifier-task.ps1" >/dev/null \
+  || fail "Windows task install leaves the host free to sleep off the tailnet"
+# S4U starts the task with nobody logged in and without a stored password.
+grep -F -- '-LogonType S4U' "${WINDOWS_DIR}/install-identifier-task.ps1" >/dev/null \
+  || fail "Windows task needs a logged-in user or a stored password"
+if grep -E -- '-Password|--host 0\.0\.0\.0' "${WINDOWS_DIR}"/*.ps1 >/dev/null; then
+  fail "Windows identifier scripts store a password or expose the API to the LAN"
+fi
+
 # .env.example is the Pi's /etc/owlcam/owlcam.env template. If the deploy
 # settings move into it, one file feeds two machines.
 grep -F -- '/etc/owlcam/owlcam.env' "${REPO_ROOT}/.env.example" >/dev/null \

@@ -236,6 +236,17 @@ def test_choose_photos_opens_the_picker_once_per_tap():
     assert source.count('closest("#identify-browse")') >= 2
 
 
+def test_identify_checks_the_identifier_before_photos_are_picked():
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+
+    # The inference host is a desktop that sleeps, so the page has to admit it
+    # is unreachable up front instead of after an upload burns a minute.
+    assert "/api/health" in source
+    assert "checkHealth" in source
+    # Picking photos must not re-enable a button the health check turned off.
+    assert "|| offline" in source
+
+
 def test_a_selection_that_yields_no_files_says_so():
     source = (WEB_ROOT / "static" / "identify.js").read_text()
 
