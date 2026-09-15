@@ -236,6 +236,17 @@ def test_choose_photos_opens_the_picker_once_per_tap():
     assert source.count('closest("#identify-browse")') >= 2
 
 
+def test_animals_identified_chart_loads_without_an_upload():
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+    css = (WEB_ROOT / "static" / "styles.css").read_text()
+
+    # The chart is all-time history, so gating it behind an identification
+    # hid it from everyone who came only to look.
+    assert "loadSummary()" in source[source.rindex("if (!origin) {") :]
+    # Desktop sits it beside the headline, in the gap the short headline left.
+    assert "grid-row: 1" in css.split(".identify-summary {")[1].split("}")[0]
+
+
 def test_feedback_does_not_promise_to_use_the_photo():
     source = (WEB_ROOT / "static" / "identify.js").read_text()
 

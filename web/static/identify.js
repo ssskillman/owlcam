@@ -477,6 +477,9 @@
   } else {
     checkHealth()
     loadSpecies()
+    // All-time history rather than a result of this visit, so there is no
+    // reason to make someone upload a photo before they can see it.
+    loadSummary()
   }
   refreshThumbs()
 })()
