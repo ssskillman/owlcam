@@ -15,6 +15,7 @@ from animal_identifier.config import (
     MAX_IMAGE_PIXELS,
     MODEL_VERSION,
     PROMPT,
+    SMALL_SUBJECT_FRACTION,
     SPECIES_FILE,
     UNKNOWN_THRESHOLD,
     YOLO_MIN_CONFIDENCE,
@@ -70,6 +71,30 @@ def select_primary_detection(detections: Sequence[Detection]) -> Detection | Non
         candidates,
         key=lambda item: (item.box[2] - item.box[0]) * (item.box[3] - item.box[1]),
     )
+
+
+def prefer_crop(
+    crop_scores: Sequence[tuple[str, float]],
+    whole_scores: Sequence[tuple[str, float]],
+    *,
+    crop_fraction: float,
+) -> bool:
+    """Whether the crop's verdict should replace the whole image's."""
+    if not crop_scores:
+        return False
+    if not whole_scores:
+        return True
+    if crop_scores[0][1] <= whole_scores[0][1]:
+        return False
+    if crop_scores[0][0] == whole_scores[0][0]:
+        # Both views agree; the crop only sharpens the same answer.
+        return True
+    # They disagree, and confidence cannot break the tie: a tight crop is fur
+    # texture with the animal's shape and surroundings removed, which scores
+    # higher than the full scene without being more correct. A raccoon on a
+    # tree came back "tiger" at 95% this way. Only trust a disagreeing crop
+    # when the subject was too small in frame to read at all.
+    return crop_fraction < SMALL_SUBJECT_FRACTION
 
 
 def validate_image(payload: bytes, file_name: str) -> Image.Image:
@@ -190,9 +215,10 @@ def classify_image(
     if primary is not None:
         crop = image.crop(primary.box)
         crop_scores = classify(crop, names)
-        if crop_scores and (
-            not whole_scores or crop_scores[0][1] > whole_scores[0][1]
-        ):
+        x1, y1, x2, y2 = primary.box
+        frame = image.width * image.height
+        fraction = ((x2 - x1) * (y2 - y1) / frame) if frame else 1.0
+        if prefer_crop(crop_scores, whole_scores, crop_fraction=fraction):
             chosen = crop_scores
             source = "crop"
 

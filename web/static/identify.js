@@ -240,14 +240,16 @@
     const note = document.createElement("textarea")
     note.rows = 2
     note.placeholder = "Optional note"
-    const opt = document.createElement("label")
-    const check = document.createElement("input")
-    check.type = "checkbox"
-    opt.append(check, document.createTextNode(" It's OK to use this photo to improve OwlCam."))
+    // No opt-in checkbox: nothing here retrains, and a feedback row keeps no
+    // image and no job reference, so consent to use the photo could not be
+    // honoured either way. Say what actually happens instead of asking.
+    const disposal = document.createElement("small")
+    disposal.textContent =
+      "Your correction is saved for review. The photo is not kept."
     const send = document.createElement("button")
     send.type = "button"
     send.textContent = "Send feedback"
-    extra.append(label, input, unknown, note, opt, send)
+    extra.append(label, input, unknown, note, disposal, send)
 
     const sendFeedback = async (looksRight, correction, iDontKnow) => {
       try {
@@ -261,7 +263,6 @@
             correction,
             note: note.value || null,
             i_dont_know: Boolean(iDontKnow),
-            train_opt_in: check.checked,
             model_version: item.model_version,
           }),
         })

@@ -236,6 +236,16 @@ def test_choose_photos_opens_the_picker_once_per_tap():
     assert source.count('closest("#identify-browse")') >= 2
 
 
+def test_feedback_does_not_promise_to_use_the_photo():
+    source = (WEB_ROOT / "static" / "identify.js").read_text()
+
+    # Nothing in the repo retrains, and a feedback row carries no image bytes
+    # and no job_id, so the photo could not be found again even if it were
+    # kept. Asking permission to use it promised something impossible.
+    assert "improve OwlCam" not in source
+    assert "The photo is not kept." in source
+
+
 def test_identify_checks_the_identifier_before_photos_are_picked():
     source = (WEB_ROOT / "static" / "identify.js").read_text()
 
