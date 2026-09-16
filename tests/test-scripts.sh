@@ -373,4 +373,21 @@ grep -F -- '/etc/owlcam/owlcam.env' "${REPO_ROOT}/.env.example" >/dev/null \
 grep -F -- 'deploy.env' "${REPO_ROOT}/.gitignore" >/dev/null \
   || fail "deploy.env is not gitignored and could be committed"
 
+# Parked offerings A–E must stay named so the roadmap cannot silently shrink.
+readonly FUTURE="${REPO_ROOT}/docs/next-steps/future-enhancements.md"
+grep -F -- 'next-steps/future-enhancements.md' "${REPO_ROOT}/docs/next_steps.md" >/dev/null \
+  || fail "next_steps.md does not point at the parked offerings doc"
+grep -F -- '## A. Real Moments' "${FUTURE}" >/dev/null \
+  || fail "future-enhancements.md dropped last-24h highlights"
+grep -F -- '## B. Ping when it is a raccoon' "${FUTURE}" >/dev/null \
+  || fail "future-enhancements.md dropped species pings"
+grep -F -- '## C. Nest temperature and humidity' "${FUTURE}" >/dev/null \
+  || fail "future-enhancements.md dropped BME280"
+grep -F -- '## D. YouTube or Facebook Live' "${FUTURE}" >/dev/null \
+  || fail "future-enhancements.md dropped restream"
+grep -F -- '## E. Visit log' "${FUTURE}" >/dev/null \
+  || fail "future-enhancements.md dropped the visit log"
+grep -F -- 'Running the species model on the Pi' "${FUTURE}" >/dev/null \
+  || fail "future-enhancements.md no longer forbids YOLO on the nest Pi"
+
 printf 'Script checks passed.\n'
