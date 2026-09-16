@@ -97,6 +97,11 @@ meant to absorb.
 
 ## Later (out of this phase)
 
+Parked product slices (highlights, raccoon/owl pings, nest climate,
+Facebook/YouTube restream, visit log) live in
+[`next-steps/future-enhancements.md`](next-steps/future-enhancements.md).
+A, B, and E wait on snapshot extraction; C and D do not.
+
 - Snapshot extraction from the existing RTSP path, store-and-forward off-box.
 - Facebook / public restream (needs an outbound publisher; Funnel is a
   different exposure decision — see [`live-feed.md`](live-feed.md)).
