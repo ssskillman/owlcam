@@ -2,6 +2,13 @@
 
 > **Purpose:** This is the handoff document for continuing the OwlCam project in Cursor.
 >
+> **Current (2026-09-18):** Live site + HLS + on-demand Identify (PC) are on
+> `main`. Next build is stills from the feed — read
+> [`docs/next-steps/README.md`](docs/next-steps/README.md) and
+> [`docs/next-steps/phase-stills-from-feed.md`](docs/next-steps/phase-stills-from-feed.md)
+> first. This file is historical ground truth for hardware and early setup;
+> do not treat section 1 “create the git repo” as unfinished work.
+>
 > Treat this file as the current ground truth. The immediate goal is to create a local Git repository at `~/github/owlcam`, connect it to `https://github.com/ssskillman/owlcam`, mirror the working Raspberry Pi configuration/scripts, and then convert the current manual setup into reproducible code and `systemd` services.
 >
 > **Important:** The working Raspberry Pi is currently the only place where the live-stream setup exists. Do **not** replace or break the working manual path until it has been captured in Git and re-tested.

@@ -293,10 +293,13 @@ Runtime configuration belongs in `/etc/owlcam/owlcam.env`; use
 | `animal_identifier/` | YOLO + BioCLIP API (Mac / gaming PC, never the Pi) |
 | `scripts/` | standalone UDP publisher |
 | `tests/` | shell script test suite |
-| `docs/` | architecture, runbooks, security, live-feed guide, [next steps](docs/next_steps.md) |
+| `docs/` | architecture, runbooks, security, live-feed guide, [next steps](docs/next_steps.md), [next phase handoff](docs/next-steps/phase-stills-from-feed.md) |
 
 ## Known gaps
 
+- **Next phase:** no automatic stills from the live RTSP path. Manual grab+POST
+  to the PC was proven 2026-09-18; build notes in
+  [`docs/next-steps/phase-stills-from-feed.md`](docs/next-steps/phase-stills-from-feed.md).
 - The hardened `/etc/mediamtx.yml` currently lives only on the Pi. It is not
   committed to `pi/config/`, and neither is `mediamtx.version`, so
   `install.sh` still fails closed by design.
