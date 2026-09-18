@@ -3,6 +3,10 @@
 Living roadmap. The live feed, systemd units, and diagnostics panel are already
 on `main`. Work below is what is left to do on the Pi, the site, and the nest.
 
+**Next phase** (stills from RTSP → queue → PC identify):  
+[`next-steps/phase-stills-from-feed.md`](next-steps/phase-stills-from-feed.md)  
+Index of parked docs: [`next-steps/README.md`](next-steps/README.md)
+
 ## Waiting on a public domain
 
 Always-up Firebase pages and a second USB camera (Arducam B0506) are

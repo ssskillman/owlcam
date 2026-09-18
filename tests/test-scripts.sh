@@ -390,4 +390,14 @@ grep -F -- '## E. Visit log' "${FUTURE}" >/dev/null \
 grep -F -- 'Running the species model on the Pi' "${FUTURE}" >/dev/null \
   || fail "future-enhancements.md no longer forbids YOLO on the nest Pi"
 
+readonly STILLS="${REPO_ROOT}/docs/next-steps/phase-stills-from-feed.md"
+grep -F -- 'phase-stills-from-feed.md' "${REPO_ROOT}/docs/next-steps/README.md" >/dev/null \
+  || fail "next-steps README does not point at the stills phase handoff"
+grep -F -- 'rtsp://127.0.0.1:8554/owl' "${STILLS}" >/dev/null \
+  || fail "stills phase handoff dropped the loopback RTSP URL"
+grep -F -- '/api/animal-identification' "${STILLS}" >/dev/null \
+  || fail "stills phase handoff dropped the identify POST path"
+grep -F -- 'schtasks' "${STILLS}" >/dev/null \
+  || fail "stills phase handoff dropped PC task restart via schtasks"
+
 printf 'Script checks passed.\n'
