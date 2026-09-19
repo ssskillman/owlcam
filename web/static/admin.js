@@ -10,6 +10,8 @@
   const overallStatus = document.querySelector("#admin-overall-status")
   const streamState = document.querySelector("#admin-stream-state")
   const streamToggle = document.querySelector("#admin-stream-toggle")
+  const streamUsbState = document.querySelector("#admin-stream-usb-state")
+  const streamUsbToggle = document.querySelector("#admin-stream-usb-toggle")
   const services = document.querySelector("#admin-services")
   const hostStatus = document.querySelector("#admin-host-status")
   const firebaseStatus = document.querySelector("#admin-firebase-status")
@@ -24,6 +26,7 @@
 
   let csrfToken = null
   let streamEnabled = null
+  let streamUsbEnabled = null
   let refreshTimer = null
 
   const api = async (path, options = {}) => {
@@ -89,14 +92,26 @@
   const renderStatus = (payload) => {
     csrfToken = payload.csrfToken
     streamEnabled = Boolean(payload.stream?.isEnabled)
-    overallStatus.textContent = streamEnabled ? "Feed online" : "Feed offline"
-    overallStatus.dataset.state = streamEnabled ? "active" : "inactive"
+    streamUsbEnabled = Boolean(payload.streamUsb?.isEnabled)
+    const anyFeedOnline = streamEnabled || streamUsbEnabled
+    overallStatus.textContent = anyFeedOnline ? "Feed online" : "Feed offline"
+    overallStatus.dataset.state = anyFeedOnline ? "active" : "inactive"
     streamState.textContent = streamEnabled
-      ? "The camera capture unit is running."
-      : "The camera capture unit is stopped."
+      ? "The nest camera capture unit is running."
+      : "The nest camera capture unit is stopped."
     streamToggle.textContent = streamEnabled ? "Turn feed off" : "Turn feed on"
     streamToggle.classList.toggle("admin-danger", streamEnabled)
     streamToggle.disabled = false
+    if (streamUsbState && streamUsbToggle) {
+      streamUsbState.textContent = streamUsbEnabled
+        ? "The USB camera capture unit is running."
+        : "The USB camera capture unit is stopped."
+      streamUsbToggle.textContent = streamUsbEnabled
+        ? "Turn USB feed off"
+        : "Turn USB feed on"
+      streamUsbToggle.classList.toggle("admin-danger", streamUsbEnabled)
+      streamUsbToggle.disabled = false
+    }
 
     replaceItems(
       services,
@@ -222,29 +237,41 @@
     }
   })
 
-  streamToggle.addEventListener("click", async () => {
-    const nextEnabled = !streamEnabled
-    if (
-      !nextEnabled &&
-      !window.confirm("Turn off the live camera feed? The admin panel will stay available.")
-    ) {
-      return
-    }
-    streamToggle.disabled = true
-    actionStatus.textContent = nextEnabled ? "Starting feed…" : "Stopping feed…"
-    try {
-      const payload = await api("/stream", {
-        method: "POST",
-        headers: { "X-Owlcam-Csrf": csrfToken },
-        body: JSON.stringify({ enabled: nextEnabled }),
-      })
-      streamEnabled = payload.stream.isEnabled
-      await refresh()
-    } catch (error) {
-      actionStatus.textContent = error.message
-      streamToggle.disabled = false
-    }
-  })
+  const bindStreamToggle = (toggle, which, getEnabled, label) => {
+    if (!toggle) return
+    toggle.addEventListener("click", async () => {
+      const nextEnabled = !getEnabled()
+      if (
+        !nextEnabled &&
+        !window.confirm(
+          `Turn off the ${label} feed? The admin panel will stay available.`,
+        )
+      ) {
+        return
+      }
+      toggle.disabled = true
+      actionStatus.textContent = nextEnabled ? `Starting ${label}…` : `Stopping ${label}…`
+      try {
+        const payload = await api("/stream", {
+          method: "POST",
+          headers: { "X-Owlcam-Csrf": csrfToken },
+          body: JSON.stringify({ enabled: nextEnabled, which }),
+        })
+        if (which === "usb") {
+          streamUsbEnabled = (payload.streamUsb || payload.stream).isEnabled
+        } else {
+          streamEnabled = payload.stream.isEnabled
+        }
+        await refresh()
+      } catch (error) {
+        actionStatus.textContent = error.message
+        toggle.disabled = false
+      }
+    })
+  }
+
+  bindStreamToggle(streamToggle, "nest", () => streamEnabled, "nest camera")
+  bindStreamToggle(streamUsbToggle, "usb", () => streamUsbEnabled, "USB camera")
 
   refreshButton.addEventListener("click", refresh)
 

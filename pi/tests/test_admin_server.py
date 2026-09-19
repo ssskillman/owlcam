@@ -205,7 +205,7 @@ class AdminHTTPTests(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertEqual(payload["stream"]["state"], "inactive")
-        control.assert_called_once_with(False)
+        control.assert_called_once_with("nest", False)
 
         repeated = Request(
             f"{self.base}/api/stream",

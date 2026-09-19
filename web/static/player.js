@@ -6,11 +6,43 @@
   const dot = document.querySelector(".status-dot");
   const title = document.querySelector("#offline-title");
   const message = document.querySelector("#offline-message");
+  const cameraButtons = document.querySelectorAll("[data-camera-source]");
   const RECONNECT_DELAY = 5000;
+  const STREAM_STORAGE_KEY = "owlcamStreamPath";
   let hls;
   let reconnectTimer;
 
   if (!video || !panel || !retry || !status || !dot) return;
+
+  const nestStreamUrl = video.dataset.streamUrl;
+  const usbStreamUrl = video.dataset.streamUrlUsb;
+  if (!nestStreamUrl || !usbStreamUrl) return;
+
+  const streamForSource = (source) =>
+    source === "usb" ? usbStreamUrl : nestStreamUrl;
+
+  const sourceForUrl = (url) => (url === usbStreamUrl ? "usb" : "nest");
+
+  const readStoredStreamUrl = () => {
+    const stored = sessionStorage.getItem(STREAM_STORAGE_KEY);
+    if (stored === nestStreamUrl || stored === usbStreamUrl) return stored;
+    return nestStreamUrl;
+  };
+
+  const applyCameraButtons = (source) => {
+    cameraButtons.forEach((button) => {
+      const active = button.dataset.cameraSource === source;
+      button.setAttribute("aria-pressed", String(active));
+    });
+  };
+
+  const setActiveStreamUrl = (url) => {
+    video.dataset.streamUrl = url;
+    sessionStorage.setItem(STREAM_STORAGE_KEY, url);
+    applyCameraButtons(sourceForUrl(url));
+  };
+
+  setActiveStreamUrl(readStoredStreamUrl());
 
   // "Camera is resting" was the panel's only headline, so a blocked request, a
   // dead network, and a genuinely idle camera all read as an owl taking a nap.
@@ -158,5 +190,15 @@
   video.addEventListener("stalled", start);
   video.addEventListener("error", scheduleReconnect);
   retry.addEventListener("click", connect);
+
+  cameraButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextUrl = streamForSource(button.dataset.cameraSource);
+      if (nextUrl === video.dataset.streamUrl) return;
+      setActiveStreamUrl(nextUrl);
+      connect();
+    });
+  });
+
   connect();
 })();

@@ -1,0 +1,9 @@
+# Snippet to merge under `paths:` in /etc/mediamtx.yml on the Pi.
+# MediaMTX also accepts RTSP publishers on unnamed paths via all_others;
+# explicit entries document the two OwlCam feeds.
+#
+#   owl:  CSI nest camera (rpicam-vid | ffmpeg)
+#   owl2: USB UVC camera (ffmpeg v4l2)
+
+owl:
+owl2:

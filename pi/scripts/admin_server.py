@@ -39,9 +39,14 @@ FIREBASE_URL = "https://carver-owlcam-72343.web.app/"
 SERVICE_UNITS = {
     "media": "owlcam-mediamtx.service",
     "stream": "owlcam-stream.service",
+    "streamUsb": "owlcam-stream-usb.service",
     "site": "owlcam-site.service",
     "diagnostics": "owlcam-diagnostics.service",
     "admin": "owlcam-admin.service",
+}
+STREAM_TARGETS = {
+    "nest": "stream",
+    "usb": "streamUsb",
 }
 
 
@@ -175,25 +180,30 @@ def service_state(unit: str) -> str:
     return state if state else "unknown"
 
 
-def stream_state() -> dict[str, Any]:
-    state = service_state(SERVICE_UNITS["stream"])
+def stream_state_for(target: str) -> dict[str, Any]:
+    unit_key = STREAM_TARGETS[target]
+    state = service_state(SERVICE_UNITS[unit_key])
     return {"state": state, "isEnabled": state in ("active", "activating")}
 
 
-def set_stream_enabled(enabled: bool) -> dict[str, Any]:
+def stream_state() -> dict[str, Any]:
+    return stream_state_for("nest")
+
+
+def set_stream_enabled(target: str, enabled: bool) -> dict[str, Any]:
+    if target not in STREAM_TARGETS:
+        raise ValueError("unknown stream target")
     verb = "start" if enabled else "stop"
-    result = _run(
-        ["systemctl", "--user", verb, SERVICE_UNITS["stream"]],
-        timeout=10,
-    )
+    unit = SERVICE_UNITS[STREAM_TARGETS[target]]
+    result = _run(["systemctl", "--user", verb, unit], timeout=10)
     if result.returncode != 0:
         raise RuntimeError("stream control failed")
     print(
         f"{datetime.now(UTC).isoformat(timespec='seconds')} "
-        f"admin stream_{'started' if enabled else 'stopped'}",
+        f"admin stream_{target}_{'started' if enabled else 'stopped'}",
         flush=True,
     )
-    return stream_state()
+    return stream_state_for(target)
 
 
 def read_service_logs(service: str, lines: int) -> list[str]:
@@ -253,6 +263,10 @@ def collect_status() -> dict[str, Any]:
         "stream": {
             "state": services["stream"],
             "isEnabled": services["stream"] in ("active", "activating"),
+        },
+        "streamUsb": {
+            "state": services["streamUsb"],
+            "isEnabled": services["streamUsb"] in ("active", "activating"),
         },
         "services": services,
         "host": {
@@ -453,8 +467,16 @@ class AdminHandler(BaseHTTPRequestHandler):
         if payload is None:
             return
         enabled = payload.get("enabled")
-        if type(enabled) is not bool or set(payload) != {"enabled"}:
-            self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "enabled must be boolean")
+        which = payload.get("which", "nest")
+        if type(enabled) is not bool or which not in STREAM_TARGETS:
+            self._error(
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+                "INVALID_INPUT",
+                "enabled must be boolean and which must be nest or usb",
+            )
+            return
+        if set(payload.keys()) - {"enabled", "which"}:
+            self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "unexpected fields")
             return
         token, _csrf = auth
         if not self.server.action_limiter.allow(token):
@@ -465,11 +487,14 @@ class AdminHandler(BaseHTTPRequestHandler):
             )
             return
         try:
-            stream = set_stream_enabled(enabled)
-        except (OSError, RuntimeError, subprocess.SubprocessError):
+            stream = set_stream_enabled(which, enabled)
+        except (OSError, RuntimeError, subprocess.SubprocessError, ValueError):
             self._error(HTTPStatus.SERVICE_UNAVAILABLE, "CONTROL_FAILED", "Stream control failed")
             return
-        self._send_json(HTTPStatus.OK, {"stream": stream})
+        body = {"stream": stream}
+        if which == "usb":
+            body["streamUsb"] = stream
+        self._send_json(HTTPStatus.OK, body)
 
     def _login(self) -> None:
         forwarded = self.headers.get("X-Forwarded-For", "").split(",")[-1].strip()

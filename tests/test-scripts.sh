@@ -181,6 +181,8 @@ grep -F -- 'http://127.0.0.1:${SITE_PORT}' "${publish_script}" >/dev/null \
   || fail "publish script does not serve the page at the root"
 grep -F -- '--set-path="/${STREAM_PATH}"' "${publish_script}" >/dev/null \
   || fail "publish script does not give the stream its own path under the page"
+grep -F -- '--set-path="/${USB_STREAM_PATH}"' "${publish_script}" >/dev/null \
+  || fail "publish script does not mount the USB stream at /owl2"
 # --set-path strips its prefix, so the target must repeat the path or MediaMTX
 # receives /index.m3u8 and answers 404.
 grep -F -- '${HLS_PORT}/${STREAM_PATH}' "${publish_script}" >/dev/null \
@@ -215,6 +217,12 @@ grep -F -- 'loginctl enable-linger' "${install_script}" >/dev/null \
 # restart forever instead of serving.
 grep -F -- 'pkill -x rpicam-vid' "${install_script}" >/dev/null \
   || fail "installer does not release the sensor before starting the unit"
+grep -F -- 'pkill -x ffmpeg' "${install_script}" >/dev/null \
+  && fail "installer must not kill every ffmpeg (that stops both camera feeds)"
+grep -F -- 'owlcam-stream-usb.service' "${install_script}" >/dev/null \
+  || fail "installer does not manage the USB stream unit"
+grep -F -- 'stop_rtsp_publishers' "${install_script}" >/dev/null \
+  || fail "installer does not scope RTSP publisher shutdown"
 # "enable --now" leaves an already-active unit running the previous binary, so a
 # reinstall of newly staged code silently keeps serving the old payload.
 grep -F -- 'systemctl --user restart owlcam-diagnostics.service' "${install_script}" \
