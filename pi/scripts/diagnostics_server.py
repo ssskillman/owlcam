@@ -3,14 +3,22 @@
 
 from __future__ import annotations
 
-import fcntl
 import json
 import os
+import sys
+import threading
 import time
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+
+# owlcam-diagnostics and bme280_raw.py install side by side in ~/.local/bin.
+_BIN_DIR = Path(__file__).resolve().parent
+if str(_BIN_DIR) not in sys.path:
+    sys.path.insert(0, str(_BIN_DIR))
+
+from bme280_raw import read_bme280  # noqa: E402
 
 
 HOST = "127.0.0.1"
@@ -24,15 +32,80 @@ PROCESS_NAMES = {
     "camera": "rpicam-vid",
     "ffmpeg": "ffmpeg",
 }
-I2C_SLAVE = 0x0703
-BME280_CHIP_ID = 0x60
-BME280_ADDRESSES = (0x76, 0x77)
-DISCONNECTED_CLIMATE = {
+CLIMATE_POLL_SECONDS = int(os.environ.get("OWLCAM_CLIMATE_POLL_SECONDS", "30"))
+
+DISCONNECTED_CLIMATE: dict[str, Any] = {
     "connected": False,
     "sensor": None,
     "temperatureC": None,
     "humidityPercent": None,
+    "pressureHpa": None,
+    "sampledAt": None,
 }
+
+_climate_lock = threading.Lock()
+_cached_climate: dict[str, Any] = dict(DISCONNECTED_CLIMATE)
+_climate_worker_started = False
+
+
+def _climate_sampled_at() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _climate_from_reading(reading: dict[str, float]) -> dict[str, Any]:
+    return {
+        "connected": True,
+        "sensor": "bme280",
+        "temperatureC": round(reading["temperature_c"], 1),
+        "humidityPercent": round(reading["humidity_pct"], 1),
+        "pressureHpa": round(reading["pressure_hpa"], 1),
+        "sampledAt": _climate_sampled_at(),
+    }
+
+
+def _poll_climate_once() -> None:
+    global _cached_climate
+
+    try:
+        reading = read_bme280()
+        sample = _climate_from_reading(reading)
+    except Exception as exc:
+        print(f"BME280 error: {exc}", flush=True)
+        sample = dict(DISCONNECTED_CLIMATE)
+    with _climate_lock:
+        _cached_climate = sample
+
+
+def _climate_worker() -> None:
+    while True:
+        _poll_climate_once()
+        time.sleep(CLIMATE_POLL_SECONDS)
+
+
+def start_climate_worker() -> None:
+    global _climate_worker_started
+
+    if _climate_worker_started:
+        return
+    _climate_worker_started = True
+    thread = threading.Thread(target=_climate_worker, name="owlcam-climate", daemon=True)
+    thread.start()
+
+
+def read_climate() -> dict[str, Any]:
+    """Return the latest cached nest climate sample."""
+
+    with _climate_lock:
+        return dict(_cached_climate)
+
+
+def set_climate_cache(climate: dict[str, Any]) -> None:
+    """Test hook to inject climate without starting the worker."""
+
+    global _cached_climate
+
+    with _climate_lock:
+        _cached_climate = dict(climate)
 
 
 def _read_kib_value(path: Path, key: str) -> int:
@@ -53,166 +126,6 @@ def _running_process_names(proc_root: Path) -> set[str]:
         except (FileNotFoundError, PermissionError, ProcessLookupError):
             continue
     return names
-
-
-def _u16(lo: int, hi: int) -> int:
-    return lo | (hi << 8)
-
-
-def _s16(lo: int, hi: int) -> int:
-    value = _u16(lo, hi)
-    return value - 65536 if value & 0x8000 else value
-
-
-def _s8(value: int) -> int:
-    return value - 256 if value & 0x80 else value
-
-
-def compensate_bme280(
-    calib: dict[str, int],
-    *,
-    adc_t: int,
-    adc_h: int,
-) -> tuple[float, float, int]:
-    """Bosch integer compensation. Returns °C, %RH, and t_fine."""
-
-    var1 = ((((adc_t >> 3) - (calib["dig_T1"] << 1))) * calib["dig_T2"]) >> 11
-    var2 = (
-        (
-            (((adc_t >> 4) - calib["dig_T1"]) * ((adc_t >> 4) - calib["dig_T1"]))
-            >> 12
-        )
-        * calib["dig_T3"]
-    ) >> 14
-    t_fine = var1 + var2
-    temperature_c = ((t_fine * 5 + 128) >> 8) / 100
-
-    humidity = t_fine - 76800
-    humidity = (
-        (
-            (
-                (
-                    (adc_h << 14)
-                    - (calib["dig_H4"] << 20)
-                    - (calib["dig_H5"] * humidity)
-                )
-                + 16384
-            )
-            >> 15
-        )
-        * (
-            (
-                (
-                    (
-                        (
-                            ((humidity * calib["dig_H6"]) >> 10)
-                            * (((humidity * calib["dig_H3"]) >> 11) + 32768)
-                        )
-                        >> 10
-                    )
-                    + 2097152
-                )
-                * calib["dig_H2"]
-                + 8192
-            )
-            >> 14
-        )
-    )
-    humidity = humidity - (
-        ((((humidity >> 15) * (humidity >> 15)) >> 7) * calib["dig_H1"]) >> 4
-    )
-    humidity = max(0, min(419430400, humidity))
-    humidity_percent = (humidity >> 12) / 1024
-
-    return temperature_c, humidity_percent, t_fine
-
-
-def _parse_bme280_calib(block_88: bytes, block_e1: bytes) -> dict[str, int]:
-    h4 = (block_e1[3] << 4) | (block_e1[4] & 0x0F)
-    h5 = (block_e1[5] << 4) | (block_e1[4] >> 4)
-    if h4 & 0x800:
-        h4 -= 4096
-    if h5 & 0x800:
-        h5 -= 4096
-    return {
-        "dig_T1": _u16(block_88[0], block_88[1]),
-        "dig_T2": _s16(block_88[2], block_88[3]),
-        "dig_T3": _s16(block_88[4], block_88[5]),
-        "dig_H1": block_88[25],
-        "dig_H2": _s16(block_e1[0], block_e1[1]),
-        "dig_H3": block_e1[2],
-        "dig_H4": h4,
-        "dig_H5": h5,
-        "dig_H6": _s8(block_e1[6]),
-    }
-
-
-def _i2c_open(bus_path: Path, address: int) -> int:
-    fd = os.open(bus_path, os.O_RDWR)
-    try:
-        fcntl.ioctl(fd, I2C_SLAVE, address)
-    except OSError:
-        os.close(fd)
-        raise
-    return fd
-
-
-def _i2c_write(fd: int, register: int, value: int) -> None:
-    os.write(fd, bytes((register, value)))
-
-
-def _i2c_read(fd: int, register: int, length: int) -> bytes:
-    os.write(fd, bytes((register,)))
-    data = os.read(fd, length)
-    if len(data) != length:
-        raise OSError("short I2C read")
-    return data
-
-
-def _read_bme280(bus_path: Path, address: int) -> dict[str, Any] | None:
-    fd = _i2c_open(bus_path, address)
-    try:
-        chip_id = _i2c_read(fd, 0xD0, 1)[0]
-        if chip_id != BME280_CHIP_ID:
-            return None
-        block_88 = _i2c_read(fd, 0x88, 26)
-        block_e1 = _i2c_read(fd, 0xE1, 7)
-        _i2c_write(fd, 0xF2, 0x01)
-        _i2c_write(fd, 0xF4, 0x25)
-        time.sleep(0.05)
-        raw = _i2c_read(fd, 0xF7, 8)
-    finally:
-        os.close(fd)
-
-    adc_t = (raw[3] << 12) | (raw[4] << 4) | (raw[5] >> 4)
-    adc_h = (raw[6] << 8) | raw[7]
-    temperature_c, humidity_percent, _t_fine = compensate_bme280(
-        _parse_bme280_calib(block_88, block_e1),
-        adc_t=adc_t,
-        adc_h=adc_h,
-    )
-    return {
-        "connected": True,
-        "sensor": "bme280",
-        "temperatureC": round(temperature_c, 1),
-        "humidityPercent": round(humidity_percent, 1),
-    }
-
-
-def read_climate(*, bus_path: Path | None = None) -> dict[str, Any]:
-    """Best-effort BME280 sample. Missing hardware is a first-class UI state."""
-
-    bus = bus_path or Path(os.environ.get("OWLCAM_I2C_BUS", "/dev/i2c-1"))
-    if not bus.exists():
-        return dict(DISCONNECTED_CLIMATE)
-    for address in BME280_ADDRESSES:
-        try:
-            sample = _read_bme280(bus, address)
-        except OSError:
-            continue
-        if sample is not None:
-            return sample
-    return dict(DISCONNECTED_CLIMATE)
 
 
 def collect_diagnostics(
@@ -312,6 +225,7 @@ class DiagnosticsHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
+    start_climate_worker()
     server = ThreadingHTTPServer((HOST, PORT), DiagnosticsHandler)
     server.serve_forever()
 

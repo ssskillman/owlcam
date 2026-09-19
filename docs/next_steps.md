@@ -52,8 +52,10 @@ cd /home/shawn/owlcam/deploy
 ./pi/scripts/install-services.sh
 ```
 
-5. Hard-refresh the site on a tailnet device. Nest air and humidity should
-   update every five seconds. Pi temperature stays the SoC die reading.
+5. Hard-refresh the site on a tailnet device. Nest air, humidity, and pressure
+   should populate when the BME280 is wired; the panel polls every five seconds
+   while the Pi samples the sensor about every thirty seconds. Pi temperature
+   stays the SoC die reading.
 
 Details: [`live-feed.md`](live-feed.md).
 

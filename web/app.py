@@ -533,6 +533,13 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                                 "through a wide range.",
                             ),
                             _diagnostic_metric(
+                                "BAROMETRIC PRESSURE",
+                                "diagnostics-pressure",
+                                "Pressure helps track weather fronts and altitude "
+                                "context for the nest site. It is independent of "
+                                "the camera enclosure.",
+                            ),
+                            _diagnostic_metric(
                                 "DAYLIGHT",
                                 "diagnostics-daylight",
                                 "Light level marks the day/night rhythm that drives "

@@ -85,14 +85,19 @@ The diagnostics service binds to `127.0.0.1:8765`, and Tailscale maps
 `/diagnostics` to it. Its
 allowlisted JSON contract contains SoC temperature, available memory,
 one-minute load, three process-health booleans, optional nest climate
-(`climate.temperatureC` / `humidityPercent` from a BME280 on I2C), and a
-sample timestamp. It intentionally omits PIDs, command lines, usernames, and
-filesystem details. Missing climate hardware reports `connected: false`
-rather than invented numbers.
+(`climate.temperatureC`, `humidityPercent`, and `pressureHpa` from a BME280 on
+I2C, plus `climate.sampledAt` for the last nest reading), and a sample
+timestamp for Pi vitals. The BME280 is read on a background loop (about every
+30 seconds) via `i2ctransfer` in [`pi/scripts/bme280_raw.py`](../pi/scripts/bme280_raw.py);
+browser polls stay at five seconds and only receive cached climate values. It
+intentionally omits PIDs, command lines, usernames, and filesystem details.
+Missing climate hardware reports `connected: false` rather than invented
+numbers.
 
-To add nest air and humidity, enable I2C (`raspi-config`), wire a BME280 to
-3.3 V / GND / SDA (GPIO2) / SCL (GPIO3), then reinstall the diagnostics unit so
-it can open `/dev/i2c-1`. DHT22 is not supported.
+To add nest air, humidity, and pressure, enable I2C (`raspi-config`), wire a
+BME280 to 3.3 V / GND / SDA (GPIO2) / SCL (GPIO3), install `i2c-tools`, then
+reinstall the diagnostics unit so it can open `/dev/i2c-1` and run
+`i2ctransfer`. DHT22 is not supported.
 
 Do not run `serve-stream.sh` or the UDP publisher alongside the units. The
 sensor takes exactly one consumer, so whichever loses the race restarts forever.

@@ -55,6 +55,8 @@ class DiagnosticsCollectionTests(unittest.TestCase):
                 "sensor": None,
                 "temperatureC": None,
                 "humidityPercent": None,
+                "pressureHpa": None,
+                "sampledAt": None,
             },
         )
         self.assertTrue(payload["sampledAt"].endswith("Z"))
@@ -83,39 +85,45 @@ class DiagnosticsCollectionTests(unittest.TestCase):
                     "sensor": "bme280",
                     "temperatureC": 12.4,
                     "humidityPercent": 63.2,
+                    "pressureHpa": 1001.8,
+                    "sampledAt": "2026-08-30T02:29:00Z",
                 },
             )
 
         self.assertEqual(payload["climate"]["sensor"], "bme280")
         self.assertEqual(payload["climate"]["temperatureC"], 12.4)
         self.assertEqual(payload["climate"]["humidityPercent"], 63.2)
+        self.assertEqual(payload["climate"]["pressureHpa"], 1001.8)
+        self.assertEqual(payload["climate"]["sampledAt"], "2026-08-30T02:29:00Z")
         self.assertTrue(payload["climate"]["connected"])
         # CPU die temperature stays a separate metric from nest air.
         self.assertEqual(payload["temperatureC"], 50.0)
 
-    def test_read_climate_without_a_bus_is_disconnected(self):
-        sample = diagnostics.read_climate(bus_path=Path("/no/such/i2c"))
+    def test_read_climate_returns_a_copy_of_the_cache(self):
+        diagnostics.set_climate_cache(diagnostics.DISCONNECTED_CLIMATE)
+        sample = diagnostics.read_climate()
         self.assertEqual(sample, diagnostics.DISCONNECTED_CLIMATE)
+        sample["connected"] = True
+        self.assertFalse(diagnostics.read_climate()["connected"])
 
-    def test_bme280_temperature_matches_bosch_datasheet_example(self):
-        # Bosch BME280 datasheet compensation example (temperature only).
-        temperature_c, _humidity, t_fine = diagnostics.compensate_bme280(
-            {
-                "dig_T1": 27504,
-                "dig_T2": 26435,
-                "dig_T3": -1000,
-                "dig_H1": 75,
-                "dig_H2": 0,
-                "dig_H3": 0,
-                "dig_H4": 0,
-                "dig_H5": 0,
-                "dig_H6": 0,
-            },
-            adc_t=519888,
-            adc_h=0,
-        )
-        self.assertAlmostEqual(temperature_c, 25.08, places=2)
-        self.assertIsInstance(t_fine, int)
+    @patch.object(diagnostics, "read_bme280")
+    def test_poll_climate_once_maps_sensor_reading(self, read_bme280):
+        read_bme280.return_value = {
+            "temperature_c": 26.05,
+            "temperature_f": 78.89,
+            "humidity_pct": 40.55,
+            "pressure_hpa": 1001.82,
+        }
+        try:
+            diagnostics._poll_climate_once()
+            climate = diagnostics.read_climate()
+            self.assertTrue(climate["connected"])
+            self.assertEqual(climate["temperatureC"], 26.1)
+            self.assertEqual(climate["humidityPercent"], 40.5)
+            self.assertEqual(climate["pressureHpa"], 1001.8)
+            self.assertTrue(climate["sampledAt"].endswith("Z"))
+        finally:
+            diagnostics.set_climate_cache(diagnostics.DISCONNECTED_CLIMATE)
 
 
 class DiagnosticsHTTPTests(unittest.TestCase):
@@ -131,6 +139,8 @@ class DiagnosticsHTTPTests(unittest.TestCase):
             "sensor": None,
             "temperatureC": None,
             "humidityPercent": None,
+            "pressureHpa": None,
+            "sampledAt": None,
         },
         "sampledAt": "2026-08-30T02:30:00Z",
     }
