@@ -4,9 +4,15 @@ The page lives at <https://owlcam.tail31318f.ts.net/> and is served by the Pi,
 beside the stream. It asks for the video and the vitals as relative paths:
 
 ```text
-/owl/index.m3u8
+/owl/index.m3u8      # CSI nest camera
+/owl2/index.m3u8   # USB camera (optional second feed)
 /diagnostics
 ```
+
+The live page includes **Nest cam** / **USB cam** buttons. The choice is stored
+in `sessionStorage` per browser tab. USB capture runs as a separate
+`owlcam-stream-usb` unit publishing to MediaMTX path `owl2` (default device
+`/dev/video2`, MJPEG 1280×720).
 
 <https://carver-owlcam-72343.web.app> redirects there and serves nothing else.
 That redirect is the link to hand out, because it is repointable: it is a 302

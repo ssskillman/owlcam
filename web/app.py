@@ -44,6 +44,7 @@ import os
 # refuses a public page access to the local address space, killing the video and
 # the vitals together.
 DEFAULT_STREAM_URL = "/owl/index.m3u8"
+DEFAULT_USB_STREAM_URL = "/owl2/index.m3u8"
 DEFAULT_DIAGNOSTICS_URL = "/diagnostics"
 ANIMAL_ID_API_ORIGIN = os.environ.get("ANIMAL_ID_API_ORIGIN", "").rstrip("/")
 OWLCAM_GROUP_URL = "https://www.facebook.com/groups/619431688614242/"
@@ -291,7 +292,7 @@ def _admin_panel() -> Dialog:
             Section(
                 Div(
                     Span("LIVE VIDEO", cls="admin-kicker"),
-                    H2("Camera feed"),
+                    H2("Nest camera (CSI)"),
                     P("Checking the stream unit…", id="admin-stream-state"),
                     cls="admin-control-copy",
                 ),
@@ -303,7 +304,24 @@ def _admin_panel() -> Dialog:
                     disabled=True,
                 ),
                 cls="admin-control",
-                aria_label="Live video control",
+                aria_label="Nest camera stream control",
+            ),
+            Section(
+                Div(
+                    Span("LIVE VIDEO", cls="admin-kicker"),
+                    H2("USB camera"),
+                    P("Checking the USB stream unit…", id="admin-stream-usb-state"),
+                    cls="admin-control-copy",
+                ),
+                Button(
+                    "Turn USB feed off",
+                    type="button",
+                    id="admin-stream-usb-toggle",
+                    cls="admin-danger",
+                    disabled=True,
+                ),
+                cls="admin-control",
+                aria_label="USB camera stream control",
             ),
             Section(
                 H2("Services"),
@@ -346,7 +364,8 @@ def _admin_panel() -> Dialog:
                     Div(
                         Label("Unit", fr="admin-log-service"),
                         Select(
-                            Option("Stream", value="stream"),
+                            Option("Nest stream", value="stream"),
+                            Option("USB stream", value="streamUsb"),
                             Option("MediaMTX", value="media"),
                             Option("Site", value="site"),
                             Option("Diagnostics", value="diagnostics"),
@@ -397,7 +416,10 @@ def _footer() -> Footer:
     )
 
 
-def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
+def render_page(
+    stream_url: str = DEFAULT_STREAM_URL,
+    usb_stream_url: str = DEFAULT_USB_STREAM_URL,
+) -> str:
     page = Html(
         _head(
             title="Carver OwlCam — Live from the Nest",
@@ -434,6 +456,7 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                                 preload="metadata",
                                 aria_label="Carver OwlCam livestream",
                                 data_stream_url=stream_url,
+                                data_stream_url_usb=usb_stream_url,
                             ),
                             Div(
                                 Div("◉", cls="owl-mark", aria_hidden="true"),
@@ -468,7 +491,30 @@ def render_page(stream_url: str = DEFAULT_STREAM_URL) -> str:
                                 ),
                                 cls="status",
                             ),
-                            Small("1920 × 1080 · H.264 · Carver OwlCam"),
+                            Div(
+                                Button(
+                                    "Nest cam",
+                                    type="button",
+                                    cls="camera-source",
+                                    data_camera_source="nest",
+                                    aria_pressed="true",
+                                ),
+                                Button(
+                                    "USB cam",
+                                    type="button",
+                                    cls="camera-source",
+                                    data_camera_source="usb",
+                                    aria_pressed="false",
+                                ),
+                                id="camera-source-toggle",
+                                cls="camera-toggle",
+                                role="group",
+                                aria_label="Live camera source",
+                            ),
+                            Small(
+                                "Nest 1920×1080 · USB 1280×720 · H.264",
+                                id="player-format-label",
+                            ),
                             cls="player-meta",
                         ),
                         cls="player-shell",

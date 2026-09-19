@@ -23,7 +23,8 @@ admin API are separate mounts on port 443, each proxied from loopback:
 | Mount | Backed by | Contains |
 |---|---|---|
 | `/` | `owlcam-site` on `127.0.0.1:8080` | HTML, CSS, photos, the player |
-| `/owl` | MediaMTX on `127.0.0.1:8888` | Live H.264 / HLS |
+| `/owl` | MediaMTX on `127.0.0.1:8888` | Nest camera HLS (CSI) |
+| `/owl2` | MediaMTX on `127.0.0.1:8888` | USB camera HLS (UVC) |
 | `/diagnostics` | `owlcam-diagnostics` on `127.0.0.1:8765` | Read-only health JSON |
 | `/admin` | `owlcam-admin` on `127.0.0.1:8766` | Authenticated controls and logs |
 

@@ -540,6 +540,39 @@ video:focus-visible {
   letter-spacing: 0.05em;
 }
 
+.camera-toggle {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.camera-source {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.camera-source[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--amber);
+}
+
+.camera-source:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
 .status {
   display: inline-flex;
   gap: 0.65rem;

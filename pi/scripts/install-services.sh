@@ -12,15 +12,24 @@ readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly UNIT_SRC="${SCRIPT_DIR}/../systemd"
 readonly UNIT_DIR="${HOME}/.config/systemd/user"
 readonly BIN_DIR="${HOME}/.local/bin"
+readonly USB_STREAM_PATH="${OWLCAM_USB_STREAM_PATH:-owl2}"
 
 uninstall=false
+
+stop_rtsp_publishers() {
+  systemctl --user stop owlcam-stream.service 2>/dev/null || true
+  systemctl --user stop owlcam-stream-usb.service 2>/dev/null || true
+  pkill -f 'ffmpeg .*rtsp://127.0.0.1:8554/owl' 2>/dev/null || true
+  pkill -f 'ffmpeg .*rtsp://127.0.0.1:8554/owl2' 2>/dev/null || true
+  sleep 1
+}
 
 usage() {
   cat <<'EOF'
 Usage: install-services.sh [--uninstall]
 
-  (default)    Install and start media, stream, site, diagnostics, and admin.
-  --uninstall  Stop, disable, and remove all five units.
+  (default)    Install and start media, both streams, site, diagnostics, and admin.
+  --uninstall  Stop, disable, and remove all OwlCam units.
 
 The site unit serves the built page from ${HOME}/owlcam/site, which deploy.sh
 stages. Build and stage it before installing, or the page will 404.
@@ -49,7 +58,7 @@ require loginctl
 if "${uninstall}"; then
   # A mount could have been declared in either mode, and clearing one does
   # not clear the other.
-  for mount_path in /admin /diagnostics "/${OWLCAM_STREAM_PATH:-owl}"; do
+  for mount_path in /admin /diagnostics "/${OWLCAM_STREAM_PATH:-owl}" "/${USB_STREAM_PATH}"; do
     tailscale funnel --https=443 --set-path="${mount_path}" off 2>/dev/null || true
     tailscale serve --https=443 --set-path="${mount_path}" off 2>/dev/null || true
   done
@@ -59,17 +68,20 @@ if "${uninstall}"; then
   systemctl --user disable --now owlcam-diagnostics.service 2>/dev/null || true
   systemctl --user disable --now owlcam-site.service 2>/dev/null || true
   systemctl --user disable --now owlcam-stream.service 2>/dev/null || true
+  systemctl --user disable --now owlcam-stream-usb.service 2>/dev/null || true
   systemctl --user disable --now owlcam-mediamtx.service 2>/dev/null || true
   rm -f "${UNIT_DIR}/owlcam-diagnostics.service" \
         "${UNIT_DIR}/owlcam-admin.service" \
         "${UNIT_DIR}/owlcam-site.service" \
         "${UNIT_DIR}/owlcam-stream.service" \
+        "${UNIT_DIR}/owlcam-stream-usb.service" \
         "${UNIT_DIR}/owlcam-mediamtx.service" \
         "${BIN_DIR}/owlcam-diagnostics" \
         "${BIN_DIR}/owlcam-admin" \
         "${BIN_DIR}/owlcam-configure-admin" \
         "${BIN_DIR}/owlcam-site" \
-        "${BIN_DIR}/owlcam-start-stream"
+        "${BIN_DIR}/owlcam-start-stream" \
+        "${BIN_DIR}/owlcam-start-stream-usb"
   systemctl --user daemon-reload
   printf 'OwlCam services removed.\n'
   exit 0
@@ -87,6 +99,7 @@ loginctl enable-linger "${USER}"
 
 mkdir -p "${UNIT_DIR}" "${BIN_DIR}"
 install -m 0755 "${SCRIPT_DIR}/start-stream.sh" "${BIN_DIR}/owlcam-start-stream"
+install -m 0755 "${SCRIPT_DIR}/start-stream-usb.sh" "${BIN_DIR}/owlcam-start-stream-usb"
 install -m 0755 "${SCRIPT_DIR}/bme280_raw.py" "${BIN_DIR}/bme280_raw.py"
 install -m 0755 "${SCRIPT_DIR}/diagnostics_server.py" "${BIN_DIR}/owlcam-diagnostics"
 install -m 0755 "${SCRIPT_DIR}/admin_server.py" "${BIN_DIR}/owlcam-admin"
@@ -97,6 +110,7 @@ install -m 0644 "${UNIT_SRC}/owlcam-admin.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-mediamtx.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-site.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-stream.service" "${UNIT_DIR}/"
+install -m 0644 "${UNIT_SRC}/owlcam-stream-usb.service" "${UNIT_DIR}/"
 
 # A capture started by hand, or by the UDP script, holds the sensor and would
 # make the new unit fail on every restart attempt.
@@ -104,9 +118,8 @@ if pgrep -x rpicam-vid >/dev/null 2>&1; then
   printf 'Stopping an existing camera capture so the unit can claim the sensor.\n'
   pkill -x rpicam-vid 2>/dev/null || true
   sleep 2
-  pkill -x ffmpeg 2>/dev/null || true
-  sleep 1
 fi
+stop_rtsp_publishers
 
 # MediaMTX started by hand would keep port 8888 and the unit would restart forever.
 if pgrep -x mediamtx >/dev/null 2>&1; then
@@ -118,6 +131,7 @@ fi
 systemctl --user daemon-reload
 systemctl --user enable owlcam-mediamtx.service
 systemctl --user enable owlcam-stream.service
+systemctl --user enable owlcam-stream-usb.service
 systemctl --user enable owlcam-site.service
 systemctl --user enable owlcam-diagnostics.service
 systemctl --user enable owlcam-admin.service
@@ -128,6 +142,7 @@ systemctl --user enable owlcam-admin.service
 systemctl --user restart owlcam-mediamtx.service
 sleep 3
 systemctl --user restart owlcam-stream.service
+systemctl --user restart owlcam-stream-usb.service
 systemctl --user restart owlcam-site.service
 systemctl --user restart owlcam-diagnostics.service
 systemctl --user restart owlcam-admin.service
@@ -148,6 +163,24 @@ if [[ "${ready:-false}" != true ]]; then
   printf 'Local HLS never became ready. Check:\n' >&2
   printf '  systemctl --user status owlcam-stream owlcam-mediamtx\n' >&2
   printf '  journalctl --user -u owlcam-stream -n 50\n' >&2
+  exit 1
+fi
+
+printf '\nWaiting for USB camera HLS (/%s)...\n' "${USB_STREAM_PATH}"
+usb_hls_url="http://127.0.0.1:${OWLCAM_HLS_PORT:-8888}/${USB_STREAM_PATH}/index.m3u8"
+for _ in $(seq 1 20); do
+  if curl -fsSL -m 3 -o /dev/null "${usb_hls_url}"; then
+    usb_ready=true
+    break
+  fi
+  sleep 2
+done
+
+if [[ "${usb_ready:-false}" != true ]]; then
+  printf 'USB stream HLS never became ready. Check:\n' >&2
+  printf '  systemctl --user status owlcam-stream-usb\n' >&2
+  printf '  journalctl --user -u owlcam-stream-usb -n 50\n' >&2
+  printf '  v4l2-ctl --list-devices   (set OWLCAM_USB_DEVICE if not /dev/video2)\n' >&2
   exit 1
 fi
 
@@ -213,6 +246,7 @@ printf 'OwlCam services installed and serving.\n'
 systemctl --user is-enabled \
   owlcam-mediamtx.service \
   owlcam-stream.service \
+  owlcam-stream-usb.service \
   owlcam-site.service \
   owlcam-diagnostics.service \
   owlcam-admin.service

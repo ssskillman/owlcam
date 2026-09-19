@@ -14,6 +14,7 @@ readonly DIAGNOSTICS_PORT="${OWLCAM_DIAGNOSTICS_PORT:-8765}"
 readonly ADMIN_PORT="${OWLCAM_ADMIN_PORT:-8766}"
 readonly SITE_PORT="${OWLCAM_SITE_PORT:-8080}"
 readonly STREAM_PATH="${OWLCAM_STREAM_PATH:-owl}"
+readonly USB_STREAM_PATH="${OWLCAM_USB_STREAM_PATH:-owl2}"
 
 mode=status
 
@@ -29,16 +30,18 @@ Usage: publish-feed.sh [--public | --private | --preserve | --status]
               defaulting to private. Used by install-services.sh.
   --status    Show the current exposure and mounts (default).
 
-Every mode declares all four mounts together: the page at /, the stream under
-/owl, vitals at /diagnostics, and the authenticated API at /admin. The page and
-stream must stay on one origin or browsers block video on Tailscale devices.
+Every mode declares all mounts together: the page at /, nest HLS under /owl,
+USB HLS under /owl2, vitals at /diagnostics, and the authenticated API at /admin.
+The page and streams must stay on one origin or browsers block video on Tailscale
+devices.
 
 Optional environment:
   OWLCAM_HLS_PORT            MediaMTX HLS port, default 8888
   OWLCAM_DIAGNOSTICS_PORT    diagnostics port, default 8765
   OWLCAM_ADMIN_PORT          authenticated admin API port, default 8766
   OWLCAM_SITE_PORT           site server port, default 8080
-  OWLCAM_STREAM_PATH         stream mount and MediaMTX path, default owl
+  OWLCAM_STREAM_PATH         nest stream mount and MediaMTX path, default owl
+  OWLCAM_USB_STREAM_PATH     USB stream mount and MediaMTX path, default owl2
 EOF
 }
 
@@ -116,6 +119,8 @@ apply() {
     "http://127.0.0.1:${SITE_PORT}"
   tailscale "${verb}" --bg --yes --https=443 --set-path="/${STREAM_PATH}" \
     "http://127.0.0.1:${HLS_PORT}/${STREAM_PATH}"
+  tailscale "${verb}" --bg --yes --https=443 --set-path="/${USB_STREAM_PATH}" \
+    "http://127.0.0.1:${HLS_PORT}/${USB_STREAM_PATH}"
   tailscale "${verb}" --bg --yes --https=443 --set-path=/diagnostics \
     "http://127.0.0.1:${DIAGNOSTICS_PORT}"
   tailscale "${verb}" --bg --yes --https=443 --set-path=/admin \
@@ -147,7 +152,8 @@ else
   printf 'Tailnet devices only. Sign in to Tailscale to watch.\n'
 fi
 printf 'Watch page: https://%s/\n' "${host}"
-printf 'Stream URL: https://%s/%s/index.m3u8\n' "${host}" "${STREAM_PATH}"
+printf 'Nest stream: https://%s/%s/index.m3u8\n' "${host}" "${STREAM_PATH}"
+printf 'USB stream: https://%s/%s/index.m3u8\n' "${host}" "${USB_STREAM_PATH}"
 printf 'Vitals URL: https://%s/diagnostics\n' "${host}"
 printf 'Admin API: https://%s/admin/api/session\n' "${host}"
 tailscale serve status 2>/dev/null || true

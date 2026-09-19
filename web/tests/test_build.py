@@ -4,6 +4,7 @@ from pathlib import Path
 
 from app import (
     DEFAULT_STREAM_URL,
+    DEFAULT_USB_STREAM_URL,
     MOMENTS,
     render_about_page,
     render_identify_page,
@@ -19,7 +20,13 @@ def test_page_uses_a_same_origin_stream_and_accessible_player():
     assert html.count("<!doctype html>") == 1
     assert "<title>Carver OwlCam — Live from the Nest</title>" in html
     assert DEFAULT_STREAM_URL == "/owl/index.m3u8"
+    assert DEFAULT_USB_STREAM_URL == "/owl2/index.m3u8"
     assert DEFAULT_STREAM_URL in html
+    assert DEFAULT_USB_STREAM_URL in html
+    assert 'id="camera-source-toggle"' in html
+    assert 'data-camera-source="nest"' in html
+    assert 'data-camera-source="usb"' in html
+    assert 'data-stream-url-usb="/owl2/index.m3u8"' in html
     assert 'integrity="sha384-' in html
     assert 'id="owlcam-player"' in html
     assert 'aria-label="Carver OwlCam livestream"' in html
@@ -528,6 +535,15 @@ def test_player_never_adds_an_empty_class_token():
     assert "if (state) dot.classList.add(state)" in source, (
         "classList.add must be guarded against the empty connecting state"
     )
+
+
+def test_player_can_switch_between_nest_and_usb_streams():
+    source = (WEB_ROOT / "static" / "player.js").read_text()
+
+    assert "owlcamStreamPath" in source
+    assert "sessionStorage" in source
+    assert "data-camera-source" in source
+    assert "/owl2/index.m3u8" in source or "streamUrlUsb" in source
 
 
 def test_player_prefers_hls_js_over_the_native_probe():
