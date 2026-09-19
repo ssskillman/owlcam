@@ -5,6 +5,7 @@
     "#diagnostics-habitat-temperature",
   );
   const humidity = document.querySelector("#diagnostics-humidity");
+  const pressure = document.querySelector("#diagnostics-pressure");
   const daylight = document.querySelector("#diagnostics-daylight");
   const temperature = document.querySelector("#diagnostics-temperature");
   const temperatureUnitButtons = document.querySelectorAll(
@@ -22,6 +23,7 @@
     !status ||
     !habitatTemperature ||
     !humidity ||
+    !pressure ||
     !daylight ||
     !temperature ||
     temperatureUnitButtons.length !== 2 ||
@@ -47,6 +49,13 @@
     return `${value.toFixed(1)} °C`;
   };
 
+  const formatSampleTime = (iso) =>
+    new Date(iso).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
   const validateClimate = (climate) => {
     if (!climate || typeof climate.connected !== "boolean") {
       throw new Error("Unexpected diagnostics response");
@@ -55,13 +64,20 @@
       if (
         typeof climate.sensor !== "string" ||
         !Number.isFinite(climate.temperatureC) ||
-        !Number.isFinite(climate.humidityPercent)
+        !Number.isFinite(climate.humidityPercent) ||
+        !Number.isFinite(climate.pressureHpa) ||
+        Number.isNaN(Date.parse(climate.sampledAt))
       ) {
         throw new Error("Unexpected diagnostics response");
       }
       return;
     }
-    if (climate.temperatureC != null || climate.humidityPercent != null) {
+    if (
+      climate.temperatureC != null ||
+      climate.humidityPercent != null ||
+      climate.pressureHpa != null ||
+      climate.sampledAt != null
+    ) {
       throw new Error("Unexpected diagnostics response");
     }
   };
@@ -87,9 +103,11 @@
     if (climate.connected) {
       habitatTemperature.textContent = formatTemperature(climate.temperatureC);
       humidity.textContent = `${climate.humidityPercent.toFixed(1)} %`;
+      pressure.textContent = `${climate.pressureHpa.toFixed(1)} hPa`;
     } else {
       habitatTemperature.textContent = "Not connected";
       humidity.textContent = "Not connected";
+      pressure.textContent = "Not connected";
     }
     daylight.textContent = "Sensor needed";
   };
@@ -108,10 +126,15 @@
     status.textContent = data.allProcessesStable
       ? "All three streaming processes stable"
       : "A streaming process needs attention";
-    updated.textContent = `Updated ${new Date(data.sampledAt).toLocaleTimeString(
-      [],
-      { hour: "numeric", minute: "2-digit", second: "2-digit" },
-    )}`;
+
+    const piUpdated = formatSampleTime(data.sampledAt);
+    if (data.climate.connected && data.climate.sampledAt) {
+      updated.textContent = `Nest air updated ${formatSampleTime(
+        data.climate.sampledAt,
+      )} · Pi vitals updated ${piUpdated}`;
+    } else {
+      updated.textContent = `Pi vitals updated ${piUpdated}`;
+    }
     panel.dataset.state = data.allProcessesStable ? "online" : "degraded";
   };
 
@@ -128,6 +151,7 @@
     status.textContent = unavailableReason(httpStatus);
     habitatTemperature.textContent = "—";
     humidity.textContent = "—";
+    pressure.textContent = "—";
     daylight.textContent = "—";
     temperature.textContent = "—";
     memory.textContent = "—";

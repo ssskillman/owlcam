@@ -8,13 +8,14 @@ Wants=network-online.target
 Type=simple
 ExecStart=%h/.local/bin/owlcam-diagnostics
 Environment=PYTHONUNBUFFERED=1
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=always
 RestartSec=5
 
-# Loopback plus /proc, SoC thermal, and optional nest BME280 on I2C.
+# Loopback plus /proc, SoC thermal, and nest BME280 via i2ctransfer.
+# PrivateDevices hides /dev/i2c-1 from user units even with DeviceAllow.
 NoNewPrivileges=true
-PrivateDevices=true
-DeviceAllow=/dev/i2c-1 rw
+PrivateDevices=false
 PrivateTmp=true
 ProtectHome=read-only
 ProtectSystem=strict

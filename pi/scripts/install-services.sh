@@ -87,6 +87,7 @@ loginctl enable-linger "${USER}"
 
 mkdir -p "${UNIT_DIR}" "${BIN_DIR}"
 install -m 0755 "${SCRIPT_DIR}/start-stream.sh" "${BIN_DIR}/owlcam-start-stream"
+install -m 0755 "${SCRIPT_DIR}/bme280_raw.py" "${BIN_DIR}/bme280_raw.py"
 install -m 0755 "${SCRIPT_DIR}/diagnostics_server.py" "${BIN_DIR}/owlcam-diagnostics"
 install -m 0755 "${SCRIPT_DIR}/admin_server.py" "${BIN_DIR}/owlcam-admin"
 install -m 0755 "${SCRIPT_DIR}/configure-admin.sh" "${BIN_DIR}/owlcam-configure-admin"

@@ -676,7 +676,7 @@ video:focus-visible {
 }
 
 .diagnostics-row-habitat {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .diagnostics-row-system {

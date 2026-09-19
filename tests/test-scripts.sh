@@ -257,8 +257,10 @@ grep -F -- '127.0.0.1' "${REPO_ROOT}/pi/scripts/diagnostics_server.py" >/dev/nul
   || fail "diagnostics endpoint is not bound to loopback"
 grep -F -- 'ProtectHome=read-only' "${diagnostics_unit}" >/dev/null \
   || fail "diagnostics unit can write to the user's home directory"
-grep -F -- 'DeviceAllow=/dev/i2c-1 rw' "${diagnostics_unit}" >/dev/null \
-  || fail "diagnostics unit cannot open the nest climate I2C bus"
+grep -F -- 'PrivateDevices=false' "${diagnostics_unit}" >/dev/null \
+  || fail "diagnostics unit must expose /dev/i2c-1 for the BME280"
+grep -F -- 'bme280_raw.py' "${install_script}" >/dev/null \
+  || fail "installer does not stage the BME280 driver beside diagnostics"
 grep -F -- 'EnvironmentFile=-%h/.config/owlcam/admin.env' "${admin_unit}" >/dev/null \
   || fail "admin unit does not load its private credential file"
 grep -F -- 'NoNewPrivileges=true' "${admin_unit}" >/dev/null \

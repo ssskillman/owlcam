@@ -398,6 +398,7 @@ def test_live_page_has_accessible_realtime_diagnostics():
     assert 'id="diagnostics-temperature"' in html
     assert 'id="diagnostics-habitat-temperature"' in html
     assert 'id="diagnostics-humidity"' in html
+    assert 'id="diagnostics-pressure"' in html
     assert 'id="diagnostics-daylight"' in html
     assert 'id="diagnostics-memory"' in html
     assert 'id="diagnostics-load"' in html
@@ -405,8 +406,8 @@ def test_live_page_has_accessible_realtime_diagnostics():
     assert 'id="temperature-unit-toggle"' in html
     assert 'aria-pressed="true"' in html
     assert 'data-temperature-unit="f"' in html
-    assert html.count('class="diagnostics-help"') == 7
-    assert html.count('tabindex="0"') >= 7
+    assert html.count('class="diagnostics-help"') == 8
+    assert html.count('tabindex="0"') >= 8
     assert 'id="diagnostics-status"' in html
     assert 'aria-live="polite"' in html
     assert 'src="/assets/diagnostics.js"' in html
@@ -428,6 +429,8 @@ def test_diagnostics_polling_is_bounded_and_renders_as_text():
     assert 'processes.textContent = "—"' in source
     assert "habitatTemperature" in source
     assert "humidity" in source
+    assert "pressure" in source
+    assert "pressureHpa" in source
     assert "daylight" in source
     assert "data?.climate" in source
     assert "celsiusToFahrenheit" in source
