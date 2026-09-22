@@ -726,7 +726,14 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
         n
         for n in hashed
         if n.startswith(
-            ("styles.", "player.", "diagnostics.", "admin.", "analytics.")
+            (
+                "styles.",
+                "player.",
+                "diagnostics.",
+                "home-status.",
+                "admin.",
+                "analytics.",
+            )
         )
     )
 
