@@ -916,6 +916,173 @@ footer {
   margin-bottom: 0;
 }
 
+.moments-calendar-section {
+  margin-bottom: clamp(2.5rem, 6vw, 4rem);
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.moments-calendar-lede {
+  max-width: 44rem;
+  margin-bottom: 1.25rem;
+}
+
+.moments-calendar__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.moments-calendar__month {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  flex: 1;
+}
+
+.moments-calendar__nav {
+  min-height: 44px;
+  padding: 0.45rem 0.85rem;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.moments-calendar__nav:hover {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+.moments-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 1.75rem;
+}
+
+.moments-calendar__weekday {
+  padding: 0.35rem 0.25rem;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.moments-calendar__day {
+  min-height: 4.5rem;
+  padding: 0.45rem 0.35rem 0.35rem;
+  color: var(--ink);
+  background: rgba(11, 16, 13, 0.55);
+  border: 1px solid var(--line);
+  text-align: left;
+  cursor: pointer;
+}
+
+.moments-calendar__day--pad {
+  border-color: transparent;
+  background: transparent;
+  cursor: default;
+  pointer-events: none;
+}
+
+.moments-calendar__day:hover:not(.moments-calendar__day--pad) {
+  border-color: rgba(232, 164, 58, 0.45);
+}
+
+.moments-calendar__day--selected {
+  border-color: var(--amber);
+  box-shadow: inset 0 0 0 1px rgba(232, 164, 58, 0.35);
+}
+
+.moments-calendar__day--today .moments-calendar__daynum {
+  color: var(--amber);
+}
+
+.moments-calendar__daynum {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.moments-calendar__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+}
+
+.moments-day__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.moments-day__status {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.moments-day__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.moments-day__table th,
+.moments-day__table td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.moments-day__table th {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.moments-day__table a {
+  color: var(--amber);
+  text-decoration: underline;
+}
+
+@media (max-width: 560px) {
+  .moments-calendar__day {
+    min-height: 3.6rem;
+    padding: 0.35rem 0.25rem;
+  }
+
+  .moments-calendar__stats {
+    font-size: 0.48rem;
+  }
+
+  .moments-day__table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
 .moments-intro {
   max-width: 52rem;
 }

@@ -214,6 +214,36 @@ class VisitStats(BaseModel):
     source: str | None = None
 
 
+class VisitCalendarDay(BaseModel):
+    date: str
+    visits: int
+    entrances: int
+    exits: int
+    pics: int
+
+
+class VisitCalendar(BaseModel):
+    year: int
+    month: int
+    days: list[VisitCalendarDay]
+
+
+class VisitDayEvent(BaseModel):
+    time: str
+    kind: str
+    species: str
+    category: str
+    confidence: float | None = None
+    visit_id: int | None = None
+    has_photo: bool = False
+    thumbnail_url: str | None = None
+
+
+class VisitDayActivity(BaseModel):
+    date: str
+    events: list[VisitDayEvent]
+
+
 def _request_source(request: Request) -> str:
     header = (request.headers.get("x-owlcam-source") or "").strip()
     return header or "browser"
@@ -322,6 +352,67 @@ def visit_stats(
         "hours": capped_hours,
         "source": normalized_source,
     }
+
+
+@app.get(
+    "/api/animal-identification/visits/calendar",
+    response_model=VisitCalendar,
+)
+def visit_calendar(
+    year: int,
+    month: int,
+    source: str | None = "feed_watcher",
+) -> dict:
+    capped_year = max(2020, min(year, 2100))
+    capped_month = max(1, min(month, 12))
+    normalized_source = source.strip() if source else None
+    if normalized_source == "":
+        normalized_source = None
+    days = visits.month_calendar(
+        capped_year,
+        capped_month,
+        source=normalized_source,
+    )
+    return {
+        "year": capped_year,
+        "month": capped_month,
+        "days": days,
+    }
+
+
+@app.get(
+    "/api/animal-identification/visits/day",
+    response_model=VisitDayActivity,
+)
+def visit_day_activity(
+    date: str,
+    source: str | None = "feed_watcher",
+) -> dict:
+    if len(date) != 10 or date[4] != "-" or date[7] != "-":
+        raise HTTPException(status_code=422, detail="date must be YYYY-MM-DD")
+    normalized_source = source.strip() if source else None
+    if normalized_source == "":
+        normalized_source = None
+    raw_events = visits.day_activity(date, source=normalized_source)
+    events = []
+    for row in raw_events:
+        thumb_url = None
+        visit_id = row.get("visit_id")
+        if row.get("has_photo") and visit_id:
+            thumb_url = f"/api/animal-identification/visits/{visit_id}/thumbnail"
+        events.append(
+            VisitDayEvent(
+                time=str(row["time"]),
+                kind=str(row["kind"]),
+                species=str(row["species"]),
+                category=str(row["category"]),
+                confidence=row["confidence"],
+                visit_id=visit_id,
+                has_photo=bool(row.get("has_photo")),
+                thumbnail_url=thumb_url,
+            )
+        )
+    return {"date": date, "events": events}
 
 
 @app.get(

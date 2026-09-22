@@ -422,5 +422,7 @@ grep -F -- 'nest visit delete E2E' "${REPO_ROOT}/pi/scripts/e2e-nest-visit-delet
   || fail "nest visit delete e2e script missing"
 grep -F -- '/api/animal-identification/visits' "${REPO_ROOT}/animal_identifier/animal_identifier/server.py" >/dev/null \
   || fail "identifier server missing visit log API"
+grep -F -- '/api/animal-identification/visits/calendar' "${REPO_ROOT}/animal_identifier/animal_identifier/server.py" >/dev/null \
+  || fail "identifier server missing visit calendar API"
 
 printf 'Script checks passed.\n'

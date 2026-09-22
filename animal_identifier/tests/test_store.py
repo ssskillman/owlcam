@@ -79,6 +79,40 @@ def test_visit_store_counts_recent_captures(tmp_path):
     assert store.count_since_hours(24, source=None) == 2
 
 
+def test_visit_store_calendar_and_day_activity(tmp_path):
+    store = VisitStore(tmp_path / "visits.sqlite", tmp_path / "thumbs")
+    first = store.add(
+        species="barred owl",
+        category="bird",
+        confidence=0.9,
+        is_unknown=False,
+        model_version="test",
+        source="feed_watcher",
+        thumbnail=b"jpeg",
+    )
+    second = store.add(
+        species="cow",
+        category="mammal",
+        confidence=0.62,
+        is_unknown=False,
+        model_version="test",
+        source="feed_watcher",
+        thumbnail=b"jpeg",
+    )
+    assert first and second
+    row = store.get_visit(first)
+    month = int(row.created_at[5:7])
+    year = int(row.created_at[:4])
+    days = store.month_calendar(year, month, source="feed_watcher")
+    assert len(days) == 1
+    assert days[0]["visits"] == 2
+    assert days[0]["pics"] == 2
+    assert days[0]["entrances"] == 2
+    events = store.day_activity(row.created_at[:10], source="feed_watcher")
+    assert any(event["kind"] == "entrance" for event in events)
+    assert any(event["kind"] == "pic" for event in events)
+
+
 def test_visit_store_delete_removes_row_and_thumbnail(tmp_path):
     store = VisitStore(tmp_path / "visits.sqlite", tmp_path / "thumbs")
     visit_id = store.add(

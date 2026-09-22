@@ -4,8 +4,12 @@ import sqlite3
 import threading
 import time
 import uuid
+from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
+
+EXIT_GAP_SECONDS = 600
 
 from animal_identifier.config import JOB_TTL_SECONDS
 
@@ -176,6 +180,80 @@ class VisitRecord:
     thumbnail_name: str | None
 
 
+def _visit_created_at(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace(" ", "T"))
+
+
+def _summarize_day(records: list[VisitRecord]) -> tuple[int, int, int, int]:
+    visits = len(records)
+    pics = sum(1 for row in records if row.thumbnail_name)
+    known = sorted(
+        [row for row in records if not row.is_unknown],
+        key=lambda row: row.created_at,
+    )
+    entrances = len(known)
+    exits = 0
+    for index in range(1, len(known)):
+        previous = _visit_created_at(known[index - 1].created_at)
+        current = _visit_created_at(known[index].created_at)
+        if (current - previous).total_seconds() >= EXIT_GAP_SECONDS:
+            exits += 1
+    return visits, entrances, exits, pics
+
+
+def _day_events(records: list[VisitRecord]) -> list[dict[str, object]]:
+    ordered = sorted(records, key=lambda row: row.created_at)
+    events: list[dict[str, object]] = []
+    last_known: VisitRecord | None = None
+    for row in ordered:
+        if not row.is_unknown and last_known is not None:
+            gap = (
+                _visit_created_at(row.created_at)
+                - _visit_created_at(last_known.created_at)
+            ).total_seconds()
+            if gap >= EXIT_GAP_SECONDS:
+                events.append(
+                    {
+                        "time": row.created_at,
+                        "kind": "exit",
+                        "species": last_known.species,
+                        "category": last_known.category,
+                        "confidence": None,
+                        "visit_id": None,
+                        "has_photo": False,
+                    }
+                )
+        if row.is_unknown:
+            kind = "visit"
+        else:
+            kind = "entrance"
+            last_known = row
+        events.append(
+            {
+                "time": row.created_at,
+                "kind": kind,
+                "species": row.species,
+                "category": row.category,
+                "confidence": row.confidence,
+                "visit_id": row.id,
+                "has_photo": bool(row.thumbnail_name),
+            }
+        )
+        if row.thumbnail_name:
+            events.append(
+                {
+                    "time": row.created_at,
+                    "kind": "pic",
+                    "species": row.species,
+                    "category": row.category,
+                    "confidence": row.confidence,
+                    "visit_id": row.id,
+                    "has_photo": True,
+                }
+            )
+    return events
+
+
 class VisitStore:
     """Timestamped visits with on-disk thumbnails for nest feed automation."""
 
@@ -344,6 +422,99 @@ class VisitStore:
             )
             for row in rows
         ]
+
+    def _rows_in_month(
+        self,
+        year: int,
+        month: int,
+        *,
+        source: str | None,
+    ) -> list[VisitRecord]:
+        month_key = f"{year:04d}-{month:02d}"
+        query = """
+            SELECT id, created_at, species, category, confidence, is_unknown,
+                   model_version, source, thumbnail_name
+            FROM visits
+            WHERE strftime('%Y-%m', created_at) = ?
+        """
+        params: list[object] = [month_key]
+        if source:
+            query += " AND source = ?"
+            params.append(source)
+        query += " ORDER BY datetime(created_at) ASC"
+        with sqlite3.connect(self.db_path) as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [
+            VisitRecord(
+                id=row[0],
+                created_at=row[1],
+                species=row[2],
+                category=row[3],
+                confidence=row[4],
+                is_unknown=bool(row[5]),
+                model_version=row[6],
+                source=row[7],
+                thumbnail_name=row[8],
+            )
+            for row in rows
+        ]
+
+    def month_calendar(
+        self,
+        year: int,
+        month: int,
+        *,
+        source: str | None = "feed_watcher",
+    ) -> list[dict[str, object]]:
+        grouped: dict[str, list[VisitRecord]] = defaultdict(list)
+        for row in self._rows_in_month(year, month, source=source):
+            grouped[row.created_at[:10]].append(row)
+        return [
+            {
+                "date": date_key,
+                "visits": summary[0],
+                "entrances": summary[1],
+                "exits": summary[2],
+                "pics": summary[3],
+            }
+            for date_key in sorted(grouped)
+            for summary in [_summarize_day(grouped[date_key])]
+        ]
+
+    def day_activity(
+        self,
+        date: str,
+        *,
+        source: str | None = "feed_watcher",
+    ) -> list[dict[str, object]]:
+        query = """
+            SELECT id, created_at, species, category, confidence, is_unknown,
+                   model_version, source, thumbnail_name
+            FROM visits
+            WHERE date(created_at) = ?
+        """
+        params: list[object] = [date]
+        if source:
+            query += " AND source = ?"
+            params.append(source)
+        query += " ORDER BY datetime(created_at) ASC"
+        with sqlite3.connect(self.db_path) as connection:
+            rows = connection.execute(query, params).fetchall()
+        records = [
+            VisitRecord(
+                id=row[0],
+                created_at=row[1],
+                species=row[2],
+                category=row[3],
+                confidence=row[4],
+                is_unknown=bool(row[5]),
+                model_version=row[6],
+                source=row[7],
+                thumbnail_name=row[8],
+            )
+            for row in rows
+        ]
+        return _day_events(records)
 
     def thumbnail_path(self, thumbnail_name: str) -> Path | None:
         path = self.thumbnail_dir / thumbnail_name

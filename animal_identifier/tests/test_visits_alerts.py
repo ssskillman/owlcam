@@ -77,6 +77,38 @@ def test_visit_stats_counts_feed_watcher_captures(monkeypatch, tmp_path):
     assert response.json()["count"] == 1
 
 
+def test_visit_calendar_and_day_endpoints(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "visits", VisitStore(tmp_path / "v.sqlite", tmp_path / "thumbs"))
+    visit_id = server.visits.add(
+        species="barred owl",
+        category="bird",
+        confidence=0.9,
+        is_unknown=False,
+        model_version="test",
+        source="feed_watcher",
+        thumbnail=b"jpeg",
+    )
+    row = server.visits.get_visit(visit_id)
+    year = int(row.created_at[:4])
+    month = int(row.created_at[5:7])
+    date = row.created_at[:10]
+    client = TestClient(server.app)
+    calendar = client.get(
+        "/api/animal-identification/visits/calendar",
+        params={"year": year, "month": month, "source": "feed_watcher"},
+    )
+    assert calendar.status_code == 200
+    assert calendar.json()["days"][0]["pics"] == 1
+    day = client.get(
+        "/api/animal-identification/visits/day",
+        params={"date": date, "source": "feed_watcher"},
+    )
+    assert day.status_code == 200
+    kinds = {event["kind"] for event in day.json()["events"]}
+    assert "entrance" in kinds
+    assert "pic" in kinds
+
+
 def test_delete_visit_requires_admin_secret(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "visits", VisitStore(tmp_path / "v.sqlite", tmp_path / "thumbs"))
     monkeypatch.setattr(server, "VISIT_ADMIN_SECRET", "nest-delete-secret")

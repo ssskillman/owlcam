@@ -95,7 +95,11 @@ def test_moments_page_has_placeholder_media_stories_and_sorting():
     assert 'src="/assets/moments/mole-delivery.webm"' in html
     assert 'poster="/assets/moments/thumbs/mole-delivery.jpg"' in html
     assert 'src="/assets/moments.js"' in html
+    assert 'src="/assets/moments-calendar.js"' in html
     assert 'src="/assets/moments-live.js"' in html
+    assert 'id="moments-calendar-grid"' in html
+    assert 'id="moments-day-table"' in html
+    assert "Activity calendar." in html
     assert 'id="nest-moments-grid"' in html
     assert 'id="nest-moments-status"' in html
     assert "From the nest." in html
@@ -705,6 +709,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert not (assets / "diagnostics.js").exists()
     assert not (assets / "moments.js").exists()
     assert not (assets / "moments-live.js").exists()
+    assert not (assets / "moments-calendar.js").exists()
     assert not (assets / "admin.js").exists()
     assert not (assets / "home-status.js").exists()
     assert not (assets / "identify.js").exists()

@@ -9,6 +9,7 @@ from fasthtml.common import (
     Form,
     H1,
     H2,
+    H3,
     Head,
     Header,
     Html,
@@ -30,7 +31,12 @@ from fasthtml.common import (
     Span,
     Strong,
     Summary,
+    Table,
+    Tbody,
+    Th,
+    Thead,
     Title,
+    Tr,
     Ul,
     Video,
     to_xml,
@@ -1033,6 +1039,76 @@ def render_moments_page() -> str:
             _admin_panel(),
             Main(
                 Section(
+                    Span("NEST ACTIVITY", cls="live-label"),
+                    H2("Activity calendar."),
+                    P(
+                        "Daily counts from the automatic nest camera log. "
+                        "V = visits, E = exits (gaps of ten minutes or more "
+                        "between identified animals), P = photos saved. "
+                        "Select a day for the full log.",
+                        cls="lede moments-calendar-lede",
+                    ),
+                    Div(
+                        Div(
+                            Button(
+                                "Previous month",
+                                type="button",
+                                id="moments-calendar-prev",
+                                cls="moments-calendar__nav",
+                                aria_label="Previous month",
+                            ),
+                            H3(
+                                "",
+                                id="moments-calendar-month",
+                                cls="moments-calendar__month",
+                            ),
+                            Button(
+                                "Next month",
+                                type="button",
+                                id="moments-calendar-next",
+                                cls="moments-calendar__nav",
+                                aria_label="Next month",
+                            ),
+                            cls="moments-calendar__toolbar",
+                        ),
+                        Div(
+                            id="moments-calendar-grid",
+                            cls="moments-calendar__grid",
+                            role="grid",
+                            aria_label="Nest activity calendar",
+                        ),
+                        H3(
+                            "Select a day",
+                            id="moments-day-title",
+                            cls="moments-day__title",
+                        ),
+                        P(
+                            "Loading calendar…",
+                            id="moments-day-status",
+                            cls="moments-day__status",
+                            aria_live="polite",
+                        ),
+                        Table(
+                            Thead(
+                                Tr(
+                                    Th("Time"),
+                                    Th("Event"),
+                                    Th("Species"),
+                                    Th("Confidence"),
+                                    Th("Photo"),
+                                ),
+                            ),
+                            Tbody(id="moments-day-body"),
+                            id="moments-day-table",
+                            cls="moments-day__table",
+                            hidden=True,
+                        ),
+                        cls="moments-calendar",
+                        data_api_origin=ANIMAL_ID_API_ORIGIN,
+                    ),
+                    cls="moments-calendar-section",
+                ),
+                Section(
                     Span("FIELD LOG", cls="live-label"),
                     H1("Small moments.", Span("Wild stories.", cls="accent")),
                     P(
@@ -1119,6 +1195,7 @@ def render_moments_page() -> str:
                 ),
             ),
             _footer(),
+            Script(src="/assets/moments-calendar.js", defer=True),
             Script(src="/assets/moments-live.js", defer=True),
             Script(src="/assets/moments.js", defer=True),
         ),
