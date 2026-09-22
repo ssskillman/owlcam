@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OwlCam preview — Console chip (v1)</title>
+    <link rel="stylesheet" href="../static/styles.css" />
+    <style>
+      .preview-banner {
+        margin: 0;
+        padding: 0.55rem 4vw;
+        background: rgba(232, 164, 58, 0.12);
+        border-bottom: 1px solid var(--line);
+        color: var(--amber);
+        font-size: 0.62rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .preview-hero {
+        padding: 3rem 4vw 4rem;
+        max-width: 42rem;
+      }
+
+      .preview-hero h1 {
+        max-width: none;
+        font-size: clamp(2.2rem, 6vw, 3.2rem);
+      }
+
+      /* V1: tighter console chip — inset glow, clearer count lane */
+      .capture-status--v1 {
+        gap: 0;
+        padding: 0;
+        border-radius: 2px;
+        border-color: rgba(232, 164, 58, 0.22);
+        background: linear-gradient(
+          180deg,
+          rgba(38, 61, 45, 0.55) 0%,
+          rgba(11, 16, 13, 0.92) 100%
+        );
+        box-shadow:
+          inset 0 1px 0 rgba(242, 234, 216, 0.06),
+          0 1px 0 rgba(0, 0, 0, 0.35);
+      }
+
+      .capture-status--v1 .capture-status-meta {
+        padding: 0.45rem 0.65rem;
+        border-right: 1px solid var(--line);
+      }
+
+      .capture-status--v1 .capture-status-value {
+        border-left: 0;
+        padding: 0.45rem 0.7rem;
+        min-width: 2rem;
+        background: rgba(0, 0, 0, 0.18);
+      }
+
+      .capture-status--v1 .capture-status-number {
+        height: 1.2rem;
+        width: 1.2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="preview-banner">Preview v1 — console chip (candidate for production)</p>
+    <header class="utility-bar">
+      <div class="site-brand">
+        <a class="eyebrow" href="#">CARVER FIELD STATION</a>
+        <p class="nav-signed-in">signed in: ccarver</p>
+      </div>
+      <div
+        class="capture-status capture-status--v1"
+        role="status"
+        aria-live="polite"
+      >
+        <span class="capture-status-meta">Nest captures · 24h</span>
+        <span class="capture-status-value">
+          <img
+            class="capture-status-number"
+            src="../static/icons/numbers/7.png"
+            alt="7 nest captures in the last 24 hours"
+            width="20"
+            height="20"
+          />
+        </span>
+      </div>
+      <nav class="site-nav" aria-label="Site">
+        <a href="#">Upload &amp; Identify</a>
+        <a href="#">Moments</a>
+        <a href="#">About</a>
+        <button type="button" class="admin-open" aria-label="Open admin">?</button>
+      </nav>
+    </header>
+    <main class="preview-hero">
+      <div class="live-label"><span aria-hidden="true">●</span> LIVE HABITAT CAMERA</div>
+      <h1>Quiet hours. <span class="accent">Wild lives.</span></h1>
+      <p class="lede">
+        Count sits in the header rail like other station telemetry — segmented label
+        and value, warm-tinted digit art for 1–10.
+      </p>
+    </main>
+  </body>
+</html>

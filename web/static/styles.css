@@ -66,53 +66,56 @@ a {
   font-weight: 600;
 }
 
-.capture-status {
+.nest-telemetry {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.45rem;
   margin-left: auto;
-  padding: 0.4rem 0.65rem;
-  border: 1px solid var(--line);
-  background: rgba(20, 32, 25, 0.72);
-  color: var(--ink);
+  padding: 0.2rem 0;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: lowercase;
+  white-space: nowrap;
   pointer-events: none;
 }
 
-.capture-status-meta {
-  color: var(--muted);
-  font-size: 0.58rem;
+.nest-telemetry__dot {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: var(--amber);
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+.nest-telemetry__label {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.nest-telemetry__label strong {
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.capture-status-value {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.15rem;
-  padding: 0.1rem 0.15rem;
-  border-left: 1px solid var(--line);
-  padding-left: 0.55rem;
-}
-
-.capture-status-number {
-  display: block;
-  height: 1.05rem;
-  width: 1.05rem;
-  object-fit: contain;
-  filter: brightness(1.08) sepia(0.9) hue-rotate(352deg) saturate(2.1);
-  opacity: 0.95;
-}
-
-.capture-status-fallback {
-  font-weight: 800;
-  font-size: 0.82rem;
-  line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: var(--amber);
-  letter-spacing: 0.02em;
+  color: rgba(232, 164, 58, 0.82);
+  margin-right: 0.15rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nest-telemetry__dot {
+    animation: nest-telemetry-breathe 3.6s ease-in-out infinite;
+  }
+}
+
+@keyframes nest-telemetry-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.75;
+  }
 }
 
 .eyebrow {
@@ -1682,10 +1685,9 @@ footer {
     padding-bottom: 0.8rem;
   }
 
-  .capture-status {
+  .nest-telemetry {
     margin-left: 0;
-    align-self: stretch;
-    justify-content: space-between;
+    align-self: flex-start;
   }
 
   .access-pill {

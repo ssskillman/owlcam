@@ -190,30 +190,17 @@ def _head(*, title: str, description: str, include_player: bool, include_identif
 
 def _capture_status() -> Div:
     return Div(
-        Span("Nest captures · 24h", cls="capture-status-meta"),
-        Div(
-            Img(
-                src="/assets/icons/numbers/1.png",
-                alt="",
-                id="capture-toast-icon",
-                cls="capture-status-number",
-                width="20",
-                height="20",
-                decoding="async",
-                hidden=True,
-            ),
-            Span(
-                "0",
-                id="capture-toast-count",
-                cls="capture-status-fallback",
-                hidden=True,
-            ),
-            cls="capture-status-value",
+        Span("", cls="nest-telemetry__dot", aria_hidden="true"),
+        Span(
+            Strong("0", id="capture-toast-count"),
+            " nest saves · 24h",
+            cls="nest-telemetry__label",
         ),
         id="capture-toast",
-        cls="capture-status",
+        cls="nest-telemetry",
         role="status",
         aria_live="polite",
+        aria_atomic="true",
         hidden=True,
     )
 

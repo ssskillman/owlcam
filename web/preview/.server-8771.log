@@ -1,0 +1,6 @@
+127.0.0.1 - - [22/Sep/2026 17:30:58] "GET /preview/v1-console-chip.html HTTP/1.1" 200 -
+127.0.0.1 - - [22/Sep/2026 17:31:58] "GET /preview/v1-console-chip.html HTTP/1.1" 200 -
+127.0.0.1 - - [22/Sep/2026 17:31:58] "GET /static/styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [22/Sep/2026 17:31:58] "GET /static/icons/numbers/7.png HTTP/1.1" 200 -
+127.0.0.1 - - [22/Sep/2026 17:31:59] code 404, message File not found
+127.0.0.1 - - [22/Sep/2026 17:31:59] "GET /favicon.ico HTTP/1.1" 404 -

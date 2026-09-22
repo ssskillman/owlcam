@@ -1,0 +1,5 @@
+127.0.0.1 - - [22/Sep/2026 17:30:58] "GET /preview/v2-telemetry-rail.html HTTP/1.1" 200 -
+127.0.0.1 - - [22/Sep/2026 17:32:31] "GET /preview/v2-telemetry-rail.html HTTP/1.1" 200 -
+127.0.0.1 - - [22/Sep/2026 17:32:31] "GET /static/styles.css HTTP/1.1" 200 -
+127.0.0.1 - - [22/Sep/2026 17:32:31] code 404, message File not found
+127.0.0.1 - - [22/Sep/2026 17:32:31] "GET /favicon.ico HTTP/1.1" 404 -

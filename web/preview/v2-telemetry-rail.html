@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OwlCam preview — Telemetry rail (v2)</title>
+    <link rel="stylesheet" href="../static/styles.css" />
+    <style>
+      .preview-banner {
+        margin: 0;
+        padding: 0.55rem 4vw;
+        background: rgba(38, 61, 45, 0.45);
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.62rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .preview-hero {
+        padding: 3rem 4vw 4rem;
+        max-width: 42rem;
+      }
+
+      .preview-hero h1 {
+        max-width: none;
+        font-size: clamp(2.2rem, 6vw, 3.2rem);
+      }
+
+      /* V2: telemetry rail — pulse + large tabular count, no bitmap */
+      .telemetry-rail {
+        display: inline-flex;
+        align-items: stretch;
+        margin-left: auto;
+        border: 1px solid var(--line);
+        background: var(--forest);
+        font-size: 0.62rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .telemetry-rail__live {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.5rem 0.65rem;
+        color: var(--muted);
+        border-right: 1px solid var(--line);
+      }
+
+      .telemetry-rail__dot {
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 50%;
+        background: var(--amber);
+        box-shadow: 0 0 0 2px rgba(232, 164, 58, 0.25);
+        animation: telemetry-pulse 2.4s ease-in-out infinite;
+      }
+
+      @keyframes telemetry-pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.55;
+          transform: scale(0.92);
+        }
+      }
+
+      .telemetry-rail__metric {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.15rem;
+        padding: 0.35rem 0.75rem;
+        min-width: 4.5rem;
+      }
+
+      .telemetry-rail__label {
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 0.52rem;
+        letter-spacing: 0.16em;
+      }
+
+      .telemetry-rail__value {
+        font-weight: 800;
+        font-size: 1.35rem;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        color: var(--amber);
+        font-family: "SF Mono", "Menlo", "Consolas", monospace;
+      }
+
+      .telemetry-rail__window {
+        display: flex;
+        align-items: center;
+        padding: 0 0.65rem;
+        color: var(--muted);
+        border-left: 1px solid var(--line);
+        font-size: 0.52rem;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .telemetry-rail__dot {
+          animation: none;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .telemetry-rail {
+          margin-left: 0;
+          align-self: stretch;
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <p class="preview-banner">Preview v2 — telemetry rail (typographic count, live pulse)</p>
+    <header class="utility-bar">
+      <div class="site-brand">
+        <a class="eyebrow" href="#">CARVER FIELD STATION</a>
+        <p class="nav-signed-in">signed in: ccarver</p>
+      </div>
+      <div class="telemetry-rail" role="status" aria-live="polite">
+        <div class="telemetry-rail__live">
+          <span class="telemetry-rail__dot" aria-hidden="true"></span>
+          <span>Auto</span>
+        </div>
+        <div class="telemetry-rail__metric">
+          <span class="telemetry-rail__label">Nest saves</span>
+          <span class="telemetry-rail__value" id="demo-count">7</span>
+        </div>
+        <span class="telemetry-rail__window">24h</span>
+      </div>
+      <nav class="site-nav" aria-label="Site">
+        <a href="#">Upload &amp; Identify</a>
+        <a href="#">Moments</a>
+        <a href="#">About</a>
+        <button type="button" class="admin-open" aria-label="Open admin">?</button>
+      </nav>
+    </header>
+    <main class="preview-hero">
+      <div class="live-label"><span aria-hidden="true">●</span> LIVE HABITAT CAMERA</div>
+      <h1>Quiet hours. <span class="accent">Wild lives.</span></h1>
+      <p class="lede">
+        Typography-first counter with a soft live indicator — no blue assets, strong
+        tabular numerals, reads like instrumentation.
+      </p>
+      <p class="lede">
+        <button type="button" id="cycle-count" style="margin-top: 1rem">
+          Cycle demo count (0 → 12)
+        </button>
+      </p>
+    </main>
+    <script>
+      (() => {
+        const el = document.querySelector("#demo-count");
+        const btn = document.querySelector("#cycle-count");
+        let n = 7;
+        btn?.addEventListener("click", () => {
+          n = n >= 12 ? 0 : n + 1;
+          el.textContent = String(n);
+        });
+      })();
+    </script>
+  </body>
+</html>

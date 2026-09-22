@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Full preview A — Whisper rail</title>
+    <link rel="stylesheet" href="../static/styles.css" />
+    <link rel="stylesheet" href="full-home-base.css" />
+    <style>
+      .variant-a .nest-telemetry {
+        padding: 0.25rem 0.55rem;
+        border: 1px solid rgba(242, 234, 216, 0.08);
+        border-radius: 2px;
+        background: rgba(11, 16, 13, 0.35);
+      }
+    </style>
+  </head>
+  <body class="variant-a">
+    <p class="preview-ribbon">Full home · A — whisper rail (production direction)</p>
+    <header class="utility-bar">
+      <div class="site-brand">
+        <a class="eyebrow" href="#">CARVER FIELD STATION</a>
+        <p class="nav-signed-in">signed in: ccarver</p>
+      </div>
+      <div class="nest-telemetry" role="status" aria-live="polite" aria-atomic="true">
+        <span class="nest-telemetry__dot" aria-hidden="true"></span>
+        <span class="nest-telemetry__label"><strong>7</strong> nest saves · 24h</span>
+      </div>
+      <nav class="site-nav" aria-label="Site">
+        <a href="#">Upload &amp; Identify</a>
+        <a href="#">Moments</a>
+        <a href="#">About</a>
+        <button type="button" class="admin-open" aria-label="Admin">?</button>
+      </nav>
+    </header>
+    <main>
+      <section class="preview-hero hero">
+        <div class="intro">
+          <div class="live-label"><span aria-hidden="true">●</span> LIVE HABITAT CAMERA</div>
+          <h1>Quiet hours. <span class="accent">Wild lives.</span></h1>
+          <p class="lede">
+            Subtle telemetry in the header: low-contrast copy, small live dot, tabular count.
+          </p>
+        </div>
+        <div class="player-shell">
+          <div class="mock-player">Live stream placeholder</div>
+        </div>
+      </section>
+      <section class="preview-diagnostics" aria-label="Nest box vitals">
+        <h2>Nest box vitals</h2>
+        <div class="preview-metrics">
+          <div class="preview-metric"><span>Temperature</span><strong>72.4 °F</strong></div>
+          <div class="preview-metric"><span>Humidity</span><strong>48%</strong></div>
+          <div class="preview-metric"><span>Pressure</span><strong>30.01 in</strong></div>
+        </div>
+      </section>
+      <section class="preview-facts" aria-label="About OwlCam">
+        <div class="fact">
+          <span class="fact-number">01</span>
+          <h2>Edge powered</h2>
+          <p>The Pi handles capture and encoding locally.</p>
+        </div>
+        <div class="fact">
+          <span class="fact-number">02</span>
+          <h2>One door in</h2>
+          <p>Tailscale publishes a single HTTPS address.</p>
+        </div>
+        <div class="fact">
+          <span class="fact-number">03</span>
+          <h2>Night watch</h2>
+          <p>Built for quiet observation, not noise.</p>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <p>CARVER OWLCAM · Observe quietly.</p>
+    </footer>
+  </body>
+</html>
