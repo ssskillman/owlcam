@@ -85,27 +85,30 @@ a {
   pointer-events: none;
 }
 
+.capture-toast-count-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 1.35rem;
+}
+
+.capture-toast-number {
+  display: block;
+  height: 1.35rem;
+  width: auto;
+  object-fit: contain;
+}
+
+.capture-toast-count-text {
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--accent);
+}
+
 .capture-toast-copy {
   margin: 0;
   color: var(--muted);
-}
-
-.capture-toast-copy strong {
-  color: var(--accent);
-  font-size: 1.05rem;
-  margin-right: 0.15rem;
-}
-
-.capture-toast-icon {
-  width: 1.35rem;
-  height: 1.35rem;
-  flex-shrink: 0;
-  background: currentColor;
-  color: var(--accent);
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9 3h6l1 2h5v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5h4l1-2zm0 4v9h6V7H9zm2 2h2v5h-2V9z'/%3E%3C/svg%3E");
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
 }
 
 .eyebrow {

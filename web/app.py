@@ -439,12 +439,26 @@ def render_page(
         Body(
             _nav(active="live"),
             Div(
-                Span("", cls="capture-toast-icon", aria_hidden="true"),
-                P(
-                    Strong("0", id="capture-toast-count"),
-                    " nest captures · last 24h",
-                    cls="capture-toast-copy",
+                Div(
+                    Img(
+                        src="/assets/icons/numbers/1.png",
+                        alt="",
+                        id="capture-toast-icon",
+                        cls="capture-toast-number",
+                        width="24",
+                        height="24",
+                        decoding="async",
+                        hidden=True,
+                    ),
+                    Span(
+                        "0",
+                        id="capture-toast-count",
+                        cls="capture-toast-count-text",
+                        hidden=True,
+                    ),
+                    cls="capture-toast-count-wrap",
                 ),
+                P("nest captures · last 24h", cls="capture-toast-copy"),
                 id="capture-toast",
                 cls="capture-toast",
                 role="status",
