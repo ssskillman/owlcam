@@ -211,22 +211,24 @@ def _nav(*, active: str, include_capture_status: bool = False) -> Div:
     identify = {"aria_current": "page"} if active == "identify" else {}
     moments = {"aria_current": "page"} if active == "moments" else {}
     about = {"aria_current": "page"} if active == "about" else {}
-    nav_items: list = [
-        A("Upload & Identify", href="/identify", **identify),
-        A("Moments", href="/moments", **moments),
-        A("About", href="/about", **about),
+    aside: list = [
+        Nav(
+            A("Upload & Identify", href="/identify", **identify),
+            A("Moments", href="/moments", **moments),
+            A("About", href="/about", **about),
+            Button(
+                "?",
+                type="button",
+                id="admin-open",
+                cls="admin-open",
+                aria_label="Open admin login",
+            ),
+            cls="site-nav",
+            aria_label="Site",
+        ),
     ]
     if include_capture_status:
-        nav_items.append(_capture_status())
-    nav_items.append(
-        Button(
-            "?",
-            type="button",
-            id="admin-open",
-            cls="admin-open",
-            aria_label="Open admin login",
-        ),
-    )
+        aside.append(Div(_capture_status(), cls="utility-bar__ledger"))
     return Div(
         Div(
             A("CARVER FIELD STATION", href="/", cls="eyebrow", **home),
@@ -238,11 +240,7 @@ def _nav(*, active: str, include_capture_status: bool = False) -> Div:
             ),
             cls="site-brand",
         ),
-        Nav(
-            *nav_items,
-            cls="site-nav",
-            aria_label="Site",
-        ),
+        Div(*aside, cls="utility-bar__aside"),
         cls="utility-bar",
     )
 

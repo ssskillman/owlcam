@@ -98,15 +98,15 @@
 
     for (let day = 1; day <= daysInMonth; day += 1) {
       const key = dateKey(viewYear, viewMonth, day);
-      const stats = dayMap.get(key) || {
-        visits: 0,
-        entrances: 0,
-        exits: 0,
-        pics: 0,
-      };
+      const stats = dayMap.get(key);
+      const hasActivity =
+        stats &&
+        (stats.visits > 0 || stats.exits > 0 || stats.pics > 0);
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "moments-calendar__day";
+      button.className = hasActivity
+        ? "moments-calendar__day"
+        : "moments-calendar__day moments-calendar__day--idle";
       if (key === selectedDate) {
         button.classList.add("moments-calendar__day--selected");
       }
@@ -117,16 +117,22 @@
         button.classList.add("moments-calendar__day--today");
       }
       button.dataset.date = key;
-      button.innerHTML = `
+      if (hasActivity) {
+        const lines = [
+          stats.visits > 0 ? `<span title="Visits">V ${stats.visits}</span>` : "",
+          stats.exits > 0 ? `<span title="Exits">E ${stats.exits}</span>` : "",
+          stats.pics > 0 ? `<span title="Photos">P ${stats.pics}</span>` : "",
+        ].filter(Boolean);
+        button.innerHTML = `
         <span class="moments-calendar__daynum">${day}</span>
-        <span class="moments-calendar__stats" aria-hidden="true">
-          <span title="Visits">V ${stats.visits}</span>
-          <span title="Exits">E ${stats.exits}</span>
-          <span title="Photos">P ${stats.pics}</span>
-        </span>
+        <span class="moments-calendar__stats" aria-hidden="true">${lines.join("")}</span>
       `;
-      const summary = `${stats.visits} visits, ${stats.exits} exits, ${stats.pics} photos`;
-      button.setAttribute("aria-label", `${key}: ${summary}`);
+        const summary = `${stats.visits} visits, ${stats.exits} exits, ${stats.pics} photos`;
+        button.setAttribute("aria-label", `${key}: ${summary}`);
+      } else {
+        button.innerHTML = `<span class="moments-calendar__daynum">${day}</span>`;
+        button.setAttribute("aria-label", `${key}: no nest activity logged`);
+      }
       grid.append(button);
     }
   };
