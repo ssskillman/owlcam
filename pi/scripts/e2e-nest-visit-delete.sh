@@ -45,14 +45,17 @@ printf '=== OwlCam nest visit delete E2E ===\n'
 printf 'Site: %s\n' "${SITE_URL}"
 
 login_body="$(mktemp)"
+login_json="$(
+  python3 -c 'import json, sys; print(json.dumps({"username": sys.argv[1], "password": sys.argv[2]}))' \
+    "${ADMIN_USER}" "${ADMIN_PASSWORD}"
+)"
 login_status="$(
   curl -sS -m 30 -o "${login_body}" -w '%{http_code}' \
     -c "${COOKIE_JAR}" \
     -H 'Content-Type: application/json' \
     -H "Origin: ${SITE_URL}" \
     -X POST "${SITE_URL}/admin/api/session" \
-    -d "$(python3 -c 'import json,os; print(json.dumps({"username":os.environ["U"],"password":os.environ["P"]}))' \
-      U="${ADMIN_USER}" P="${ADMIN_PASSWORD}")"
+    -d "${login_json}"
 )"
 if [[ "${login_status}" != "200" ]]; then
   cat "${login_body}" >&2 || true
