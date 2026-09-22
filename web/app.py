@@ -352,6 +352,24 @@ def _admin_panel() -> Dialog:
                     ),
                     cls="admin-toolbar",
                 ),
+                Div(
+                    Strong("Moments visit log offline"),
+                    P(
+                        "If Moments shows “Visit log offline” or the activity "
+                        "calendar has no day counts, the visit log API on the "
+                        "gaming PC is unreachable. The site is fine—the "
+                        "inference host is not answering.",
+                    ),
+                    P(
+                        "On the gaming PC: pull the latest owlcam repo and "
+                        "restart the animal identifier service (scheduled task "
+                        "or uvicorn). Confirm the PC is on Tailscale and that "
+                        "deploy.env ANIMAL_ID_API_ORIGIN matches that host. "
+                        "Run make pi-deploy after changing the origin.",
+                    ),
+                    cls="admin-alert",
+                    role="note",
+                ),
                 Section(
                     H2("Live feeds"),
                     Div(

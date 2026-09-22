@@ -439,6 +439,38 @@ html[data-theme="light"] .admin-dialog {
   padding-bottom: 1.25rem;
 }
 
+.admin-alert {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--amber) 55%, var(--line));
+  background: color-mix(in srgb, var(--amber) 12%, var(--night));
+  line-height: 1.55;
+}
+
+.admin-alert strong {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--amber);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.admin-alert p {
+  margin: 0 0 0.65rem;
+  color: var(--ink);
+  font-size: 0.84rem;
+}
+
+.admin-alert p:last-child {
+  margin-bottom: 0;
+}
+
+html[data-theme="dark"] .admin-alert {
+  background: color-mix(in srgb, var(--amber) 14%, var(--forest));
+}
+
 .admin-toolbar strong {
   display: block;
   margin-top: 0.25rem;

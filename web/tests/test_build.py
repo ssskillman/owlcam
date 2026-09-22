@@ -536,6 +536,8 @@ def test_every_page_has_an_accessible_admin_login_and_panel():
         assert 'id="admin-dashboard"' in markup
         assert 'id="admin-stream-toggle"' in markup
         assert 'class="admin-feed-grid"' in markup
+        assert 'class="admin-alert"' in markup
+        assert "Moments visit log offline" in markup
         assert 'aria-describedby="admin-panel-desc"' in markup
         assert 'id="admin-log-output"' in markup
         assert 'id="admin-firebase-status"' in markup
