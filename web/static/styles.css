@@ -1,17 +1,4 @@
 :root,
-html[data-theme="dark"] {
-  color-scheme: dark;
-  --ink: #f2ead8;
-  --muted: #a8ad9d;
-  --night: #0b100d;
-  --forest: #142019;
-  --moss: #263d2d;
-  --amber: #e8a43a;
-  --line: rgba(242, 234, 216, 0.18);
-  --danger: #cf6b4f;
-  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
-}
-
 html[data-theme="light"] {
   color-scheme: light;
   --ink: #152018;
@@ -22,9 +9,24 @@ html[data-theme="light"] {
   --amber: #8a5208;
   --line: rgba(21, 32, 24, 0.22);
   --danger: #9b3822;
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
   font-size: 106.25%;
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f2ead8;
+  --muted: #a8ad9d;
+  --night: #0b100d;
+  --forest: #142019;
+  --moss: #263d2d;
+  --amber: #e8a43a;
+  --line: rgba(242, 234, 216, 0.18);
+  --danger: #cf6b4f;
+  font-size: 100%;
+}
+
+:root .ledger-chip,
 html[data-theme="light"] .ledger-chip {
   font-size: 0.64rem;
 }
@@ -51,15 +53,15 @@ body {
   color: var(--ink);
   background-color: var(--night);
   background-image:
-    linear-gradient(rgba(242, 234, 216, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(242, 234, 216, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(21, 32, 24, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 32, 24, 0.06) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
-html[data-theme="light"] body {
+html[data-theme="dark"] body {
   background-image:
-    linear-gradient(rgba(21, 32, 24, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(21, 32, 24, 0.06) 1px, transparent 1px);
+    linear-gradient(rgba(242, 234, 216, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(242, 234, 216, 0.035) 1px, transparent 1px);
 }
 
 .skip-link {

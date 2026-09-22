@@ -237,12 +237,12 @@ def _nav(*, active: str, include_capture_status: bool = False) -> Div:
             A("Moments", href="/moments", **moments),
             A("About", href="/about", **about),
             Button(
-                "Light",
+                "Dark",
                 type="button",
                 id="theme-toggle",
                 cls="theme-toggle",
-                aria_label="Switch to light theme for easier reading",
-                aria_pressed="false",
+                aria_label="Switch to dark theme",
+                aria_pressed="true",
             ),
             Button(
                 "Admin",
@@ -1129,19 +1129,6 @@ def render_moments_page() -> str:
                                 P(
                                     "Tap a day to see nest camera activity for that date.",
                                     cls="lede moments-calendar-lede",
-                                ),
-                                Details(
-                                    Summary(
-                                        "What do V, E, and P mean?",
-                                        cls="moments-calendar-legend__summary",
-                                    ),
-                                    P(
-                                        "V = visits logged. E = exits (at least ten "
-                                        "minutes between identified animals). P = photos "
-                                        "saved.",
-                                        cls="moments-calendar-legend__body",
-                                    ),
-                                    cls="moments-calendar-legend",
                                 ),
                                 Div(
                                     id="moments-calendar-offline",

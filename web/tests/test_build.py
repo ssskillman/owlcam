@@ -110,7 +110,7 @@ def test_moments_page_has_placeholder_media_stories_and_sorting():
     assert 'href="#moments-calendar"' in html
     assert html.index("Small moments.") < html.index("moments-calendar-drawer")
     assert "Open the calendar above to load nest activity." in html
-    assert "What do V, E, and P mean?" in html
+    assert "moments-calendar-legend" not in html
     assert 'src="/assets/theme.js"' in html
     assert 'id="nest-moments-grid"' in html
     assert 'id="nest-moments-status"' in html

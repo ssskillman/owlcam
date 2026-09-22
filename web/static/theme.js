@@ -11,7 +11,7 @@
     }
     const attr = root.getAttribute("data-theme");
     if (attr === "light" || attr === "dark") return attr;
-    return "dark";
+    return "light";
   };
 
   const currentTheme = () =>

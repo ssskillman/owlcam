@@ -41,6 +41,9 @@
 
   const apiUrl = (path) => `${origin}${path}`;
 
+  const VEP_LEGEND =
+    "V = visits logged. E = exits (at least ten minutes between identified animals). P = photos saved.";
+
   const setCalendarOffline = (offline) => {
     calendarOffline = offline;
     root.classList.toggle("moments-calendar--offline", offline);
@@ -50,9 +53,6 @@
         "Visit log offline — counts are unavailable until the inference host is running again.";
     }
     if (offline) {
-      dayTitle.textContent = "Calendar paused";
-      dayStatus.textContent =
-        "Pick a day again once the visit log is back online.";
       dayTable.hidden = true;
     }
   };
@@ -140,16 +140,17 @@
       button.dataset.date = key;
       if (hasActivity) {
         const lines = [
-          stats.visits > 0 ? `<span title="Visits">V ${stats.visits}</span>` : "",
-          stats.exits > 0 ? `<span title="Exits">E ${stats.exits}</span>` : "",
-          stats.pics > 0 ? `<span title="Photos">P ${stats.pics}</span>` : "",
+          stats.visits > 0 ? `<span>V ${stats.visits}</span>` : "",
+          stats.exits > 0 ? `<span>E ${stats.exits}</span>` : "",
+          stats.pics > 0 ? `<span>P ${stats.pics}</span>` : "",
         ].filter(Boolean);
         button.innerHTML = `
         <span class="moments-calendar__daynum">${day}</span>
         <span class="moments-calendar__stats" aria-hidden="true">${lines.join("")}</span>
       `;
         const summary = `${stats.visits} visits, ${stats.exits} exits, ${stats.pics} photos`;
-        button.setAttribute("aria-label", `${key}: ${summary}`);
+        button.title = `${summary}. ${VEP_LEGEND}`;
+        button.setAttribute("aria-label", `${key}: ${summary}. ${VEP_LEGEND}`);
       } else {
         button.innerHTML = `<span class="moments-calendar__daynum">${day}</span>`;
         button.setAttribute("aria-label", `${key}: no nest activity logged`);
