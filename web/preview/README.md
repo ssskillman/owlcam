@@ -8,7 +8,7 @@ badges, `prefers-reduced-motion` for the live dot.
 ## Full home (3 versions)
 
 ```bash
-./preview/serve-previews.sh
+cd web && ./preview/serve-previews.sh
 ```
 
 | Port | URL | Idea |
