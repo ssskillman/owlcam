@@ -208,6 +208,12 @@ class VisitList(BaseModel):
     visits: list[VisitItem]
 
 
+class VisitStats(BaseModel):
+    count: int
+    hours: int
+    source: str | None = None
+
+
 def _request_source(request: Request) -> str:
     header = (request.headers.get("x-owlcam-source") or "").strip()
     return header or "browser"
@@ -292,6 +298,30 @@ def species_list() -> dict[str, list[str]]:
 )
 def identification_summary() -> dict:
     return identifications.summary()
+
+
+@app.get(
+    "/api/animal-identification/visits/stats",
+    response_model=VisitStats,
+)
+def visit_stats(
+    hours: int = 24,
+    source: str | None = "feed_watcher",
+) -> dict:
+    capped_hours = max(1, min(hours, 168))
+    normalized_source = source.strip() if source else None
+    if normalized_source == "":
+        normalized_source = None
+    count = visits.count_since_hours(
+        capped_hours,
+        source=normalized_source,
+        require_thumbnail=True,
+    )
+    return {
+        "count": count,
+        "hours": capped_hours,
+        "source": normalized_source,
+    }
 
 
 @app.get(

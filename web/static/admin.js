@@ -21,10 +21,12 @@
   const loadLogsButton = document.querySelector("#admin-load-logs")
   const logOutput = document.querySelector("#admin-log-output")
   const actionStatus = document.querySelector("#admin-action-status")
+  const navSignedIn = document.querySelector("#nav-signed-in")
 
   if (!dialog || !openButton) return
 
   let csrfToken = null
+  let signedInUsername = null
   let streamEnabled = null
   let streamUsbEnabled = null
   let refreshTimer = null
@@ -52,8 +54,21 @@
     return payload
   }
 
+  const renderNavSignedIn = (username) => {
+    if (!navSignedIn) return
+    if (username) {
+      navSignedIn.textContent = `signed in: ${username}`
+      navSignedIn.hidden = false
+    } else {
+      navSignedIn.textContent = ""
+      navSignedIn.hidden = true
+    }
+  }
+
   const showLogin = (message = "") => {
     csrfToken = null
+    signedInUsername = null
+    renderNavSignedIn(null)
     login.hidden = false
     dashboard.hidden = true
     loginStatus.textContent = message
@@ -183,10 +198,21 @@
     }
   }
 
-  const notifyAdminSession = (authenticated) => {
+  const notifyAdminSession = (authenticated, username = signedInUsername) => {
+    if (authenticated && username) {
+      signedInUsername = username
+      renderNavSignedIn(username)
+    } else if (!authenticated) {
+      signedInUsername = null
+      renderNavSignedIn(null)
+    }
     window.dispatchEvent(
       new CustomEvent("owlcam-admin-session", {
-        detail: { authenticated, csrfToken: authenticated ? csrfToken : null },
+        detail: {
+          authenticated,
+          csrfToken: authenticated ? csrfToken : null,
+          username: authenticated ? signedInUsername : null,
+        },
       }),
     )
   }
@@ -197,10 +223,10 @@
       const session = await api("/session")
       if (session.authenticated) {
         csrfToken = session.csrfToken
-        notifyAdminSession(true)
+        notifyAdminSession(true, session.username)
         await refresh()
       } else {
-        notifyAdminSession(false)
+        notifyAdminSession(false, null)
         showLogin()
         document.querySelector("#admin-username")?.focus()
       }
@@ -236,7 +262,7 @@
         }),
       })
       csrfToken = payload.csrfToken
-      notifyAdminSession(true)
+      notifyAdminSession(true, payload.username)
       loginForm.reset()
       document.querySelector("#admin-username").value = "ccarver"
       await refresh()
@@ -298,6 +324,14 @@
       document.querySelector("#admin-username")?.focus()
     }
   })
+
+  api("/session")
+    .then((session) => {
+      if (!session.authenticated) return
+      csrfToken = session.csrfToken
+      notifyAdminSession(true, session.username)
+    })
+    .catch(() => {})
 
   loadLogsButton.addEventListener("click", async () => {
     loadLogsButton.disabled = true

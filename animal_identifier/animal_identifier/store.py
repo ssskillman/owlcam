@@ -290,6 +290,27 @@ class VisitStore:
             thumbnail_name=row[8],
         )
 
+    def count_since_hours(
+        self,
+        hours: int,
+        *,
+        source: str | None = None,
+        require_thumbnail: bool = True,
+    ) -> int:
+        query = """
+            SELECT COUNT(*) FROM visits
+            WHERE datetime(created_at) > datetime('now', ?)
+        """
+        params: list[object] = [f"-{hours} hours"]
+        if source:
+            query += " AND source = ?"
+            params.append(source)
+        if require_thumbnail:
+            query += " AND thumbnail_name IS NOT NULL"
+        with sqlite3.connect(self.db_path) as connection:
+            row = connection.execute(query, params).fetchone()
+        return int(row[0]) if row else 0
+
     def list_visits(
         self,
         *,

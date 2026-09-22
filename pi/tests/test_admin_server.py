@@ -68,7 +68,7 @@ class SessionStoreTests(unittest.TestCase):
     def test_sessions_expire_and_csrf_is_bound_to_the_session(self):
         now = [100.0]
         store = admin.SessionStore(ttl_seconds=60, clock=lambda: now[0])
-        token, csrf = store.create()
+        token, csrf = store.create("admin")
 
         self.assertEqual(store.authenticate(token), csrf)
         now[0] = 161.0
@@ -148,6 +148,7 @@ class AdminHTTPTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(payload["authenticated"])
         self.assertTrue(payload["csrfToken"])
+        self.assertEqual(payload["username"], "admin")
         cookie = headers["Set-Cookie"]
         self.assertIn("HttpOnly", cookie)
         self.assertIn("Secure", cookie)

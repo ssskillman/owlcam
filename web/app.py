@@ -173,6 +173,7 @@ def _head(*, title: str, description: str, include_player: bool, include_identif
             ),
             Script(src="/assets/player.js", defer=True),
             Script(src="/assets/diagnostics.js", defer=True),
+            Script(src="/assets/home-status.js", defer=True),
             *scripts,
         ]
     return Head(
@@ -193,7 +194,16 @@ def _nav(*, active: str) -> Div:
     moments = {"aria_current": "page"} if active == "moments" else {}
     about = {"aria_current": "page"} if active == "about" else {}
     return Div(
-        A("CARVER FIELD STATION", href="/", cls="eyebrow", **home),
+        Div(
+            A("CARVER FIELD STATION", href="/", cls="eyebrow", **home),
+            P(
+                "",
+                id="nav-signed-in",
+                cls="nav-signed-in",
+                hidden=True,
+            ),
+            cls="site-brand",
+        ),
         Nav(
             A("Upload & Identify", href="/identify", **identify),
             A("Moments", href="/moments", **moments),
@@ -428,6 +438,19 @@ def render_page(
         ),
         Body(
             _nav(active="live"),
+            Div(
+                Span("", cls="capture-toast-icon", aria_hidden="true"),
+                P(
+                    Strong("0", id="capture-toast-count"),
+                    " nest captures · last 24h",
+                    cls="capture-toast-copy",
+                ),
+                id="capture-toast",
+                cls="capture-toast",
+                role="status",
+                aria_live="polite",
+                hidden=True,
+            ),
             _admin_panel(),
             Main(
                 Section(
@@ -665,6 +688,7 @@ def render_page(
                 ),
             ),
             _footer(),
+            data_api_origin=ANIMAL_ID_API_ORIGIN,
         ),
         lang="en",
     )

@@ -55,6 +55,30 @@ def test_visit_store_lists_and_thumbnails(tmp_path):
     assert store.thumbnail_path(rows[0].thumbnail_name).read_bytes() == b"jpeg"
 
 
+def test_visit_store_counts_recent_captures(tmp_path):
+    store = VisitStore(tmp_path / "visits.sqlite", tmp_path / "thumbs")
+    store.add(
+        species="barred owl",
+        category="bird",
+        confidence=0.9,
+        is_unknown=False,
+        model_version="test",
+        source="feed_watcher",
+        thumbnail=b"jpeg",
+    )
+    store.add(
+        species="cow",
+        category="mammal",
+        confidence=0.62,
+        is_unknown=False,
+        model_version="test",
+        source="browser",
+        thumbnail=b"jpeg",
+    )
+    assert store.count_since_hours(24, source="feed_watcher") == 1
+    assert store.count_since_hours(24, source=None) == 2
+
+
 def test_visit_store_delete_removes_row_and_thumbnail(tmp_path):
     store = VisitStore(tmp_path / "visits.sqlite", tmp_path / "thumbs")
     visit_id = store.add(

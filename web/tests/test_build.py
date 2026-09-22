@@ -39,6 +39,10 @@ def test_page_uses_a_same_origin_stream_and_accessible_player():
     assert ">Live<" not in html
     assert "Braxton" not in html
     assert "Greg Blum" not in html
+    assert 'id="nav-signed-in"' in html
+    assert 'id="capture-toast"' in html
+    assert 'src="/assets/home-status.js"' in html
+    assert "data-api-origin=" in html
 
 
 def test_about_page_covers_chris_carver_only():
@@ -699,6 +703,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert not (assets / "moments.js").exists()
     assert not (assets / "moments-live.js").exists()
     assert not (assets / "admin.js").exists()
+    assert not (assets / "home-status.js").exists()
     assert not (assets / "identify.js").exists()
     assert not (assets / "analytics.js").exists()
 
@@ -710,6 +715,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert any(n.startswith("diagnostics.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("moments.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("admin.") and n.endswith(".js") for n in hashed)
+    assert any(n.startswith("home-status.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("identify.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("analytics.") and n.endswith(".js") for n in hashed)
 

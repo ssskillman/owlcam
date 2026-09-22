@@ -16,6 +16,7 @@ FINGERPRINTED = (
     "diagnostics.js",
     "moments.js",
     "moments-live.js",
+    "home-status.js",
     "admin.js",
     "identify.js",
     "analytics.js",

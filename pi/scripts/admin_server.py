@@ -150,15 +150,15 @@ class SessionStore:
     ) -> None:
         self.ttl_seconds = ttl_seconds
         self.clock = clock
-        self._sessions: dict[str, tuple[str, float]] = {}
+        self._sessions: dict[str, tuple[str, float, str]] = {}
         self._lock = threading.Lock()
 
-    def create(self) -> tuple[str, str]:
+    def create(self, username: str) -> tuple[str, str]:
         token = secrets.token_urlsafe(32)
         csrf = secrets.token_urlsafe(24)
         with self._lock:
             self._prune()
-            self._sessions[token] = (csrf, self.clock() + self.ttl_seconds)
+            self._sessions[token] = (csrf, self.clock() + self.ttl_seconds, username)
         return token, csrf
 
     def authenticate(self, token: str | None) -> str | None:
@@ -169,6 +169,14 @@ class SessionStore:
             record = self._sessions.get(token)
             return record[0] if record else None
 
+    def username_for(self, token: str | None) -> str | None:
+        if not token:
+            return None
+        with self._lock:
+            self._prune()
+            record = self._sessions.get(token)
+            return record[2] if record else None
+
     def delete(self, token: str | None) -> None:
         if not token:
             return
@@ -178,7 +186,9 @@ class SessionStore:
     def _prune(self) -> None:
         now = self.clock()
         expired = [
-            token for token, (_csrf, expiry) in self._sessions.items() if expiry <= now
+            token
+            for token, (_csrf, expiry, _username) in self._sessions.items()
+            if expiry <= now
         ]
         for token in expired:
             self._sessions.pop(token, None)
@@ -459,9 +469,14 @@ class AdminHandler(BaseHTTPRequestHandler):
         if path == "/api/session":
             token = self._session_token()
             csrf = self.sessions.authenticate(token)
+            username = self.sessions.username_for(token) if csrf else None
             self._send_json(
                 HTTPStatus.OK,
-                {"authenticated": bool(csrf), "csrfToken": csrf},
+                {
+                    "authenticated": bool(csrf),
+                    "csrfToken": csrf,
+                    "username": username,
+                },
             )
             return
         auth = self._require_auth()
@@ -575,14 +590,14 @@ class AdminHandler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid credentials")
             return
         self.server.login_limiter.clear(client)
-        token, csrf = self.sessions.create()
+        token, csrf = self.sessions.create(username)
         cookie = (
             f"{SESSION_COOKIE}={token}; Path=/; Max-Age={SESSION_TTL_SECONDS}; "
             "Secure; HttpOnly; SameSite=Strict"
         )
         self._send_json(
             HTTPStatus.OK,
-            {"authenticated": True, "csrfToken": csrf},
+            {"authenticated": True, "csrfToken": csrf, "username": username},
             cookie=cookie,
         )
 

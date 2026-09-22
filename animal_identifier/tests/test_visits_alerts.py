@@ -57,6 +57,26 @@ def test_feed_watcher_visit_persists_and_lists(monkeypatch, tmp_path):
     assert thumb.headers["content-type"] == "image/jpeg"
 
 
+def test_visit_stats_counts_feed_watcher_captures(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "visits", VisitStore(tmp_path / "v.sqlite", tmp_path / "thumbs"))
+    server.visits.add(
+        species="barred owl",
+        category="bird",
+        confidence=0.9,
+        is_unknown=False,
+        model_version="test",
+        source="feed_watcher",
+        thumbnail=b"jpeg",
+    )
+    client = TestClient(server.app)
+    response = client.get(
+        "/api/animal-identification/visits/stats",
+        params={"hours": 24, "source": "feed_watcher"},
+    )
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+
+
 def test_delete_visit_requires_admin_secret(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "visits", VisitStore(tmp_path / "v.sqlite", tmp_path / "thumbs"))
     monkeypatch.setattr(server, "VISIT_ADMIN_SECRET", "nest-delete-secret")
