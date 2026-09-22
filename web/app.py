@@ -54,12 +54,6 @@ DEFAULT_USB_STREAM_URL = "/owl2/index.m3u8"
 DEFAULT_DIAGNOSTICS_URL = "/diagnostics"
 ANIMAL_ID_API_ORIGIN = os.environ.get("ANIMAL_ID_API_ORIGIN", "").rstrip("/")
 
-_THEME_BOOTSTRAP = (
-    "(function(){try{var k='owlcam-theme',t=localStorage.getItem(k);"
-    "document.documentElement.setAttribute('data-theme',"
-    "t==='light'||t==='dark'?t:'dark');}catch(e){"
-    "document.documentElement.setAttribute('data-theme','dark');}})();"
-)
 OWLCAM_GROUP_URL = "https://www.facebook.com/groups/619431688614242/"
 MOMENTS = (
     {
@@ -170,10 +164,22 @@ def _skip_link() -> A:
     return A("Skip to main content", href="#main-content", cls="skip-link")
 
 
+def _moments_jump_nav() -> Nav:
+    return Nav(
+        A("Calendar", href="#moments-calendar"),
+        Span("·", aria_hidden="true", cls="moments-jump__sep"),
+        A("Live", href="#moments-live"),
+        Span("·", aria_hidden="true", cls="moments-jump__sep"),
+        A("Archive", href="#moments-archive"),
+        cls="moments-jump",
+        aria_label="On this page",
+    )
+
+
 def _head(*, title: str, description: str, include_player: bool, include_identify: bool = False) -> Head:
+    # theme.js runs synchronously (no defer): site CSP blocks inline scripts, so
+    # localStorage must be read from this file before paint on every navigation.
     scripts = [
-        Script(NotStr(_THEME_BOOTSTRAP)),
-        Script(src="/assets/theme.js", defer=True),
         Script(src="/assets/admin.js", defer=True),
         Script(src="/assets/analytics.js", type="module"),
     ]
@@ -198,6 +204,7 @@ def _head(*, title: str, description: str, include_player: bool, include_identif
     return Head(
         Meta(charset="utf-8"),
         Meta(name="viewport", content="width=device-width, initial-scale=1"),
+        Script(src="/assets/theme.js"),
         Meta(name="description", content=description),
         Title(title),
         Link(rel="icon", href="/assets/favicon.svg", type="image/svg+xml"),
@@ -286,6 +293,7 @@ def _admin_panel() -> Dialog:
             P(
                 "Sign in to inspect services, read bounded logs, and control "
                 "the camera feed.",
+                id="admin-panel-desc",
                 cls="admin-intro",
             ),
             Form(
@@ -307,7 +315,7 @@ def _admin_panel() -> Dialog:
                     maxlength="1024",
                     required=True,
                 ),
-                Button("Sign in", type="submit"),
+                Button("Sign in", type="submit", cls="admin-primary"),
                 id="admin-login-form",
                 cls="admin-login-form",
             ),
@@ -323,139 +331,164 @@ def _admin_panel() -> Dialog:
         Div(
             Div(
                 Div(
-                    Span("SYSTEM STATE", cls="admin-kicker"),
-                    Strong("Loading…", id="admin-overall-status"),
-                ),
-                Div(
-                    Button(
-                        "Refresh",
-                        type="button",
-                        id="admin-refresh",
-                        cls="admin-secondary",
-                    ),
-                    Button(
-                        "Sign out",
-                        type="button",
-                        id="admin-logout",
-                        cls="admin-secondary",
-                    ),
-                    cls="admin-actions",
-                ),
-                cls="admin-toolbar",
-            ),
-            Section(
-                Div(
-                    Span("LIVE VIDEO", cls="admin-kicker"),
-                    H2("Nest camera (CSI)"),
-                    P("Checking the stream unit…", id="admin-stream-state"),
-                    cls="admin-control-copy",
-                ),
-                Button(
-                    "Turn feed off",
-                    type="button",
-                    id="admin-stream-toggle",
-                    cls="admin-danger",
-                    disabled=True,
-                ),
-                cls="admin-control",
-                aria_label="Nest camera stream control",
-            ),
-            Section(
-                Div(
-                    Span("LIVE VIDEO", cls="admin-kicker"),
-                    H2("USB camera"),
-                    P("Checking the USB stream unit…", id="admin-stream-usb-state"),
-                    cls="admin-control-copy",
-                ),
-                Button(
-                    "Turn USB feed off",
-                    type="button",
-                    id="admin-stream-usb-toggle",
-                    cls="admin-danger",
-                    disabled=True,
-                ),
-                cls="admin-control",
-                aria_label="USB camera stream control",
-            ),
-            Section(
-                H2("Services"),
-                Div(id="admin-services", cls="admin-service-grid"),
-                cls="admin-section",
-            ),
-            Section(
-                H2("Pi health"),
-                Div(id="admin-host-status", cls="admin-metric-grid"),
-                cls="admin-section",
-            ),
-            Section(
-                H2("Firebase edge"),
-                P(
-                    "Checking redirect health…",
-                    id="admin-firebase-status",
-                    cls="admin-firebase",
-                ),
-                Small(
-                    "Redirect health is shown here. Visitor counts and page "
-                    "activity live in the linked GA4 property."
-                ),
-                P(
-                    A(
-                        "Open visitor analytics",
-                        href=(
-                            "https://console.firebase.google.com/project/"
-                            "carver-owlcam-72343/analytics"
-                        ),
-                        target="_blank",
-                        rel="noopener noreferrer",
-                    ),
-                    cls="admin-analytics-link",
-                ),
-                cls="admin-section",
-            ),
-            Section(
-                Div(
-                    H2("Service logs"),
                     Div(
-                        Label("Unit", fr="admin-log-service"),
-                        Select(
-                            Option("Nest stream", value="stream"),
-                            Option("USB stream", value="streamUsb"),
-                            Option("MediaMTX", value="media"),
-                            Option("Site", value="site"),
-                            Option("Diagnostics", value="diagnostics"),
-                            Option("Admin", value="admin"),
-                            id="admin-log-service",
-                        ),
+                        Span("SYSTEM STATE", cls="admin-kicker"),
+                        Strong("Loading…", id="admin-overall-status"),
+                    ),
+                    Div(
                         Button(
-                            "Load logs",
+                            "Refresh",
                             type="button",
-                            id="admin-load-logs",
+                            id="admin-refresh",
                             cls="admin-secondary",
                         ),
-                        cls="admin-log-controls",
+                        Button(
+                            "Sign out",
+                            type="button",
+                            id="admin-logout",
+                            cls="admin-secondary",
+                        ),
+                        cls="admin-actions",
                     ),
-                    cls="admin-section-heading",
+                    cls="admin-toolbar",
                 ),
-                Pre(
-                    "Choose a service to load its latest 100 journal lines.",
-                    id="admin-log-output",
-                    tabindex="0",
+                Section(
+                    H2("Live feeds"),
+                    Div(
+                        Div(
+                            Div(
+                                Span("Nest camera (CSI)", cls="admin-feed-title"),
+                                P(
+                                    "Checking the stream unit…",
+                                    id="admin-stream-state",
+                                    cls="admin-feed-state",
+                                ),
+                                cls="admin-control-copy",
+                            ),
+                            Button(
+                                "Turn feed on",
+                                type="button",
+                                id="admin-stream-toggle",
+                                cls="admin-primary",
+                                disabled=True,
+                                aria_pressed="false",
+                                aria_label="Turn nest camera feed on",
+                            ),
+                            cls="admin-control",
+                            data_feed="nest",
+                        ),
+                        Div(
+                            Div(
+                                Span("USB camera", cls="admin-feed-title"),
+                                P(
+                                    "Checking the USB stream unit…",
+                                    id="admin-stream-usb-state",
+                                    cls="admin-feed-state",
+                                ),
+                                cls="admin-control-copy",
+                            ),
+                            Button(
+                                "Turn USB feed on",
+                                type="button",
+                                id="admin-stream-usb-toggle",
+                                cls="admin-primary",
+                                disabled=True,
+                                aria_pressed="false",
+                                aria_label="Turn USB camera feed on",
+                            ),
+                            cls="admin-control",
+                            data_feed="usb",
+                        ),
+                        cls="admin-feed-grid",
+                    ),
+                    cls="admin-section admin-section--feeds",
                 ),
-                cls="admin-section admin-logs",
+                Section(
+                    H2("Services"),
+                    Div(id="admin-services", cls="admin-service-grid"),
+                    cls="admin-section",
+                ),
+                Section(
+                    H2("Pi health"),
+                    Div(id="admin-host-status", cls="admin-metric-grid"),
+                    cls="admin-section",
+                ),
+                Section(
+                    H2("Firebase edge"),
+                    P(
+                        "Checking redirect health…",
+                        id="admin-firebase-status",
+                        cls="admin-firebase",
+                    ),
+                    Small(
+                        "Redirect health is shown here. Visitor counts and page "
+                        "activity live in the linked GA4 property."
+                    ),
+                    P(
+                        A(
+                            "Open visitor analytics",
+                            href=(
+                                "https://console.firebase.google.com/project/"
+                                "carver-owlcam-72343/analytics"
+                            ),
+                            target="_blank",
+                            rel="noopener noreferrer",
+                        ),
+                        cls="admin-analytics-link",
+                    ),
+                    cls="admin-section",
+                ),
+                Section(
+                    Div(
+                        H2("Service logs"),
+                        Div(
+                            Label("Unit", fr="admin-log-service"),
+                            Select(
+                                Option("Nest stream", value="stream"),
+                                Option("USB stream", value="streamUsb"),
+                                Option("MediaMTX", value="media"),
+                                Option("Site", value="site"),
+                                Option("Diagnostics", value="diagnostics"),
+                                Option("Admin", value="admin"),
+                                id="admin-log-service",
+                            ),
+                            Button(
+                                "Load logs",
+                                type="button",
+                                id="admin-load-logs",
+                                cls="admin-secondary",
+                            ),
+                            cls="admin-log-controls",
+                        ),
+                        cls="admin-section-heading",
+                    ),
+                    Pre(
+                        "Choose a service to load its latest 100 journal lines.",
+                        id="admin-log-output",
+                        tabindex="0",
+                    ),
+                    cls="admin-section admin-logs",
+                ),
+                cls="admin-dashboard-body",
             ),
-            P(
-                "",
-                id="admin-action-status",
-                cls="admin-message",
-                role="status",
-                aria_live="polite",
+            Div(
+                P(
+                    "",
+                    id="admin-action-status",
+                    cls="admin-message admin-action-status",
+                    role="status",
+                    aria_live="polite",
+                ),
+                cls="admin-dashboard-footer",
             ),
             id="admin-dashboard",
             hidden=True,
+            aria_busy="false",
         ),
         id="admin-dialog",
         cls="admin-dialog",
         aria_labelledby="admin-panel-title",
+        aria_describedby="admin-panel-desc",
     )
 
 
@@ -1065,88 +1098,6 @@ def render_moments_page() -> str:
             _admin_panel(),
             Main(
                 Section(
-                    Span("NEST ACTIVITY", cls="live-label"),
-                    H2("Activity calendar."),
-                    P(
-                        "Tap a day to see nest camera activity for that date.",
-                        cls="lede moments-calendar-lede",
-                    ),
-                    Details(
-                        Summary("What do V, E, and P mean?", cls="moments-calendar-legend__summary"),
-                        P(
-                            "V = visits logged. E = exits (at least ten minutes "
-                            "between identified animals). P = photos saved.",
-                            cls="moments-calendar-legend__body",
-                        ),
-                        cls="moments-calendar-legend",
-                    ),
-                    Div(
-                        id="moments-calendar-offline",
-                        cls="moments-calendar__offline",
-                        role="alert",
-                        hidden=True,
-                    ),
-                    Div(
-                        Div(
-                            Button(
-                                "Previous month",
-                                type="button",
-                                id="moments-calendar-prev",
-                                cls="moments-calendar__nav",
-                                aria_label="Previous month",
-                            ),
-                            H3(
-                                "",
-                                id="moments-calendar-month",
-                                cls="moments-calendar__month",
-                            ),
-                            Button(
-                                "Next month",
-                                type="button",
-                                id="moments-calendar-next",
-                                cls="moments-calendar__nav",
-                                aria_label="Next month",
-                            ),
-                            cls="moments-calendar__toolbar",
-                        ),
-                        Div(
-                            id="moments-calendar-grid",
-                            cls="moments-calendar__grid",
-                            role="grid",
-                            aria_label="Nest activity calendar",
-                        ),
-                        H3(
-                            "Select a day",
-                            id="moments-day-title",
-                            cls="moments-day__title",
-                        ),
-                        P(
-                            "Loading calendar…",
-                            id="moments-day-status",
-                            cls="moments-day__status",
-                            aria_live="polite",
-                        ),
-                        Table(
-                            Thead(
-                                Tr(
-                                    Th("Time"),
-                                    Th("Event"),
-                                    Th("Species"),
-                                    Th("Confidence"),
-                                    Th("Photo"),
-                                ),
-                            ),
-                            Tbody(id="moments-day-body"),
-                            id="moments-day-table",
-                            cls="moments-day__table",
-                            hidden=True,
-                        ),
-                        cls="moments-calendar",
-                        data_api_origin=ANIMAL_ID_API_ORIGIN,
-                    ),
-                    cls="moments-calendar-section",
-                ),
-                Section(
                     Span("FIELD LOG", cls="live-label"),
                     H1("Small moments.", Span("Wild stories.", cls="accent")),
                     P(
@@ -1163,7 +1114,108 @@ def render_moments_page() -> str:
                         "stock standing in until OwlCam records its own video.",
                         cls="moments-notice",
                     ),
+                    _moments_jump_nav(),
                     cls="moments-intro",
+                ),
+                Section(
+                    Span("NEST ACTIVITY", cls="live-label"),
+                    Details(
+                        Summary(
+                            "Activity calendar.",
+                            cls="moments-calendar-drawer__summary",
+                        ),
+                        Div(
+                            Div(
+                                P(
+                                    "Tap a day to see nest camera activity for that date.",
+                                    cls="lede moments-calendar-lede",
+                                ),
+                                Details(
+                                    Summary(
+                                        "What do V, E, and P mean?",
+                                        cls="moments-calendar-legend__summary",
+                                    ),
+                                    P(
+                                        "V = visits logged. E = exits (at least ten "
+                                        "minutes between identified animals). P = photos "
+                                        "saved.",
+                                        cls="moments-calendar-legend__body",
+                                    ),
+                                    cls="moments-calendar-legend",
+                                ),
+                                Div(
+                                    id="moments-calendar-offline",
+                                    cls="moments-calendar__offline",
+                                    role="alert",
+                                    hidden=True,
+                                ),
+                                Div(
+                                    Div(
+                                        Button(
+                                            "Previous month",
+                                            type="button",
+                                            id="moments-calendar-prev",
+                                            cls="moments-calendar__nav",
+                                            aria_label="Previous month",
+                                        ),
+                                        H3(
+                                            "",
+                                            id="moments-calendar-month",
+                                            cls="moments-calendar__month",
+                                        ),
+                                        Button(
+                                            "Next month",
+                                            type="button",
+                                            id="moments-calendar-next",
+                                            cls="moments-calendar__nav",
+                                            aria_label="Next month",
+                                        ),
+                                        cls="moments-calendar__toolbar",
+                                    ),
+                                    Div(
+                                        id="moments-calendar-grid",
+                                        cls="moments-calendar__grid",
+                                        role="grid",
+                                        aria_label="Nest activity calendar",
+                                    ),
+                                    H3(
+                                        "Select a day",
+                                        id="moments-day-title",
+                                        cls="moments-day__title",
+                                    ),
+                                    P(
+                                        "Open the calendar above to load nest activity.",
+                                        id="moments-day-status",
+                                        cls="moments-day__status",
+                                        aria_live="polite",
+                                    ),
+                                    Table(
+                                        Thead(
+                                            Tr(
+                                                Th("Time"),
+                                                Th("Event"),
+                                                Th("Species"),
+                                                Th("Confidence"),
+                                                Th("Photo"),
+                                            ),
+                                        ),
+                                        Tbody(id="moments-day-body"),
+                                        id="moments-day-table",
+                                        cls="moments-day__table",
+                                        hidden=True,
+                                    ),
+                                    cls="moments-calendar",
+                                    data_api_origin=ANIMAL_ID_API_ORIGIN,
+                                ),
+                                cls="moments-calendar-drawer__panel-inner",
+                            ),
+                            cls="moments-calendar-drawer__panel",
+                        ),
+                        cls="moments-calendar-drawer",
+                        id="moments-calendar-drawer",
+                    ),
+                    id="moments-calendar",
+                    cls="moments-calendar-section",
                 ),
                 Section(
                     Span("LIVE FROM THE NEST", cls="live-label"),
@@ -1185,6 +1237,7 @@ def render_moments_page() -> str:
                         id="nest-moments-grid",
                         cls="moments-grid nest-moments-grid",
                     ),
+                    id="moments-live",
                     cls="nest-moments",
                     data_api_origin=ANIMAL_ID_API_ORIGIN,
                 ),
@@ -1229,6 +1282,7 @@ def render_moments_page() -> str:
                         id="moments-grid",
                         cls="moments-grid",
                     ),
+                    id="moments-archive",
                     cls="moments-log",
                 ),
                 id="main-content",

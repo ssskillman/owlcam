@@ -104,6 +104,31 @@
     }
   }
 
+  const setFeedControl = (
+    control,
+    stateEl,
+    toggle,
+    enabled,
+    { running, stopped, turnOn, turnOff },
+  ) => {
+    if (control) {
+      control.dataset.state = enabled ? "running" : "stopped"
+    }
+    if (stateEl) {
+      stateEl.textContent = enabled ? running : stopped
+    }
+    if (!toggle) return
+    toggle.textContent = enabled ? turnOff : turnOn
+    toggle.classList.toggle("admin-danger", enabled)
+    toggle.classList.toggle("admin-primary", !enabled)
+    toggle.setAttribute("aria-pressed", String(enabled))
+    toggle.setAttribute(
+      "aria-label",
+      enabled ? turnOff : turnOn,
+    )
+    toggle.disabled = false
+  }
+
   const renderStatus = (payload) => {
     csrfToken = payload.csrfToken
     streamEnabled = Boolean(payload.stream?.isEnabled)
@@ -111,22 +136,30 @@
     const anyFeedOnline = streamEnabled || streamUsbEnabled
     overallStatus.textContent = anyFeedOnline ? "Feed online" : "Feed offline"
     overallStatus.dataset.state = anyFeedOnline ? "active" : "inactive"
-    streamState.textContent = streamEnabled
-      ? "The nest camera capture unit is running."
-      : "The nest camera capture unit is stopped."
-    streamToggle.textContent = streamEnabled ? "Turn feed off" : "Turn feed on"
-    streamToggle.classList.toggle("admin-danger", streamEnabled)
-    streamToggle.disabled = false
-    if (streamUsbState && streamUsbToggle) {
-      streamUsbState.textContent = streamUsbEnabled
-        ? "The USB camera capture unit is running."
-        : "The USB camera capture unit is stopped."
-      streamUsbToggle.textContent = streamUsbEnabled
-        ? "Turn USB feed off"
-        : "Turn USB feed on"
-      streamUsbToggle.classList.toggle("admin-danger", streamUsbEnabled)
-      streamUsbToggle.disabled = false
-    }
+    setFeedControl(
+      streamToggle?.closest(".admin-control"),
+      streamState,
+      streamToggle,
+      streamEnabled,
+      {
+        running: "Capture unit is running.",
+        stopped: "Capture unit is stopped.",
+        turnOn: "Turn feed on",
+        turnOff: "Turn feed off",
+      },
+    )
+    setFeedControl(
+      streamUsbToggle?.closest(".admin-control"),
+      streamUsbState,
+      streamUsbToggle,
+      streamUsbEnabled,
+      {
+        running: "Capture unit is running.",
+        stopped: "Capture unit is stopped.",
+        turnOn: "Turn USB feed on",
+        turnOff: "Turn USB feed off",
+      },
+    )
 
     replaceItems(
       services,
@@ -180,6 +213,7 @@
 
   const refresh = async () => {
     window.clearTimeout(refreshTimer)
+    dashboard?.setAttribute("aria-busy", "true")
     actionStatus.textContent = "Refreshing…"
     try {
       const payload = await api("/status")
@@ -195,6 +229,8 @@
         actionStatus.textContent = error.message
         refreshTimer = window.setTimeout(refresh, 10000)
       }
+    } finally {
+      dashboard?.setAttribute("aria-busy", "false")
     }
   }
 
@@ -228,16 +264,23 @@
       } else {
         notifyAdminSession(false, null)
         showLogin()
-        document.querySelector("#admin-username")?.focus()
       }
     } catch {
       showLogin("The admin service is unavailable.")
     }
   }
 
+  const focusPanel = () => {
+    if (!login.hidden) {
+      document.querySelector("#admin-username")?.focus()
+      return
+    }
+    closeButton?.focus()
+  }
+
   openButton.addEventListener("click", () => {
     dialog.showModal()
-    checkSession()
+    checkSession().finally(focusPanel)
   })
 
   closeButton.addEventListener("click", () => dialog.close())
@@ -278,14 +321,6 @@
     if (!toggle) return
     toggle.addEventListener("click", async () => {
       const nextEnabled = !getEnabled()
-      if (
-        !nextEnabled &&
-        !window.confirm(
-          `Turn off the ${label} feed? The admin panel will stay available.`,
-        )
-      ) {
-        return
-      }
       toggle.disabled = true
       actionStatus.textContent = nextEnabled ? `Starting ${label}…` : `Stopping ${label}…`
       try {

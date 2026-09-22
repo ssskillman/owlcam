@@ -101,6 +101,15 @@ def test_moments_page_has_placeholder_media_stories_and_sorting():
     assert 'id="moments-day-table"' in html
     assert 'id="moments-calendar-offline"' in html
     assert "Activity calendar." in html
+    assert 'id="moments-calendar-drawer"' in html
+    assert "moments-calendar-drawer__summary" in html
+    assert 'id="moments-calendar"' in html
+    assert 'id="moments-live"' in html
+    assert 'id="moments-archive"' in html
+    assert 'class="moments-jump"' in html
+    assert 'href="#moments-calendar"' in html
+    assert html.index("Small moments.") < html.index("moments-calendar-drawer")
+    assert "Open the calendar above to load nest activity." in html
     assert "What do V, E, and P mean?" in html
     assert 'src="/assets/theme.js"' in html
     assert 'id="nest-moments-grid"' in html
@@ -526,6 +535,8 @@ def test_every_page_has_an_accessible_admin_login_and_panel():
         assert 'autocomplete="current-password"' in markup
         assert 'id="admin-dashboard"' in markup
         assert 'id="admin-stream-toggle"' in markup
+        assert 'class="admin-feed-grid"' in markup
+        assert 'aria-describedby="admin-panel-desc"' in markup
         assert 'id="admin-log-output"' in markup
         assert 'id="admin-firebase-status"' in markup
         assert "Analytics is not configured" not in markup
@@ -547,7 +558,9 @@ def test_admin_client_uses_cookie_sessions_csrf_and_safe_text_rendering():
     assert ".innerHTML" not in source
     assert "localStorage" not in source
     assert "sessionStorage" not in source
-    assert "confirm(" in source
+    assert "confirm(" not in source
+    assert 'setAttribute("aria-pressed"' in source
+    assert "setFeedControl" in source
 
 
 def test_favicon_is_fingerprinted():

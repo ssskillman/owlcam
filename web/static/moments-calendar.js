@@ -2,6 +2,7 @@
   const root = document.querySelector(".moments-calendar");
   if (!root) return;
 
+  const drawer = document.querySelector("#moments-calendar-drawer");
   const grid = document.querySelector("#moments-calendar-grid");
   const monthLabel = document.querySelector("#moments-calendar-month");
   const prevButton = document.querySelector("#moments-calendar-prev");
@@ -35,6 +36,8 @@
   let selectedDate = null;
   let dayMap = new Map();
   let calendarOffline = false;
+  let monthLoaded = false;
+  let monthLoading = false;
 
   const apiUrl = (path) => `${origin}${path}`;
 
@@ -226,7 +229,10 @@
   };
 
   const loadMonth = async () => {
+    if (monthLoading) return;
+    monthLoading = true;
     grid.setAttribute("aria-busy", "true");
+    dayStatus.textContent = "Loading calendar…";
     try {
       if (!origin) {
         throw new Error("missing api origin");
@@ -247,6 +253,7 @@
       dayMap = new Map(
         (payload.days || []).map((day) => [day.date, day]),
       );
+      monthLoaded = true;
       renderCalendar();
       if (!selectedDate) {
         const todayKey = dateKey(
@@ -259,18 +266,38 @@
           viewMonth === today.getMonth() + 1
         ) {
           await loadDay(todayKey);
+        } else {
+          dayTitle.textContent = "Select a day";
+          dayStatus.textContent = "Choose a day on the calendar above.";
+          dayTable.hidden = true;
         }
       }
     } catch {
       dayMap = new Map();
+      monthLoaded = true;
       setCalendarOffline(true);
       renderCalendar();
     } finally {
+      monthLoading = false;
       grid.removeAttribute("aria-busy");
     }
   };
 
+  const ensureMonthLoaded = () => {
+    if (!monthLoaded && !monthLoading) {
+      loadMonth();
+    }
+  };
+
+  const openDrawerFromHash = () => {
+    if (!drawer) return;
+    if (window.location.hash !== "#moments-calendar") return;
+    drawer.open = true;
+    ensureMonthLoaded();
+  };
+
   prevButton.addEventListener("click", () => {
+    ensureMonthLoaded();
     viewMonth -= 1;
     if (viewMonth < 1) {
       viewMonth = 12;
@@ -281,6 +308,7 @@
   });
 
   nextButton.addEventListener("click", () => {
+    ensureMonthLoaded();
     viewMonth += 1;
     if (viewMonth > 12) {
       viewMonth = 1;
@@ -297,5 +325,12 @@
     loadDay(button.dataset.date);
   });
 
-  loadMonth();
+  drawer?.addEventListener("toggle", () => {
+    if (drawer.open) {
+      ensureMonthLoaded();
+    }
+  });
+
+  openDrawerFromHash();
+  window.addEventListener("hashchange", openDrawerFromHash);
 })();
