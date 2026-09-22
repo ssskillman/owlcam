@@ -36,6 +36,23 @@ JOB_TTL_SECONDS = 24 * 60 * 60
 RATE_LIMIT_REQUESTS = int(os.environ.get("ANIMAL_ID_RATE_LIMIT", "20"))
 RATE_LIMIT_WINDOW_SECONDS = 15 * 60
 INFERENCE_TIMEOUT_SECONDS = int(os.environ.get("ANIMAL_ID_INFERENCE_TIMEOUT", "120"))
+VISIT_LOG_UNKNOWN = os.environ.get("ANIMAL_ID_VISIT_LOG_UNKNOWN", "0").strip() in {
+    "1",
+    "true",
+    "yes",
+}
+VISIT_DEDUPE_SECONDS = int(os.environ.get("ANIMAL_ID_VISIT_DEDUPE_SECONDS", "300"))
+VISIT_LIST_DEFAULT_LIMIT = int(os.environ.get("ANIMAL_ID_VISIT_LIST_LIMIT", "50"))
+ALERT_SLACK_WEBHOOK = os.environ.get("ANIMAL_ID_ALERT_SLACK_WEBHOOK", "").strip()
+ALERT_SPECIES = frozenset(
+    name.strip().lower()
+    for name in os.environ.get(
+        "ANIMAL_ID_ALERT_SPECIES",
+        "barred owl,raccoon",
+    ).split(",")
+    if name.strip()
+)
+ALERT_COOLDOWN_SECONDS = int(os.environ.get("ANIMAL_ID_ALERT_COOLDOWN_SECONDS", "1800"))
 
 # COCO classes that are animals. Person/vehicle boxes must not steal the crop.
 ANIMAL_LABELS = frozenset(

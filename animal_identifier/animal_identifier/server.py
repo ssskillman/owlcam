@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
+from animal_identifier.alerts import maybe_send_species_alert
 from animal_identifier.config import (
     BIND_HOST,
     BIND_PORT,
@@ -28,10 +29,19 @@ from animal_identifier.config import (
     RATE_LIMIT_REQUESTS,
     RATE_LIMIT_WINDOW_SECONDS,
     UNKNOWN_THRESHOLD,
+    VISIT_DEDUPE_SECONDS,
+    VISIT_LIST_DEFAULT_LIMIT,
+    VISIT_LOG_UNKNOWN,
 )
 from animal_identifier.pipeline import identify_images, load_species, load_taxonomy
 from animal_identifier.schemas import ImageResult
-from animal_identifier.store import FeedbackStore, IdentificationStore, JobStore
+from animal_identifier.store import (
+    AlertCooldownStore,
+    FeedbackStore,
+    IdentificationStore,
+    JobStore,
+    VisitStore,
+)
 
 FAILURE = "We couldn't analyze this photo right now. Please try again in a moment."
 DATA_DIR = Path(
@@ -145,6 +155,8 @@ app.openapi = custom_openapi
 jobs = JobStore()
 feedback = FeedbackStore(DATA_DIR / "feedback.sqlite")
 identifications = IdentificationStore(DATA_DIR / "identifications.sqlite")
+visits = VisitStore(DATA_DIR / "visits.sqlite", DATA_DIR / "visit-thumbnails")
+alert_cooldowns = AlertCooldownStore(DATA_DIR / "alert-cooldowns.sqlite")
 _hits: dict[str, deque[float]] = defaultdict(deque)
 _hits_lock = threading.Lock()
 _pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="animal-id")
@@ -176,6 +188,68 @@ class SummaryCategory(BaseModel):
 class IdentificationSummary(BaseModel):
     total: int
     categories: list[SummaryCategory]
+
+
+class VisitItem(BaseModel):
+    id: int
+    created_at: str
+    species: str
+    category: str
+    confidence: float
+    is_unknown: bool
+    model_version: str
+    source: str
+    thumbnail_url: str | None = None
+
+
+class VisitList(BaseModel):
+    visits: list[VisitItem]
+
+
+def _request_source(request: Request) -> str:
+    header = (request.headers.get("x-owlcam-source") or "").strip()
+    return header or "browser"
+
+
+def _record_visit(
+    *,
+    result: ImageResult,
+    source: str,
+    original_bytes: bytes | None,
+) -> None:
+    if result.error is not None:
+        return
+    if result.is_unknown and not VISIT_LOG_UNKNOWN:
+        return
+    taxonomy = load_taxonomy()
+    category = taxonomy.get(result.classification, "unknown")
+    if (
+        not result.is_unknown
+        and source == "feed_watcher"
+        and visits.recent_same_species(
+            result.classification,
+            source,
+            VISIT_DEDUPE_SECONDS,
+        )
+    ):
+        return
+    thumb = result.annotated_jpeg or original_bytes
+    visit_id = visits.add(
+        species=result.classification,
+        category=category,
+        confidence=result.confidence,
+        is_unknown=result.is_unknown,
+        model_version=result.model_version or MODEL_VERSION,
+        source=source,
+        thumbnail=thumb,
+    )
+    if visit_id and not result.is_unknown:
+        maybe_send_species_alert(
+            species=result.classification,
+            confidence=result.confidence,
+            source=source,
+            cooldowns=alert_cooldowns,
+        )
 
 
 def _client_ip(request: Request) -> str:
@@ -216,6 +290,48 @@ def species_list() -> dict[str, list[str]]:
 )
 def identification_summary() -> dict:
     return identifications.summary()
+
+
+@app.get(
+    "/api/animal-identification/visits",
+    response_model=VisitList,
+)
+def list_visits(
+    limit: int = VISIT_LIST_DEFAULT_LIMIT,
+    species: str | None = None,
+) -> dict:
+    capped = max(1, min(limit, 200))
+    rows = visits.list_visits(limit=capped, species=species)
+    payload = []
+    for row in rows:
+        thumb_url = None
+        if row.thumbnail_name:
+            thumb_url = f"/api/animal-identification/visits/{row.id}/thumbnail"
+        payload.append(
+            VisitItem(
+                id=row.id,
+                created_at=row.created_at,
+                species=row.species,
+                category=row.category,
+                confidence=row.confidence,
+                is_unknown=row.is_unknown,
+                model_version=row.model_version,
+                source=row.source,
+                thumbnail_url=thumb_url,
+            )
+        )
+    return {"visits": payload}
+
+
+@app.get("/api/animal-identification/visits/{visit_id}/thumbnail")
+def visit_thumbnail(visit_id: int) -> Response:
+    row = visits.get_visit(visit_id)
+    if row is None or not row.thumbnail_name:
+        raise HTTPException(status_code=404, detail="That thumbnail is not available.")
+    path = visits.thumbnail_path(row.thumbnail_name)
+    if path is None:
+        raise HTTPException(status_code=404, detail="That thumbnail is not available.")
+    return Response(content=path.read_bytes(), media_type="image/jpeg")
 
 
 def _failure(file_name: str) -> ImageResult:
@@ -272,7 +388,9 @@ async def identify(request: Request, images: list[UploadFile] = File(default=[])
     if len(uploads) > MAX_IMAGES:
         raise HTTPException(status_code=400, detail="You can send up to 5 photos at a time.")
 
+    source = _request_source(request)
     files: list[tuple[str, bytes]] = []
+    payloads_by_position: dict[int, bytes] = {}
     valid_positions: list[int] = []
     results_by_position: dict[int, ImageResult] = {}
     for position, upload in enumerate(uploads):
@@ -288,6 +406,7 @@ async def identify(request: Request, images: list[UploadFile] = File(default=[])
             continue
         valid_positions.append(position)
         files.append((name, payload))
+        payloads_by_position[position] = payload
 
     if files:
         identified = await run_in_threadpool(_identify_with_timeout, files)
@@ -322,6 +441,16 @@ async def identify(request: Request, images: list[UploadFile] = File(default=[])
         # Anonymous history is optional; never discard a completed inference
         # because the aggregate database is briefly locked or unavailable.
         logger.exception("Could not record identification summary")
+
+    for position, result in results_by_position.items():
+        try:
+            _record_visit(
+                result=result,
+                source=source,
+                original_bytes=payloads_by_position.get(position),
+            )
+        except sqlite3.Error:
+            logger.exception("Could not record visit log entry")
 
     payload = []
     for index, result in enumerate(results, start=1):

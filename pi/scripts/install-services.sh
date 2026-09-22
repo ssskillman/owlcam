@@ -69,14 +69,17 @@ if "${uninstall}"; then
   systemctl --user disable --now owlcam-site.service 2>/dev/null || true
   systemctl --user disable --now owlcam-stream.service 2>/dev/null || true
   systemctl --user disable --now owlcam-stream-usb.service 2>/dev/null || true
+  systemctl --user disable --now owlcam-feed-watcher.service 2>/dev/null || true
   systemctl --user disable --now owlcam-mediamtx.service 2>/dev/null || true
   rm -f "${UNIT_DIR}/owlcam-diagnostics.service" \
         "${UNIT_DIR}/owlcam-admin.service" \
         "${UNIT_DIR}/owlcam-site.service" \
         "${UNIT_DIR}/owlcam-stream.service" \
         "${UNIT_DIR}/owlcam-stream-usb.service" \
+        "${UNIT_DIR}/owlcam-feed-watcher.service" \
         "${UNIT_DIR}/owlcam-mediamtx.service" \
         "${BIN_DIR}/owlcam-diagnostics" \
+        "${BIN_DIR}/owlcam-feed-watcher" \
         "${BIN_DIR}/owlcam-admin" \
         "${BIN_DIR}/owlcam-configure-admin" \
         "${BIN_DIR}/owlcam-site" \
@@ -105,12 +108,14 @@ install -m 0755 "${SCRIPT_DIR}/diagnostics_server.py" "${BIN_DIR}/owlcam-diagnos
 install -m 0755 "${SCRIPT_DIR}/admin_server.py" "${BIN_DIR}/owlcam-admin"
 install -m 0755 "${SCRIPT_DIR}/configure-admin.sh" "${BIN_DIR}/owlcam-configure-admin"
 install -m 0755 "${SCRIPT_DIR}/site_server.py" "${BIN_DIR}/owlcam-site"
+install -m 0755 "${SCRIPT_DIR}/feed_watcher.py" "${BIN_DIR}/owlcam-feed-watcher"
 install -m 0644 "${UNIT_SRC}/owlcam-diagnostics.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-admin.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-mediamtx.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-site.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-stream.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-stream-usb.service" "${UNIT_DIR}/"
+install -m 0644 "${UNIT_SRC}/owlcam-feed-watcher.service" "${UNIT_DIR}/"
 
 # A capture started by hand, or by the UDP script, holds the sensor and would
 # make the new unit fail on every restart attempt.
@@ -135,6 +140,11 @@ systemctl --user enable owlcam-stream-usb.service
 systemctl --user enable owlcam-site.service
 systemctl --user enable owlcam-diagnostics.service
 systemctl --user enable owlcam-admin.service
+if [[ -f "${HOME}/.config/owlcam/watcher.env" ]]; then
+  systemctl --user enable owlcam-feed-watcher.service
+else
+  printf 'Note: copy pi/config/watcher.env.example to ~/.config/owlcam/watcher.env to enable the feed watcher.\n'
+fi
 
 # Restart rather than "enable --now": an already-running unit keeps executing the
 # binary it started with, so freshly staged code would not take effect until the
@@ -146,6 +156,9 @@ systemctl --user restart owlcam-stream-usb.service
 systemctl --user restart owlcam-site.service
 systemctl --user restart owlcam-diagnostics.service
 systemctl --user restart owlcam-admin.service
+if systemctl --user is-enabled owlcam-feed-watcher.service >/dev/null 2>&1; then
+  systemctl --user restart owlcam-feed-watcher.service
+fi
 
 printf '\nWaiting for local HLS...\n'
 hls_url="http://127.0.0.1:${OWLCAM_HLS_PORT:-8888}/${OWLCAM_STREAM_PATH:-owl}/index.m3u8"
@@ -249,4 +262,5 @@ systemctl --user is-enabled \
   owlcam-stream-usb.service \
   owlcam-site.service \
   owlcam-diagnostics.service \
-  owlcam-admin.service
+  owlcam-admin.service \
+  owlcam-feed-watcher.service

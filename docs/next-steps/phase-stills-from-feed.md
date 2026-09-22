@@ -105,3 +105,15 @@ If `/Query` says the task does not exist, run
 - The grab+POST can run with nobody at a keyboard, without stopping the live
   page.
 - Tests pin: RTSP URL, POST path, no YOLO on the Pi, cooldown exists.
+
+## Automation in the repo
+
+- Phase 0 (on Pi): [`../../pi/scripts/e2e-phase0-feed.sh`](../../pi/scripts/e2e-phase0-feed.sh)
+- Phase 1 (on Pi): [`../../pi/scripts/e2e-phase1-capture-identify.sh`](../../pi/scripts/e2e-phase1-capture-identify.sh)
+  with `OWLCAM_IDENTIFY_URL` set.
+- Watcher: [`../../pi/scripts/feed_watcher.py`](../../pi/scripts/feed_watcher.py),
+  unit [`../../pi/systemd/owlcam-feed-watcher.service`](../../pi/systemd/owlcam-feed-watcher.service),
+  config [`../../pi/config/watcher.env.example`](../../pi/config/watcher.env.example).
+- Visit log + optional Slack alerts on the inference PC:
+  `GET /api/animal-identification/visits`, env
+  [`../../pi/config/alerts.env.example`](../../pi/config/alerts.env.example).

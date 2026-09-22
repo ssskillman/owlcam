@@ -1,0 +1,17 @@
+[Unit]
+Description=OwlCam RTSP still capture and identify queue
+Documentation=https://github.com/ssskillman/owlcam/blob/main/docs/next-steps/phase-stills-from-feed.md
+After=owlcam-stream.service owlcam-mediamtx.service
+Wants=owlcam-stream.service
+ConditionPathExists=%h/.config/owlcam/watcher.env
+
+[Service]
+Type=simple
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-%h/.config/owlcam/watcher.env
+ExecStart=%h/.local/bin/owlcam-feed-watcher
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=default.target

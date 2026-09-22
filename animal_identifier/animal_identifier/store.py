@@ -161,3 +161,216 @@ class IdentificationStore:
             key=lambda row: (-row["count"], row["category"]),
         )
         return {"total": total, "categories": ordered}
+
+
+@dataclass(frozen=True)
+class VisitRecord:
+    id: int
+    created_at: str
+    species: str
+    category: str
+    confidence: float
+    is_unknown: bool
+    model_version: str
+    source: str
+    thumbnail_name: str | None
+
+
+class VisitStore:
+    """Timestamped visits with on-disk thumbnails for nest feed automation."""
+
+    def __init__(self, db_path: Path, thumbnail_dir: Path) -> None:
+        self.db_path = db_path
+        self.thumbnail_dir = thumbnail_dir
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(self.db_path) as connection:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS visits (
+                    id INTEGER PRIMARY KEY,
+                    created_at TEXT NOT NULL,
+                    species TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    confidence REAL NOT NULL,
+                    is_unknown INTEGER NOT NULL,
+                    model_version TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    thumbnail_name TEXT
+                )
+                """
+            )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS visits_created_at
+                ON visits (created_at DESC)
+                """
+            )
+            connection.execute(
+                """
+                CREATE INDEX IF NOT EXISTS visits_species_created
+                ON visits (species, created_at DESC)
+                """
+            )
+
+    def recent_same_species(
+        self,
+        species: str,
+        source: str,
+        within_seconds: int,
+    ) -> bool:
+        with sqlite3.connect(self.db_path) as connection:
+            row = connection.execute(
+                """
+                SELECT 1 FROM visits
+                WHERE species = ? AND source = ? AND is_unknown = 0
+                  AND datetime(created_at) > datetime('now', ?)
+                LIMIT 1
+                """,
+                (species, source, f"-{within_seconds} seconds"),
+            ).fetchone()
+        return row is not None
+
+    def add(
+        self,
+        *,
+        species: str,
+        category: str,
+        confidence: float,
+        is_unknown: bool,
+        model_version: str,
+        source: str,
+        thumbnail: bytes | None,
+    ) -> int | None:
+        thumb_name = None
+        if thumbnail:
+            thumb_name = f"{uuid.uuid4().hex}.jpg"
+            (self.thumbnail_dir / thumb_name).write_bytes(thumbnail)
+        with sqlite3.connect(self.db_path) as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO visits (
+                    created_at, species, category, confidence, is_unknown,
+                    model_version, source, thumbnail_name
+                ) VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    species,
+                    category,
+                    confidence,
+                    int(is_unknown),
+                    model_version,
+                    source,
+                    thumb_name,
+                ),
+            )
+            return int(cursor.lastrowid)
+
+    def get_visit(self, visit_id: int) -> VisitRecord | None:
+        with sqlite3.connect(self.db_path) as connection:
+            row = connection.execute(
+                """
+                SELECT id, created_at, species, category, confidence, is_unknown,
+                       model_version, source, thumbnail_name
+                FROM visits WHERE id = ?
+                """,
+                (visit_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return VisitRecord(
+            id=row[0],
+            created_at=row[1],
+            species=row[2],
+            category=row[3],
+            confidence=row[4],
+            is_unknown=bool(row[5]),
+            model_version=row[6],
+            source=row[7],
+            thumbnail_name=row[8],
+        )
+
+    def list_visits(
+        self,
+        *,
+        limit: int,
+        species: str | None = None,
+    ) -> list[VisitRecord]:
+        query = """
+            SELECT id, created_at, species, category, confidence, is_unknown,
+                   model_version, source, thumbnail_name
+            FROM visits
+        """
+        params: list[object] = []
+        if species:
+            query += " WHERE species = ?"
+            params.append(species)
+        query += " ORDER BY datetime(created_at) DESC LIMIT ?"
+        params.append(limit)
+        with sqlite3.connect(self.db_path) as connection:
+            rows = connection.execute(query, params).fetchall()
+        return [
+            VisitRecord(
+                id=row[0],
+                created_at=row[1],
+                species=row[2],
+                category=row[3],
+                confidence=row[4],
+                is_unknown=bool(row[5]),
+                model_version=row[6],
+                source=row[7],
+                thumbnail_name=row[8],
+            )
+            for row in rows
+        ]
+
+    def thumbnail_path(self, thumbnail_name: str) -> Path | None:
+        path = self.thumbnail_dir / thumbnail_name
+        return path if path.is_file() else None
+
+
+class AlertCooldownStore:
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(self.path) as connection:
+            connection.execute(
+                """
+                CREATE TABLE IF NOT EXISTS alert_cooldowns (
+                    species TEXT PRIMARY KEY,
+                    last_sent_at TEXT NOT NULL
+                )
+                """
+            )
+
+    def may_send(self, species: str, cooldown_seconds: int) -> bool:
+        with sqlite3.connect(self.path) as connection:
+            row = connection.execute(
+                """
+                SELECT last_sent_at FROM alert_cooldowns WHERE species = ?
+                """,
+                (species,),
+            ).fetchone()
+        if row is None:
+            return True
+        with sqlite3.connect(self.path) as connection:
+            recent = connection.execute(
+                """
+                SELECT 1 FROM alert_cooldowns
+                WHERE species = ?
+                  AND datetime(last_sent_at) > datetime('now', ?)
+                """,
+                (species, f"-{cooldown_seconds} seconds"),
+            ).fetchone()
+        return recent is None
+
+    def mark_sent(self, species: str) -> None:
+        with sqlite3.connect(self.path) as connection:
+            connection.execute(
+                """
+                INSERT INTO alert_cooldowns (species, last_sent_at)
+                VALUES (?, datetime('now'))
+                ON CONFLICT(species) DO UPDATE SET last_sent_at = datetime('now')
+                """,
+                (species,),
+            )

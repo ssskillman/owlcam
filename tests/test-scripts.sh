@@ -410,4 +410,15 @@ grep -F -- '/api/animal-identification' "${STILLS}" >/dev/null \
 grep -F -- 'schtasks' "${STILLS}" >/dev/null \
   || fail "stills phase handoff dropped PC task restart via schtasks"
 
+grep -F -- 'feed_watcher.py' "${REPO_ROOT}/pi/scripts/install-services.sh" >/dev/null \
+  || fail "installer does not install the feed watcher"
+grep -F -- 'rtsp://127.0.0.1:8554/owl' "${REPO_ROOT}/pi/scripts/feed_watcher.py" >/dev/null \
+  || fail "feed watcher dropped loopback RTSP URL"
+grep -F -- 'X-OwlCam-Source' "${REPO_ROOT}/pi/scripts/feed_watcher.py" >/dev/null \
+  || fail "feed watcher dropped source header for visit log"
+grep -F -- 'Phase 0' "${REPO_ROOT}/pi/scripts/e2e-phase0-feed.sh" >/dev/null \
+  || fail "phase 0 e2e script missing"
+grep -F -- '/api/animal-identification/visits' "${REPO_ROOT}/animal_identifier/animal_identifier/server.py" >/dev/null \
+  || fail "identifier server missing visit log API"
+
 printf 'Script checks passed.\n'
