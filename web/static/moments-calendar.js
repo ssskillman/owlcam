@@ -10,6 +10,7 @@
   const dayStatus = document.querySelector("#moments-day-status");
   const dayTable = document.querySelector("#moments-day-table");
   const dayBody = document.querySelector("#moments-day-body");
+  const offlineBanner = document.querySelector("#moments-calendar-offline");
 
   if (
     !grid ||
@@ -33,8 +34,25 @@
   let viewMonth = today.getMonth() + 1;
   let selectedDate = null;
   let dayMap = new Map();
+  let calendarOffline = false;
 
   const apiUrl = (path) => `${origin}${path}`;
+
+  const setCalendarOffline = (offline) => {
+    calendarOffline = offline;
+    root.classList.toggle("moments-calendar--offline", offline);
+    if (offlineBanner) {
+      offlineBanner.hidden = !offline;
+      offlineBanner.textContent =
+        "Visit log offline — counts are unavailable until the inference host is running again.";
+    }
+    if (offline) {
+      dayTitle.textContent = "Calendar paused";
+      dayStatus.textContent =
+        "Pick a day again once the visit log is back online.";
+      dayTable.hidden = true;
+    }
+  };
 
   const pad = (value) => String(value).padStart(2, "0");
 
@@ -177,6 +195,7 @@
   };
 
   const loadDay = async (date) => {
+    if (calendarOffline) return;
     selectedDate = date;
     renderCalendar();
     dayTitle.textContent = new Date(`${date}T12:00:00`).toLocaleDateString(
@@ -224,6 +243,7 @@
         throw new Error(`HTTP ${response.status}`);
       }
       const payload = await response.json();
+      setCalendarOffline(false);
       dayMap = new Map(
         (payload.days || []).map((day) => [day.date, day]),
       );
@@ -243,9 +263,8 @@
       }
     } catch {
       dayMap = new Map();
+      setCalendarOffline(true);
       renderCalendar();
-      dayStatus.textContent =
-        "Nest activity calendar is unavailable while the visit log is offline.";
     } finally {
       grid.removeAttribute("aria-busy");
     }
@@ -272,6 +291,7 @@
   });
 
   grid.addEventListener("click", (event) => {
+    if (calendarOffline) return;
     const button = event.target.closest(".moments-calendar__day");
     if (!button || !button.dataset.date) return;
     loadDay(button.dataset.date);

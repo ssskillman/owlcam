@@ -99,7 +99,10 @@ def test_moments_page_has_placeholder_media_stories_and_sorting():
     assert 'src="/assets/moments-live.js"' in html
     assert 'id="moments-calendar-grid"' in html
     assert 'id="moments-day-table"' in html
+    assert 'id="moments-calendar-offline"' in html
     assert "Activity calendar." in html
+    assert "What do V, E, and P mean?" in html
+    assert 'src="/assets/theme.js"' in html
     assert 'id="nest-moments-grid"' in html
     assert 'id="nest-moments-status"' in html
     assert "From the nest." in html
@@ -513,7 +516,10 @@ def test_every_page_has_an_accessible_admin_login_and_panel():
         render_identify_page(),
     ):
         assert 'id="admin-open"' in markup
-        assert 'aria-label="Open admin login"' in markup
+        assert 'id="theme-toggle"' in markup
+        assert 'href="#main-content"' in markup
+        assert 'id="main-content"' in markup
+        assert 'aria-label="Open admin sign-in for station controls"' in markup
         assert 'id="admin-dialog"' in markup
         assert 'id="admin-login-form"' in markup
         assert 'autocomplete="username"' in markup
@@ -714,6 +720,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert not (assets / "home-status.js").exists()
     assert not (assets / "identify.js").exists()
     assert not (assets / "analytics.js").exists()
+    assert not (assets / "theme.js").exists()
 
     hashed = {p.name for p in assets.glob("*.*.css")} | {
         p.name for p in assets.glob("*.*.js")
@@ -726,6 +733,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert any(n.startswith("home-status.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("identify.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("analytics.") and n.endswith(".js") for n in hashed)
+    assert any(n.startswith("theme.") and n.endswith(".js") for n in hashed)
 
     index = (output / "index.html").read_text()
     assert '"/assets/styles.css"' not in index
@@ -741,6 +749,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
                 "home-status.",
                 "admin.",
                 "analytics.",
+                "theme.",
             )
         )
     )

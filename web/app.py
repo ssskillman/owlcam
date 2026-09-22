@@ -53,6 +53,13 @@ DEFAULT_STREAM_URL = "/owl/index.m3u8"
 DEFAULT_USB_STREAM_URL = "/owl2/index.m3u8"
 DEFAULT_DIAGNOSTICS_URL = "/diagnostics"
 ANIMAL_ID_API_ORIGIN = os.environ.get("ANIMAL_ID_API_ORIGIN", "").rstrip("/")
+
+_THEME_BOOTSTRAP = (
+    "(function(){try{var k='owlcam-theme',t=localStorage.getItem(k);"
+    "document.documentElement.setAttribute('data-theme',"
+    "t==='light'||t==='dark'?t:'dark');}catch(e){"
+    "document.documentElement.setAttribute('data-theme','dark');}})();"
+)
 OWLCAM_GROUP_URL = "https://www.facebook.com/groups/619431688614242/"
 MOMENTS = (
     {
@@ -159,8 +166,14 @@ def _diagnostic_metric(
     )
 
 
+def _skip_link() -> A:
+    return A("Skip to main content", href="#main-content", cls="skip-link")
+
+
 def _head(*, title: str, description: str, include_player: bool, include_identify: bool = False) -> Head:
     scripts = [
+        Script(NotStr(_THEME_BOOTSTRAP)),
+        Script(src="/assets/theme.js", defer=True),
         Script(src="/assets/admin.js", defer=True),
         Script(src="/assets/analytics.js", type="module"),
     ]
@@ -217,11 +230,19 @@ def _nav(*, active: str, include_capture_status: bool = False) -> Div:
             A("Moments", href="/moments", **moments),
             A("About", href="/about", **about),
             Button(
-                "?",
+                "Light",
+                type="button",
+                id="theme-toggle",
+                cls="theme-toggle",
+                aria_label="Switch to light theme for easier reading",
+                aria_pressed="false",
+            ),
+            Button(
+                "Admin",
                 type="button",
                 id="admin-open",
                 cls="admin-open",
-                aria_label="Open admin login",
+                aria_label="Open admin sign-in for station controls",
             ),
             cls="site-nav",
             aria_label="Site",
@@ -460,6 +481,7 @@ def render_page(
             include_player=True,
         ),
         Body(
+            _skip_link(),
             _nav(active="live", include_capture_status=True),
             _admin_panel(),
             Main(
@@ -696,6 +718,7 @@ def render_page(
                     cls="facts",
                     aria_label="About OwlCam",
                 ),
+                id="main-content",
             ),
             _footer(),
             data_api_origin=ANIMAL_ID_API_ORIGIN,
@@ -749,6 +772,7 @@ def render_identify_page() -> str:
             include_identify=True,
         ),
         Body(
+            _skip_link(),
             _nav(active="identify"),
             _admin_panel(),
             Main(
@@ -851,7 +875,8 @@ def render_identify_page() -> str:
                     ),
                     Div(id="identify-results", cls="identify-results"),
                     cls="identify-page",
-                )
+                ),
+                id="main-content",
             ),
             _footer(),
         ),
@@ -871,6 +896,7 @@ def render_about_page() -> str:
             include_player=False,
         ),
         Body(
+            _skip_link(),
             _nav(active="about"),
             _admin_panel(),
             Main(
@@ -943,6 +969,7 @@ def render_about_page() -> str:
                     cls="about-grid",
                     aria_label="About Chris Carver",
                 ),
+                id="main-content",
             ),
             _footer(),
         ),
@@ -1033,6 +1060,7 @@ def render_moments_page() -> str:
             include_player=False,
         ),
         Body(
+            _skip_link(),
             _nav(active="moments"),
             _admin_panel(),
             Main(
@@ -1040,11 +1068,23 @@ def render_moments_page() -> str:
                     Span("NEST ACTIVITY", cls="live-label"),
                     H2("Activity calendar."),
                     P(
-                        "Daily counts from the automatic nest camera log. "
-                        "V = visits, E = exits (gaps of ten minutes or more "
-                        "between identified animals), P = photos saved. "
-                        "Select a day for the full log.",
+                        "Tap a day to see nest camera activity for that date.",
                         cls="lede moments-calendar-lede",
+                    ),
+                    Details(
+                        Summary("What do V, E, and P mean?", cls="moments-calendar-legend__summary"),
+                        P(
+                            "V = visits logged. E = exits (at least ten minutes "
+                            "between identified animals). P = photos saved.",
+                            cls="moments-calendar-legend__body",
+                        ),
+                        cls="moments-calendar-legend",
+                    ),
+                    Div(
+                        id="moments-calendar-offline",
+                        cls="moments-calendar__offline",
+                        role="alert",
+                        hidden=True,
                     ),
                     Div(
                         Div(
@@ -1191,6 +1231,7 @@ def render_moments_page() -> str:
                     ),
                     cls="moments-log",
                 ),
+                id="main-content",
             ),
             _footer(),
             Script(src="/assets/moments-calendar.js", defer=True),

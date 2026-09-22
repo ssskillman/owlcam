@@ -157,10 +157,15 @@
     return { retry: false };
   };
 
+  const showStatus = (message, isError = false) => {
+    status.textContent = message;
+    status.classList.toggle("nest-moments-status--error", isError);
+  };
+
   const deleteVisit = async (visitId) => {
     await refreshAdminSession();
     if (!adminSession.authenticated || !adminSession.csrfToken) {
-      window.alert("Sign in from ? to delete nest captures.");
+      showStatus("Sign in with Admin to delete nest captures.", true);
       return;
     }
     try {
@@ -178,8 +183,14 @@
       suppressedIds.add(visitId);
       const next = cachedVisits.filter((visit) => visit.id !== visitId);
       renderVisits(next);
+      showStatus(
+        `Showing ${next.length} recent nest capture${next.length === 1 ? "" : "s"}.`,
+      );
     } catch {
-      window.alert("Could not delete that capture. Try signing in again from ?");
+      showStatus(
+        "Could not delete that capture. Open Admin and sign in again.",
+        true,
+      );
     }
   };
 

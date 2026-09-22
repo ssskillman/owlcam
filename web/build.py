@@ -12,6 +12,7 @@ DEFAULT_OUTPUT = WEB_ROOT / "public"
 # unstyled until the old TTL expires.
 FINGERPRINTED = (
     "styles.css",
+    "theme.js",
     "player.js",
     "diagnostics.js",
     "moments.js",

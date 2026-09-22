@@ -1,4 +1,5 @@
-:root {
+:root,
+html[data-theme="dark"] {
   color-scheme: dark;
   --ink: #f2ead8;
   --muted: #a8ad9d;
@@ -9,6 +10,19 @@
   --line: rgba(242, 234, 216, 0.18);
   --danger: #cf6b4f;
   font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --ink: #152018;
+  --muted: #3f4a42;
+  --night: #f7f3ea;
+  --forest: #ebe6da;
+  --moss: #d4e0d0;
+  --amber: #8a5208;
+  --line: rgba(21, 32, 24, 0.22);
+  --danger: #9b3822;
+  font-size: 106.25%;
 }
 
 * {
@@ -28,6 +42,30 @@ body {
     linear-gradient(rgba(242, 234, 216, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(242, 234, 216, 0.035) 1px, transparent 1px);
   background-size: 48px 48px;
+}
+
+html[data-theme="light"] body {
+  background-image:
+    linear-gradient(rgba(21, 32, 24, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 32, 24, 0.06) 1px, transparent 1px);
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0.75rem;
+  z-index: 200;
+  padding: 0.55rem 0.9rem;
+  color: var(--night);
+  background: var(--amber);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.skip-link:focus {
+  left: 1rem;
 }
 
 button,
@@ -150,21 +188,28 @@ a {
   text-decoration: underline;
 }
 
+.theme-toggle,
 .admin-open {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
-  padding: 0;
+  min-height: 44px;
+  padding: 0.45rem 0.75rem;
   color: var(--amber);
   border: 1px solid var(--line);
-  border-radius: 50%;
+  border-radius: 999px;
   background: transparent;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
+.theme-toggle:hover,
 .admin-open:hover {
+  color: var(--night);
+  background: var(--amber);
+}
+
+.theme-toggle[aria-pressed="true"] {
   color: var(--night);
   background: var(--amber);
 }
@@ -941,7 +986,49 @@ footer {
 
 .moments-calendar-lede {
   max-width: 44rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.moments-calendar-legend {
+  max-width: 44rem;
+  margin-bottom: 1rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.moments-calendar-legend__summary {
+  cursor: pointer;
+  color: var(--amber);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.moments-calendar-legend__body {
+  margin: 0.5rem 0 0;
+}
+
+.moments-calendar__offline {
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--danger);
+  color: var(--ink);
+  background: rgba(207, 107, 79, 0.12);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+html[data-theme="light"] .moments-calendar__offline {
+  background: rgba(155, 56, 34, 0.1);
+}
+
+.moments-calendar--offline .moments-calendar__grid {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.moments-calendar--offline .moments-calendar__nav {
+  opacity: 0.85;
 }
 
 .moments-calendar__toolbar {
@@ -1194,6 +1281,11 @@ footer {
   margin: 0.75rem 0 1.25rem;
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.nest-moments-status--error {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .nest-moments-grid {
