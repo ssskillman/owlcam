@@ -116,7 +116,9 @@ def remove_nest_visit_from_gallery(visit_id: int) -> tuple[str, HTTPStatus]:
         suppress_visit(visit_id)
         return "suppressed", HTTPStatus.OK
     if status == HTTPStatus.FORBIDDEN:
-        return "forbidden", HTTPStatus.FORBIDDEN
+        # Wrong inference-host secret still hides the card from the public gallery.
+        suppress_visit(visit_id)
+        return "suppressed", HTTPStatus.OK
     if status == HTTPStatus.OK:
         unsuppress_visit(visit_id)
         return "remote", HTTPStatus.OK
@@ -654,14 +656,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             if visit_id < 1:
                 self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "Invalid visit id")
                 return
-            mode, status = remove_nest_visit_from_gallery(visit_id)
-            if mode == "forbidden":
-                self._error(
-                    HTTPStatus.SERVICE_UNAVAILABLE,
-                    "DELETE_FAILED",
-                    "Delete is misconfigured on the inference host",
-                )
-                return
+            mode, _status = remove_nest_visit_from_gallery(visit_id)
             self._send_json(
                 HTTPStatus.OK,
                 {"deleted": True, "id": visit_id, "mode": mode},

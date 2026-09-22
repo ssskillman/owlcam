@@ -317,6 +317,22 @@ class AdminHTTPTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(payload, {"deleted": True, "id": 9, "mode": "suppressed"})
 
+    @patch.object(admin, "delete_nest_visit")
+    def test_nest_visit_delete_suppresses_when_inference_host_returns_forbidden(
+        self,
+        delete_visit,
+    ):
+        delete_visit.return_value = 403
+        _status, _headers, login, token = self.login()
+        cookie = {"Cookie": f"{admin.SESSION_COOKIE}={token}"}
+        status, _headers, payload = request_json(
+            f"{self.base}/api/nest-visits/11",
+            method="DELETE",
+            headers={**cookie, "X-Owlcam-Csrf": login["csrfToken"]},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(payload, {"deleted": True, "id": 11, "mode": "suppressed"})
+
 
 if __name__ == "__main__":
     unittest.main()

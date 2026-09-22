@@ -418,6 +418,8 @@ grep -F -- 'X-OwlCam-Source' "${REPO_ROOT}/pi/scripts/feed_watcher.py" >/dev/nul
   || fail "feed watcher dropped source header for visit log"
 grep -F -- 'Phase 0' "${REPO_ROOT}/pi/scripts/e2e-phase0-feed.sh" >/dev/null \
   || fail "phase 0 e2e script missing"
+grep -F -- 'nest visit delete E2E' "${REPO_ROOT}/pi/scripts/e2e-nest-visit-delete.sh" >/dev/null \
+  || fail "nest visit delete e2e script missing"
 grep -F -- '/api/animal-identification/visits' "${REPO_ROOT}/animal_identifier/animal_identifier/server.py" >/dev/null \
   || fail "identifier server missing visit log API"
 

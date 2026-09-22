@@ -135,24 +135,47 @@
     }
   };
 
+  const deleteVisitOnServer = async (visitId, csrfToken) => {
+    const response = await fetch(`/admin/api/nest-visits/${visitId}`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { "X-Owlcam-Csrf": csrfToken },
+    });
+    if (response.status === 403) {
+      return { retry: true };
+    }
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try {
+        const payload = await response.json();
+        detail = payload?.error?.message || detail;
+      } catch {
+        /* ignore */
+      }
+      throw new Error(detail);
+    }
+    return { retry: false };
+  };
+
   const deleteVisit = async (visitId) => {
-    if (!adminSession.authenticated || !adminSession.csrfToken) return;
-    if (
-      !window.confirm(
-        `Remove visit #${visitId} from the nest gallery? This cannot be undone.`,
-      )
-    ) {
+    await refreshAdminSession();
+    if (!adminSession.authenticated || !adminSession.csrfToken) {
+      window.alert("Sign in from ? to delete nest captures.");
       return;
     }
     try {
-      const response = await fetch(`/admin/api/nest-visits/${visitId}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: { "X-Owlcam-Csrf": adminSession.csrfToken },
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      let result = await deleteVisitOnServer(visitId, adminSession.csrfToken);
+      if (result.retry) {
+        await refreshAdminSession();
+        if (!adminSession.csrfToken) {
+          throw new Error("Session expired");
+        }
+        result = await deleteVisitOnServer(visitId, adminSession.csrfToken);
+        if (result.retry) {
+          throw new Error("Request verification failed");
+        }
       }
+      suppressedIds.add(visitId);
       const next = cachedVisits.filter((visit) => visit.id !== visitId);
       renderVisits(next);
     } catch {
