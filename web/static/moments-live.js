@@ -16,8 +16,26 @@
   let hasRendered = false;
   let adminSession = { authenticated: false, csrfToken: null };
   let cachedVisits = [];
+  let suppressedIds = new Set();
 
   const apiUrl = (path) => `${origin}${path}`;
+
+  const loadSuppressed = async () => {
+    try {
+      const response = await fetch("/api/nest-visits-suppressed", {
+        credentials: "omit",
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      const ids = Array.isArray(payload.visitIds) ? payload.visitIds : [];
+      suppressedIds = new Set(
+        ids.filter((id) => typeof id === "number" && id > 0),
+      );
+    } catch {
+      suppressedIds = new Set();
+    }
+  };
 
   const formatSpecies = (species) =>
     species
@@ -35,7 +53,8 @@
         visit.source === SOURCE &&
         typeof visit.confidence === "number" &&
         visit.confidence >= MIN_CONFIDENCE &&
-        visit.thumbnail_url,
+        visit.thumbnail_url &&
+        !suppressedIds.has(visit.id),
     );
 
   const trashIcon = `
@@ -173,6 +192,7 @@
       status.textContent = "Loading recent nest captures…";
     }
     try {
+      await loadSuppressed();
       const response = await fetch(
         apiUrl("/api/animal-identification/visits?limit=20"),
         { credentials: "omit", mode: "cors" },

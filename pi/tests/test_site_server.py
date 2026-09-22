@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import tempfile
 import threading
 import unittest
@@ -124,6 +125,14 @@ class ServedResponseTests(unittest.TestCase):
         self.addCleanup(thread.join, 5)
         self.addCleanup(self.server.server_close)
         self.addCleanup(self.server.shutdown)
+
+    def test_serves_suppressed_visit_ids_as_json(self):
+        with urlopen(f"{self.base}/api/nest-visits-suppressed", timeout=5) as response:
+            payload = json.loads(response.read().decode())
+            headers = response.headers
+        self.assertIn("visitIds", payload)
+        self.assertEqual(headers["Content-Type"], "application/json; charset=utf-8")
+        self.assertEqual(headers["Cache-Control"], "no-store")
 
     def test_serves_the_page_with_the_headers_firebase_used_to_add(self):
         with urlopen(f"{self.base}/", timeout=5) as response:

@@ -64,6 +64,17 @@ On the **gaming PC**:
    uv run uvicorn animal_identifier.server:app --host 127.0.0.1 --port 8767
    ```
 
+   For admin nest-capture delete from `/moments`, set the same secret on the PC
+   as `OWLCAM_VISIT_ADMIN_SECRET` in the Pi `admin.env`:
+
+   ```bash
+   set ANIMAL_ID_VISIT_ADMIN_SECRET=<same value as Pi>
+   ```
+
+   Then restart uvicorn after `git pull` so `DELETE
+   /api/animal-identification/visits/{id}` exists. Until then, the Pi hides
+   removed cards locally via `suppressed-nest-visits.json`.
+
    First run downloads YOLO and BioCLIP weights.
 3. Funnel **8443** on this PC (not 443 — that is the Pi site, and the
    Identify origin is `:8443`):

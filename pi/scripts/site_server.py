@@ -16,6 +16,7 @@ cross-origin hop, so there is nothing left to block, allow, or explain.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import sys
@@ -25,6 +26,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from mimetypes import guess_type
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
+
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from nest_visit_suppression import list_suppressed_payload  # noqa: E402
 
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("OWLCAM_SITE_PORT", "8080"))
@@ -192,6 +198,23 @@ class SiteHandler(BaseHTTPRequestHandler):
                 formatdate(target.stat().st_mtime, usegmt=True),
             )
 
+    def _send_json(
+        self,
+        status: HTTPStatus,
+        payload: dict,
+        *,
+        include_body: bool,
+    ) -> None:
+        body = json.dumps(payload, separators=(",", ":")).encode()
+        self.send_response(status)
+        self._send_headers(None)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if include_body:
+            self.wfile.write(body)
+
     def _send_text(
         self,
         status: HTTPStatus,
@@ -210,6 +233,15 @@ class SiteHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def _serve(self, *, include_body: bool) -> None:
+        path = urlsplit(self.path).path.rstrip("/") or "/"
+        if path == "/api/nest-visits-suppressed":
+            self._send_json(
+                HTTPStatus.OK,
+                list_suppressed_payload(),
+                include_body=include_body,
+            )
+            return
+
         target = resolve_file(self.path, SITE_ROOT)
         if target is None:
             self._send_text(

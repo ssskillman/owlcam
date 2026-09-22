@@ -17,7 +17,9 @@ import os
 import secrets
 import shutil
 import subprocess
+import sys
 import threading
+from pathlib import Path
 import time
 from collections import defaultdict, deque
 from datetime import UTC, datetime
@@ -28,6 +30,11 @@ from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from nest_visit_suppression import suppress_visit, unsuppress_visit  # noqa: E402
 
 
 HOST = "127.0.0.1"
@@ -98,6 +105,23 @@ def delete_nest_visit(visit_id: int) -> int:
             return response.status
     except HTTPError as error:
         return error.code
+
+
+def remove_nest_visit_from_gallery(visit_id: int) -> tuple[str, HTTPStatus]:
+    """Delete on the inference host when possible; always hide from the public gallery."""
+
+    try:
+        status = delete_nest_visit(visit_id)
+    except (OSError, RuntimeError, URLError):
+        suppress_visit(visit_id)
+        return "suppressed", HTTPStatus.OK
+    if status == HTTPStatus.FORBIDDEN:
+        return "forbidden", HTTPStatus.FORBIDDEN
+    if status == HTTPStatus.OK:
+        unsuppress_visit(visit_id)
+        return "remote", HTTPStatus.OK
+    suppress_visit(visit_id)
+    return "suppressed", HTTPStatus.OK
 
 
 def _b64encode(value: bytes) -> str:
@@ -630,29 +654,18 @@ class AdminHandler(BaseHTTPRequestHandler):
             if visit_id < 1:
                 self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "Invalid visit id")
                 return
-            try:
-                status = delete_nest_visit(visit_id)
-            except (OSError, RuntimeError, URLError):
+            mode, status = remove_nest_visit_from_gallery(visit_id)
+            if mode == "forbidden":
                 self._error(
                     HTTPStatus.SERVICE_UNAVAILABLE,
                     "DELETE_FAILED",
-                    "Could not delete that capture",
+                    "Delete is misconfigured on the inference host",
                 )
                 return
-            if status == HTTPStatus.NOT_FOUND:
-                self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Visit not found")
-                return
-            if status == HTTPStatus.FORBIDDEN:
-                self._error(HTTPStatus.SERVICE_UNAVAILABLE, "DELETE_FAILED", "Delete is misconfigured")
-                return
-            if status != HTTPStatus.OK:
-                self._error(
-                    HTTPStatus.SERVICE_UNAVAILABLE,
-                    "DELETE_FAILED",
-                    "Could not delete that capture",
-                )
-                return
-            self._send_json(HTTPStatus.OK, {"deleted": True, "id": visit_id})
+            self._send_json(
+                HTTPStatus.OK,
+                {"deleted": True, "id": visit_id, "mode": mode},
+            )
             return
         self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Not found")
 
