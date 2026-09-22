@@ -188,7 +188,37 @@ def _head(*, title: str, description: str, include_player: bool, include_identif
     )
 
 
-def _nav(*, active: str) -> Div:
+def _capture_status() -> Div:
+    return Div(
+        Span("Nest captures · 24h", cls="capture-status-meta"),
+        Div(
+            Img(
+                src="/assets/icons/numbers/1.png",
+                alt="",
+                id="capture-toast-icon",
+                cls="capture-status-number",
+                width="20",
+                height="20",
+                decoding="async",
+                hidden=True,
+            ),
+            Span(
+                "0",
+                id="capture-toast-count",
+                cls="capture-status-fallback",
+                hidden=True,
+            ),
+            cls="capture-status-value",
+        ),
+        id="capture-toast",
+        cls="capture-status",
+        role="status",
+        aria_live="polite",
+        hidden=True,
+    )
+
+
+def _nav(*, active: str, include_capture_status: bool = False) -> Div:
     home = {"aria_current": "page"} if active == "live" else {}
     identify = {"aria_current": "page"} if active == "identify" else {}
     moments = {"aria_current": "page"} if active == "moments" else {}
@@ -204,6 +234,7 @@ def _nav(*, active: str) -> Div:
             ),
             cls="site-brand",
         ),
+        _capture_status() if include_capture_status else "",
         Nav(
             A("Upload & Identify", href="/identify", **identify),
             A("Moments", href="/moments", **moments),
@@ -437,34 +468,7 @@ def render_page(
             include_player=True,
         ),
         Body(
-            _nav(active="live"),
-            Div(
-                Div(
-                    Img(
-                        src="/assets/icons/numbers/1.png",
-                        alt="",
-                        id="capture-toast-icon",
-                        cls="capture-toast-number",
-                        width="24",
-                        height="24",
-                        decoding="async",
-                        hidden=True,
-                    ),
-                    Span(
-                        "0",
-                        id="capture-toast-count",
-                        cls="capture-toast-count-text",
-                        hidden=True,
-                    ),
-                    cls="capture-toast-count-wrap",
-                ),
-                P("nest captures · last 24h", cls="capture-toast-copy"),
-                id="capture-toast",
-                cls="capture-toast",
-                role="status",
-                aria_live="polite",
-                hidden=True,
-            ),
+            _nav(active="live", include_capture_status=True),
             _admin_panel(),
             Main(
                 Section(

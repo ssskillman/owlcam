@@ -62,53 +62,57 @@ a {
   font-size: 0.62rem;
   letter-spacing: 0.08em;
   text-transform: lowercase;
-  color: var(--accent);
+  color: var(--amber);
   font-weight: 600;
 }
 
-.capture-toast {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 40;
-  display: flex;
+.capture-status {
+  display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.65rem 0.9rem;
-  border-radius: 0.65rem;
-  border: 1px solid rgba(255, 220, 160, 0.28);
-  background: rgba(8, 14, 11, 0.92);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  gap: 0.55rem;
+  margin-left: auto;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--line);
+  background: rgba(20, 32, 25, 0.72);
   color: var(--ink);
   pointer-events: none;
 }
 
-.capture-toast-count-wrap {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  min-width: 1.35rem;
-}
-
-.capture-toast-number {
-  display: block;
-  height: 1.35rem;
-  width: auto;
-  object-fit: contain;
-}
-
-.capture-toast-count-text {
-  font-weight: 700;
-  font-size: 1.05rem;
-  line-height: 1;
-  color: var(--accent);
-}
-
-.capture-toast-copy {
-  margin: 0;
+.capture-status-meta {
   color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.capture-status-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  padding: 0.1rem 0.15rem;
+  border-left: 1px solid var(--line);
+  padding-left: 0.55rem;
+}
+
+.capture-status-number {
+  display: block;
+  height: 1.05rem;
+  width: 1.05rem;
+  object-fit: contain;
+  filter: brightness(1.08) sepia(0.9) hue-rotate(352deg) saturate(2.1);
+  opacity: 0.95;
+}
+
+.capture-status-fallback {
+  font-weight: 800;
+  font-size: 0.82rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--amber);
+  letter-spacing: 0.02em;
 }
 
 .eyebrow {
@@ -1048,7 +1052,7 @@ footer {
   border: 1px solid rgba(255, 220, 160, 0.35);
   border-radius: 0.45rem;
   background: rgba(8, 12, 10, 0.82);
-  color: var(--accent);
+  color: var(--amber);
   cursor: pointer;
 }
 
@@ -1676,6 +1680,12 @@ footer {
     gap: 0.7rem;
     padding-top: 0.8rem;
     padding-bottom: 0.8rem;
+  }
+
+  .capture-status {
+    margin-left: 0;
+    align-self: stretch;
+    justify-content: space-between;
   }
 
   .access-pill {
