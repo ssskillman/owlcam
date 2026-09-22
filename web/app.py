@@ -190,17 +190,12 @@ def _head(*, title: str, description: str, include_player: bool, include_identif
 
 def _capture_status() -> Div:
     return Div(
-        Span("", cls="nest-telemetry__dot", aria_hidden="true"),
-        Span(
-            Strong("0", id="capture-toast-count"),
-            " nest saves · 24h",
-            cls="nest-telemetry__label",
-        ),
+        Strong("0", id="capture-toast-count", cls="ledger-chip__value"),
+        Span("saves / 24h"),
         id="capture-toast",
-        cls="nest-telemetry",
+        cls="ledger-chip",
         role="status",
         aria_live="polite",
-        aria_atomic="true",
         hidden=True,
     )
 
@@ -210,6 +205,22 @@ def _nav(*, active: str, include_capture_status: bool = False) -> Div:
     identify = {"aria_current": "page"} if active == "identify" else {}
     moments = {"aria_current": "page"} if active == "moments" else {}
     about = {"aria_current": "page"} if active == "about" else {}
+    nav_items: list = [
+        A("Upload & Identify", href="/identify", **identify),
+        A("Moments", href="/moments", **moments),
+        A("About", href="/about", **about),
+    ]
+    if include_capture_status:
+        nav_items.append(_capture_status())
+    nav_items.append(
+        Button(
+            "?",
+            type="button",
+            id="admin-open",
+            cls="admin-open",
+            aria_label="Open admin login",
+        ),
+    )
     return Div(
         Div(
             A("CARVER FIELD STATION", href="/", cls="eyebrow", **home),
@@ -221,18 +232,8 @@ def _nav(*, active: str, include_capture_status: bool = False) -> Div:
             ),
             cls="site-brand",
         ),
-        _capture_status() if include_capture_status else "",
         Nav(
-            A("Upload & Identify", href="/identify", **identify),
-            A("Moments", href="/moments", **moments),
-            A("About", href="/about", **about),
-            Button(
-                "?",
-                type="button",
-                id="admin-open",
-                cls="admin-open",
-                aria_label="Open admin login",
-            ),
+            *nav_items,
             cls="site-nav",
             aria_label="Site",
         ),

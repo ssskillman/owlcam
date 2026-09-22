@@ -66,56 +66,26 @@ a {
   font-weight: 600;
 }
 
-.nest-telemetry {
+.ledger-chip {
   display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-left: auto;
-  padding: 0.2rem 0;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.28rem 0.5rem;
+  border-bottom: 1px solid rgba(232, 164, 58, 0.35);
   color: var(--muted);
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: lowercase;
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
 }
 
-.nest-telemetry__dot {
-  width: 0.35rem;
-  height: 0.35rem;
-  border-radius: 50%;
-  background: var(--amber);
-  opacity: 0.55;
-  flex-shrink: 0;
-}
-
-.nest-telemetry__label {
-  font-weight: 500;
-  letter-spacing: 0.06em;
-}
-
-.nest-telemetry__label strong {
+.ledger-chip__value {
+  font-size: 0.78rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: rgba(232, 164, 58, 0.82);
-  margin-right: 0.15rem;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .nest-telemetry__dot {
-    animation: nest-telemetry-breathe 3.6s ease-in-out infinite;
-  }
-}
-
-@keyframes nest-telemetry-breathe {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.75;
-  }
+  color: rgba(232, 164, 58, 0.78);
+  letter-spacing: 0.04em;
 }
 
 .eyebrow {
@@ -1683,11 +1653,6 @@ footer {
     gap: 0.7rem;
     padding-top: 0.8rem;
     padding-bottom: 0.8rem;
-  }
-
-  .nest-telemetry {
-    margin-left: 0;
-    align-self: flex-start;
   }
 
   .access-pill {

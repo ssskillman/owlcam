@@ -41,7 +41,8 @@ def test_page_uses_a_same_origin_stream_and_accessible_player():
     assert "Greg Blum" not in html
     assert 'id="nav-signed-in"' in html
     assert 'id="capture-toast"' in html
-    assert 'class="nest-telemetry"' in html
+    assert 'class="ledger-chip"' in html
+    assert "saves / 24h" in html
     assert 'id="capture-toast-count"' in html
     assert 'src="/assets/home-status.js"' in html
     assert "data-api-origin=" in html
