@@ -95,7 +95,11 @@ delete_status="$(
     -X DELETE "${SITE_URL}/admin/api/nest-visits/${target_id}"
 )"
 if [[ "${delete_status}" != "200" ]]; then
-  cat "${delete_body}" >&2 || true
+  if [[ -s "${delete_body}" ]]; then
+    cat "${delete_body}" >&2
+  else
+    printf '(empty response body — admin API may have crashed; try: ssh pi systemctl --user restart owlcam-admin)\n' >&2
+  fi
   rm -f "${delete_body}"
   fail "DELETE nest visit returned HTTP ${delete_status}"
 fi

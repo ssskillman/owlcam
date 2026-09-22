@@ -656,7 +656,15 @@ class AdminHandler(BaseHTTPRequestHandler):
             if visit_id < 1:
                 self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "Invalid visit id")
                 return
-            mode, _status = remove_nest_visit_from_gallery(visit_id)
+            try:
+                mode, _status = remove_nest_visit_from_gallery(visit_id)
+            except OSError:
+                self._error(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    "DELETE_FAILED",
+                    "Could not update the local suppression list",
+                )
+                return
             self._send_json(
                 HTTPStatus.OK,
                 {"deleted": True, "id": visit_id, "mode": mode},
