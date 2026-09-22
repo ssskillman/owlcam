@@ -82,6 +82,7 @@ if "${uninstall}"; then
         "${BIN_DIR}/owlcam-feed-watcher" \
         "${BIN_DIR}/owlcam-admin" \
         "${BIN_DIR}/owlcam-configure-admin" \
+        "${BIN_DIR}/owlcam-admin-add-user" \
         "${BIN_DIR}/owlcam-site" \
         "${BIN_DIR}/owlcam-start-stream" \
         "${BIN_DIR}/owlcam-start-stream-usb"
@@ -107,6 +108,7 @@ install -m 0755 "${SCRIPT_DIR}/bme280_raw.py" "${BIN_DIR}/bme280_raw.py"
 install -m 0755 "${SCRIPT_DIR}/diagnostics_server.py" "${BIN_DIR}/owlcam-diagnostics"
 install -m 0755 "${SCRIPT_DIR}/admin_server.py" "${BIN_DIR}/owlcam-admin"
 install -m 0755 "${SCRIPT_DIR}/configure-admin.sh" "${BIN_DIR}/owlcam-configure-admin"
+install -m 0755 "${SCRIPT_DIR}/configure-admin-add-user.sh" "${BIN_DIR}/owlcam-admin-add-user"
 install -m 0755 "${SCRIPT_DIR}/site_server.py" "${BIN_DIR}/owlcam-site"
 install -m 0755 "${SCRIPT_DIR}/feed_watcher.py" "${BIN_DIR}/owlcam-feed-watcher"
 install -m 0644 "${UNIT_SRC}/owlcam-diagnostics.service" "${UNIT_DIR}/"

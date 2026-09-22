@@ -55,6 +55,26 @@ def test_visit_store_lists_and_thumbnails(tmp_path):
     assert store.thumbnail_path(rows[0].thumbnail_name).read_bytes() == b"jpeg"
 
 
+def test_visit_store_delete_removes_row_and_thumbnail(tmp_path):
+    store = VisitStore(tmp_path / "visits.sqlite", tmp_path / "thumbs")
+    visit_id = store.add(
+        species="cow",
+        category="mammal",
+        confidence=0.62,
+        is_unknown=False,
+        model_version="test",
+        source="feed_watcher",
+        thumbnail=b"jpeg",
+    )
+    row = store.get_visit(visit_id)
+    thumb_path = store.thumbnail_path(row.thumbnail_name)
+    assert thumb_path.is_file()
+    assert store.delete_visit(visit_id)
+    assert store.get_visit(visit_id) is None
+    assert not thumb_path.is_file()
+    assert not store.delete_visit(visit_id)
+
+
 def test_alert_cooldown_blocks_repeat(tmp_path):
     cooldowns = AlertCooldownStore(tmp_path / "alerts.sqlite")
     assert cooldowns.may_send("raccoon", 1800)

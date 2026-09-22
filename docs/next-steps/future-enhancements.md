@@ -16,15 +16,24 @@ watcher.
 
 ## A. Real Moments / last-24h highlights
 
-Today Owl Moments are curated files in `web/static/moments/`, not nest
-captures. Spark Hosting can hold small curated clips; it cannot absorb
-24/7 video ([`../next_steps.md`](../next_steps.md)).
+**Shipped (v1):** `/moments` includes a **From the nest** section that polls
+the inference host visit API about every thirty seconds and shows
+`feed_watcher` captures with known species (confidence ≥ 0.6). Curated
+static cards in `web/static/moments/` remain above that section.
 
-Once stills exist, pick a handful per day (highest confidence, one per
-species, cooldown so wind does not fill the gallery). Serve them as
-thumbnails on the site or as a “last 24 hours” strip. Optional 2–3 s
-clips later. Firebase Hosting is fine for a dozen small JPEGs; a USB SSD
-on the Pi is the local buffer.
+**E2E checklist:**
+
+1. PC identifier + Funnel `:8443` healthy; Pi `owlcam-feed-watcher` running.
+2. Open `/moments` — curated field log unchanged; live section loads or
+   shows offline copy without breaking the page.
+3. After a classified nest still (or a manual `feed_watcher` POST), a new
+   card appears within one poll interval (~30s) without redeploy.
+4. Thumbnail loads (no CSP errors for `OWLCAM_ANIMAL_ID_ORIGIN`).
+5. PC asleep — live section shows unavailable; curated Moments still work.
+
+**Later:** Pi sync of thumbnails to `~/owlcam/site` for same-origin cache when
+the PC is off; daily “pick best of” curation; optional 2–3 s clips. A USB
+SSD on the Pi remains the buffer if clip volume grows.
 
 ## B. Ping when it is a raccoon (or an owl)
 

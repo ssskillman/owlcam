@@ -183,14 +183,24 @@
     }
   }
 
+  const notifyAdminSession = (authenticated) => {
+    window.dispatchEvent(
+      new CustomEvent("owlcam-admin-session", {
+        detail: { authenticated, csrfToken: authenticated ? csrfToken : null },
+      }),
+    )
+  }
+
   const checkSession = async () => {
     loginStatus.textContent = "Checking session…"
     try {
       const session = await api("/session")
       if (session.authenticated) {
         csrfToken = session.csrfToken
+        notifyAdminSession(true)
         await refresh()
       } else {
+        notifyAdminSession(false)
         showLogin()
         document.querySelector("#admin-username")?.focus()
       }
@@ -226,8 +236,9 @@
         }),
       })
       csrfToken = payload.csrfToken
+      notifyAdminSession(true)
       loginForm.reset()
-      document.querySelector("#admin-username").value = "admin"
+      document.querySelector("#admin-username").value = "ccarver"
       await refresh()
     } catch (error) {
       loginStatus.textContent = error.message
@@ -282,6 +293,7 @@
         headers: { "X-Owlcam-Csrf": csrfToken },
       })
     } finally {
+      notifyAdminSession(false)
       showLogin("Signed out.")
       document.querySelector("#admin-username")?.focus()
     }

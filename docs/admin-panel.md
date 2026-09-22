@@ -71,6 +71,15 @@ All responses are JSON with `Cache-Control: no-store`.
 | `POST` | `/admin/api/stream` | Start or stop the stream |
 | `GET` | `/admin/api/logs?service=stream&lines=100` | Bounded service journal |
 | `GET` | `/admin/api/firebase` | Firebase redirect health |
+| `DELETE` | `/admin/api/nest-visits/{id}` | Remove a live nest capture (proxies to the inference host) |
+
+Additional admin accounts live in `~/.config/owlcam/admin-users` (one
+`username:scrypt:…` line per user). Run `owlcam-admin-add-user` on the Pi to
+append a user without replacing the primary `admin.env` credentials.
+
+Nest capture deletion also requires matching secrets on the Pi
+(`OWLCAM_VISIT_ADMIN_SECRET`, `OWLCAM_IDENTIFY_URL` in `admin.env`) and on the
+inference PC (`ANIMAL_ID_VISIT_ADMIN_SECRET`).
 
 ## Recovery
 

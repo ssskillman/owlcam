@@ -239,7 +239,7 @@ def _admin_panel() -> Dialog:
                 Input(
                     id="admin-username",
                     name="username",
-                    value="admin",
+                    value="ccarver",
                     autocomplete="username",
                     maxlength="64",
                     required=True,
@@ -1022,6 +1022,29 @@ def render_moments_page() -> str:
                     cls="moments-intro",
                 ),
                 Section(
+                    Span("LIVE FROM THE NEST", cls="live-label"),
+                    H2("From the nest."),
+                    P(
+                        "Automatic captures from the live nest camera, "
+                        "classified when something recognizable is in frame. "
+                        "This section refreshes about every thirty seconds "
+                        "while the photo-processing server is online.",
+                        cls="lede nest-moments-lede",
+                    ),
+                    P(
+                        "Loading recent nest captures…",
+                        id="nest-moments-status",
+                        cls="nest-moments-status",
+                        aria_live="polite",
+                    ),
+                    Div(
+                        id="nest-moments-grid",
+                        cls="moments-grid nest-moments-grid",
+                    ),
+                    cls="nest-moments",
+                    data_api_origin=ANIMAL_ID_API_ORIGIN,
+                ),
+                Section(
                     Div(
                         Span("SORT FIELD LOG", cls="sort-title"),
                         Button(
@@ -1066,6 +1089,7 @@ def render_moments_page() -> str:
                 ),
             ),
             _footer(),
+            Script(src="/assets/moments-live.js", defer=True),
             Script(src="/assets/moments.js", defer=True),
         ),
         lang="en",

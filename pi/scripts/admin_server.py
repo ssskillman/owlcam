@@ -48,6 +48,56 @@ STREAM_TARGETS = {
     "nest": "stream",
     "usb": "streamUsb",
 }
+DEFAULT_ADMIN_USERS_FILE = os.path.expanduser("~/.config/owlcam/admin-users")
+
+
+def load_admin_credentials() -> dict[str, str]:
+    """Map usernames to scrypt password records from admin-users and admin.env."""
+
+    credentials: dict[str, str] = {}
+    users_file = os.environ.get("OWLCAM_ADMIN_USERS_FILE", DEFAULT_ADMIN_USERS_FILE)
+    if os.path.isfile(users_file):
+        with open(users_file, encoding="utf-8") as handle:
+            for line in handle:
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#"):
+                    continue
+                username, separator, password_hash = stripped.partition(":")
+                if not separator or not username or not password_hash:
+                    continue
+                credentials[username] = password_hash
+    legacy_username = os.environ.get("OWLCAM_ADMIN_USERNAME", "admin")
+    legacy_hash = os.environ.get("OWLCAM_ADMIN_PASSWORD_HASH", "")
+    if legacy_hash:
+        credentials[legacy_username] = legacy_hash
+    return credentials
+
+
+def verify_admin_login(credentials: dict[str, str], username: str, password: str) -> bool:
+    encoded = credentials.get(username)
+    if encoded is None:
+        return False
+    return verify_password(password, encoded)
+
+
+def delete_nest_visit(visit_id: int) -> int:
+    """Ask the inference host to delete a visit row and thumbnail."""
+
+    identify_url = os.environ.get("OWLCAM_IDENTIFY_URL", "").strip().rstrip("/")
+    secret = os.environ.get("OWLCAM_VISIT_ADMIN_SECRET", "").strip()
+    if not identify_url or not secret:
+        raise RuntimeError("nest visit deletion is not configured")
+    target = f"{identify_url}/visits/{visit_id}"
+    request = Request(
+        target,
+        method="DELETE",
+        headers={"X-OwlCam-Visit-Admin": secret},
+    )
+    try:
+        with build_opener(HTTPRedirectHandler()).open(request, timeout=30) as response:
+            return response.status
+    except HTTPError as error:
+        return error.code
 
 
 def _b64encode(value: bytes) -> str:
@@ -510,8 +560,8 @@ class AdminHandler(BaseHTTPRequestHandler):
             return
         username = payload.get("username")
         password = payload.get("password")
-        configured_hash = self.server.password_hash
-        if not configured_hash:
+        credentials = self.server.admin_credentials
+        if not credentials:
             self._error(HTTPStatus.SERVICE_UNAVAILABLE, "NOT_CONFIGURED", "Admin login is not configured")
             return
         valid = (
@@ -519,8 +569,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             and isinstance(password, str)
             and len(username) <= 64
             and len(password) <= 1024
-            and hmac.compare_digest(username, self.server.admin_username)
-            and verify_password(password, configured_hash)
+            and verify_admin_login(credentials, username, password)
         )
         if not valid:
             self._error(HTTPStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid credentials")
@@ -541,19 +590,56 @@ class AdminHandler(BaseHTTPRequestHandler):
         if not self._origin_allowed():
             self._error(HTTPStatus.FORBIDDEN, "ORIGIN", "Origin not allowed")
             return
-        if self._path() != "/api/session":
-            self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Not found")
+        path = self._path()
+        if path == "/api/session":
+            auth = self._require_auth(csrf=True)
+            if not auth:
+                return
+            token, _csrf = auth
+            self.sessions.delete(token)
+            cookie = (
+                f"{SESSION_COOKIE}=; Path=/; Max-Age=0; "
+                "Secure; HttpOnly; SameSite=Strict"
+            )
+            self._send_json(HTTPStatus.OK, {"authenticated": False}, cookie=cookie)
             return
-        auth = self._require_auth(csrf=True)
-        if not auth:
+        if path.startswith("/api/nest-visits/"):
+            auth = self._require_auth(csrf=True)
+            if not auth:
+                return
+            visit_part = path.removeprefix("/api/nest-visits/").strip("/")
+            if not visit_part.isdigit():
+                self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "Invalid visit id")
+                return
+            visit_id = int(visit_part)
+            if visit_id < 1:
+                self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "Invalid visit id")
+                return
+            try:
+                status = delete_nest_visit(visit_id)
+            except (OSError, RuntimeError, URLError):
+                self._error(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    "DELETE_FAILED",
+                    "Could not delete that capture",
+                )
+                return
+            if status == HTTPStatus.NOT_FOUND:
+                self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Visit not found")
+                return
+            if status == HTTPStatus.FORBIDDEN:
+                self._error(HTTPStatus.SERVICE_UNAVAILABLE, "DELETE_FAILED", "Delete is misconfigured")
+                return
+            if status != HTTPStatus.OK:
+                self._error(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    "DELETE_FAILED",
+                    "Could not delete that capture",
+                )
+                return
+            self._send_json(HTTPStatus.OK, {"deleted": True, "id": visit_id})
             return
-        token, _csrf = auth
-        self.sessions.delete(token)
-        cookie = (
-            f"{SESSION_COOKIE}=; Path=/; Max-Age=0; "
-            "Secure; HttpOnly; SameSite=Strict"
-        )
-        self._send_json(HTTPStatus.OK, {"authenticated": False}, cookie=cookie)
+        self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Not found")
 
     def log_message(self, _format: str, *_args: object) -> None:
         return
@@ -562,13 +648,12 @@ class AdminHandler(BaseHTTPRequestHandler):
 def main() -> None:
     server = ThreadingHTTPServer((HOST, PORT), AdminHandler)
     server.sessions = SessionStore()
-    server.password_hash = os.environ.get("OWLCAM_ADMIN_PASSWORD_HASH", "")
-    server.admin_username = os.environ.get("OWLCAM_ADMIN_USERNAME", "admin")
+    server.admin_credentials = load_admin_credentials()
     server.login_limiter = LoginRateLimiter()
     server.action_limiter = LoginRateLimiter(limit=1, window_seconds=15)
-    if not server.password_hash:
+    if not server.admin_credentials:
         print(
-            "warning: OWLCAM_ADMIN_PASSWORD_HASH is unset; login is disabled",
+            "warning: no admin credentials are configured; login is disabled",
             flush=True,
         )
     server.serve_forever()

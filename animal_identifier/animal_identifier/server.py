@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import sqlite3
@@ -30,6 +31,7 @@ from animal_identifier.config import (
     RATE_LIMIT_WINDOW_SECONDS,
     UNKNOWN_THRESHOLD,
     VISIT_DEDUPE_SECONDS,
+    VISIT_ADMIN_SECRET,
     VISIT_LIST_DEFAULT_LIMIT,
     VISIT_LOG_UNKNOWN,
 )
@@ -321,6 +323,23 @@ def list_visits(
             )
         )
     return {"visits": payload}
+
+
+@app.delete("/api/animal-identification/visits/{visit_id}")
+def delete_visit(visit_id: int, request: Request) -> dict[str, object]:
+    if not VISIT_ADMIN_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="Visit deletion is not configured on this server.",
+        )
+    provided = request.headers.get("X-OwlCam-Visit-Admin", "")
+    if not hmac.compare_digest(provided, VISIT_ADMIN_SECRET):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if visit_id < 1:
+        raise HTTPException(status_code=422, detail="Invalid visit id")
+    if not visits.delete_visit(visit_id):
+        raise HTTPException(status_code=404, detail="Visit not found")
+    return {"deleted": True, "id": visit_id}
 
 
 @app.get("/api/animal-identification/visits/{visit_id}/thumbnail")

@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import threading
 import unittest
 from http.cookies import SimpleCookie
@@ -24,6 +25,32 @@ def request_json(url, *, method="GET", payload=None, headers=None):
     request = Request(url, data=body, method=method, headers=request_headers)
     with urlopen(request, timeout=5) as response:
         return response.status, response.headers, json.load(response)
+
+
+class AdminCredentialTests(unittest.TestCase):
+    def test_loads_legacy_and_extra_users(self):
+        with patch.dict(
+            os.environ,
+            {
+                "OWLCAM_ADMIN_USERNAME": "admin",
+                "OWLCAM_ADMIN_PASSWORD_HASH": admin.hash_password("legacy"),
+                "OWLCAM_ADMIN_USERS_FILE": str(Path(__file__).with_name("admin-users-fixture")),
+            },
+            clear=False,
+        ):
+            users_file = Path(os.environ["OWLCAM_ADMIN_USERS_FILE"])
+            users_file.write_text(
+                f"ccarver:{admin.hash_password('extra-user-secret')}\n",
+                encoding="utf-8",
+            )
+            try:
+                credentials = admin.load_admin_credentials()
+            finally:
+                users_file.unlink(missing_ok=True)
+
+        self.assertTrue(admin.verify_admin_login(credentials, "admin", "legacy"))
+        self.assertTrue(admin.verify_admin_login(credentials, "ccarver", "extra-user-secret"))
+        self.assertFalse(admin.verify_admin_login(credentials, "ccarver", "wrong"))
 
 
 class PasswordTests(unittest.TestCase):
@@ -91,8 +118,7 @@ class AdminHTTPTests(unittest.TestCase):
             admin.AdminHandler,
         )
         self.server.sessions = self.sessions
-        self.server.password_hash = admin.hash_password("nest-secret")
-        self.server.admin_username = "admin"
+        self.server.admin_credentials = {"admin": admin.hash_password("nest-secret")}
         self.server.login_limiter = admin.LoginRateLimiter(limit=10, window_seconds=60)
         self.server.action_limiter = admin.LoginRateLimiter(limit=1, window_seconds=15)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -242,6 +268,37 @@ class AdminHTTPTests(unittest.TestCase):
             urlopen(request, timeout=5)
         self.assertEqual(caught.exception.code, 422)
         caught.exception.close()
+
+    @patch.object(admin, "delete_nest_visit")
+    def test_nest_visit_delete_requires_auth_and_csrf(self, delete_visit):
+        delete_visit.return_value = 200
+        _status, _headers, login, token = self.login()
+        cookie = {"Cookie": f"{admin.SESSION_COOKIE}={token}"}
+
+        unauthenticated = Request(f"{self.base}/api/nest-visits/7", method="DELETE")
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(unauthenticated, timeout=5)
+        self.assertEqual(caught.exception.code, 401)
+        caught.exception.close()
+
+        without_csrf = Request(
+            f"{self.base}/api/nest-visits/7",
+            method="DELETE",
+            headers=cookie,
+        )
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(without_csrf, timeout=5)
+        self.assertEqual(caught.exception.code, 403)
+        caught.exception.close()
+
+        status, _headers, payload = request_json(
+            f"{self.base}/api/nest-visits/7",
+            method="DELETE",
+            headers={**cookie, "X-Owlcam-Csrf": login["csrfToken"]},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(payload, {"deleted": True, "id": 7})
+        delete_visit.assert_called_once_with(7)
 
 
 if __name__ == "__main__":

@@ -328,6 +328,23 @@ class VisitStore:
         path = self.thumbnail_dir / thumbnail_name
         return path if path.is_file() else None
 
+    def delete_visit(self, visit_id: int) -> bool:
+        row = self.get_visit(visit_id)
+        if row is None:
+            return False
+        if row.thumbnail_name:
+            thumb = self.thumbnail_dir / row.thumbnail_name
+            try:
+                thumb.unlink(missing_ok=True)
+            except OSError:
+                pass
+        with sqlite3.connect(self.db_path) as connection:
+            cursor = connection.execute(
+                "DELETE FROM visits WHERE id = ?",
+                (visit_id,),
+            )
+            return cursor.rowcount > 0
+
 
 class AlertCooldownStore:
     def __init__(self, path: Path) -> None:

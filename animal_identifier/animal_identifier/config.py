@@ -43,6 +43,7 @@ VISIT_LOG_UNKNOWN = os.environ.get("ANIMAL_ID_VISIT_LOG_UNKNOWN", "0").strip() i
 }
 VISIT_DEDUPE_SECONDS = int(os.environ.get("ANIMAL_ID_VISIT_DEDUPE_SECONDS", "300"))
 VISIT_LIST_DEFAULT_LIMIT = int(os.environ.get("ANIMAL_ID_VISIT_LIST_LIMIT", "50"))
+VISIT_ADMIN_SECRET = os.environ.get("ANIMAL_ID_VISIT_ADMIN_SECRET", "").strip()
 ALERT_SLACK_WEBHOOK = os.environ.get("ANIMAL_ID_ALERT_SLACK_WEBHOOK", "").strip()
 ALERT_SPECIES = frozenset(
     name.strip().lower()

@@ -88,9 +88,23 @@ def test_moments_page_has_placeholder_media_stories_and_sorting():
     assert 'src="/assets/moments/mole-delivery.webm"' in html
     assert 'poster="/assets/moments/thumbs/mole-delivery.jpg"' in html
     assert 'src="/assets/moments.js"' in html
+    assert 'src="/assets/moments-live.js"' in html
+    assert 'id="nest-moments-grid"' in html
+    assert 'id="nest-moments-status"' in html
+    assert "From the nest." in html
     assert 'href="/moments"' in html
     assert "capture dates were not preserved" in html
     assert "Strix-varia" not in html
+
+
+def test_moments_page_embeds_configured_api_origin(monkeypatch):
+    import app as site_app
+
+    monkeypatch.setattr(
+        site_app, "ANIMAL_ID_API_ORIGIN", "https://id.example.ts.net:8443"
+    )
+    html = site_app.render_moments_page()
+    assert 'data-api-origin="https://id.example.ts.net:8443"' in html
 
 
 def test_photo_moments_load_thumbnails_that_open_full_size():
@@ -683,6 +697,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assert not (assets / "player.js").exists()
     assert not (assets / "diagnostics.js").exists()
     assert not (assets / "moments.js").exists()
+    assert not (assets / "moments-live.js").exists()
     assert not (assets / "admin.js").exists()
     assert not (assets / "identify.js").exists()
     assert not (assets / "analytics.js").exists()

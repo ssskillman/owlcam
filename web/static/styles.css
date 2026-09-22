@@ -954,6 +954,69 @@ footer {
   font-size: 0.78rem;
 }
 
+.nest-moments {
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.nest-moments-lede {
+  max-width: 42rem;
+}
+
+.nest-moments-status {
+  margin: 0.75rem 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.nest-moments-grid {
+  margin-top: 0.5rem;
+}
+
+.nest-moment-delete {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid rgba(255, 220, 160, 0.35);
+  border-radius: 0.45rem;
+  background: rgba(8, 12, 10, 0.82);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.nest-moment-delete:hover,
+.nest-moment-delete:focus-visible {
+  background: rgba(180, 60, 40, 0.85);
+  color: #fff6eb;
+  border-color: rgba(255, 200, 160, 0.55);
+}
+
+.nest-moment-badge {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  padding: 0.35rem 0.5rem;
+  color: var(--night);
+  background: var(--amber);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.nest-moment-subject {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
 .moments-grid {
   display: grid;
   gap: 1px;

@@ -57,6 +57,29 @@ def test_feed_watcher_visit_persists_and_lists(monkeypatch, tmp_path):
     assert thumb.headers["content-type"] == "image/jpeg"
 
 
+def test_delete_visit_requires_admin_secret(monkeypatch, tmp_path):
+    monkeypatch.setattr(server, "visits", VisitStore(tmp_path / "v.sqlite", tmp_path / "thumbs"))
+    monkeypatch.setattr(server, "VISIT_ADMIN_SECRET", "nest-delete-secret")
+    client = TestClient(server.app)
+    visit_id = server.visits.add(
+        species="cow",
+        category="mammal",
+        confidence=0.62,
+        is_unknown=False,
+        model_version="test",
+        source="feed_watcher",
+        thumbnail=b"jpeg",
+    )
+    assert client.delete(f"/api/animal-identification/visits/{visit_id}").status_code == 403
+    response = client.delete(
+        f"/api/animal-identification/visits/{visit_id}",
+        headers={"X-OwlCam-Visit-Admin": "nest-delete-secret"},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"deleted": True, "id": visit_id}
+    assert client.get("/api/animal-identification/visits").json()["visits"] == []
+
+
 def test_visit_dedupe_for_feed_watcher(monkeypatch, tmp_path):
     visit_store = VisitStore(tmp_path / "v.sqlite", tmp_path / "thumbs")
     monkeypatch.setattr(server, "visits", visit_store)
