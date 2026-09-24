@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+*.local.env
 deploy.env
 !deploy.env.example
 *.secret
@@ -16,6 +17,8 @@ __pycache__/
 *.py[cod]
 .venv/
 web/public/
+web/preview/.server-*
+web/preview/.live-*
 .firebase/
 *.pt
 .DS_Store

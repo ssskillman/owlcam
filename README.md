@@ -294,7 +294,7 @@ Runtime configuration belongs in `/etc/owlcam/owlcam.env`; use
 | `animal_identifier/` | YOLO + BioCLIP API (Mac / gaming PC, never the Pi) |
 | `scripts/` | standalone UDP publisher |
 | `tests/` | shell script test suite |
-| `docs/` | architecture, runbooks, security, live-feed guide, [next steps](docs/next_steps.md), [next phase handoff](docs/next-steps/phase-stills-from-feed.md) |
+| `docs/` | architecture, runbooks, security, live-feed guide, [microphone](docs/microphone.md), [next steps](docs/next_steps.md), [next phase handoff](docs/next-steps/phase-stills-from-feed.md) |
 
 ## Known gaps
 

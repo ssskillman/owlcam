@@ -425,4 +425,55 @@ grep -F -- '/api/animal-identification/visits' "${REPO_ROOT}/animal_identifier/a
 grep -F -- '/api/animal-identification/visits/calendar' "${REPO_ROOT}/animal_identifier/animal_identifier/server.py" >/dev/null \
   || fail "identifier server missing visit calendar API"
 
+mic_test="${REPO_ROOT}/pi/scripts/test_microphone.sh"
+capture_py="${REPO_ROOT}/pi/scripts/capture_audio.py"
+i2s_config="${REPO_ROOT}/pi/scripts/configure-i2s-mic.sh"
+owlmic_config="${REPO_ROOT}/pi/scripts/configure-owlmic.sh"
+[[ -x "${mic_test}" ]] || fail "test_microphone.sh is missing or not executable"
+[[ -x "${capture_py}" ]] || fail "capture_audio.py is missing or not executable"
+[[ -x "${i2s_config}" ]] || fail "configure-i2s-mic.sh is missing or not executable"
+[[ -x "${owlmic_config}" ]] || fail "configure-owlmic.sh is missing or not executable"
+mic_help="$("${mic_test}" --help)"
+[[ "${mic_help}" == *"--duration"* ]] \
+  || fail "test_microphone.sh --help does not document --duration"
+if "${mic_test}" --not-an-option >/dev/null 2>&1; then
+  fail "test_microphone.sh accepted an unknown option"
+fi
+empty_path="$(mktemp -d)"
+if PATH="${empty_path}" "${mic_test}" --duration 1 >/dev/null 2>&1; then
+  fail "test_microphone.sh succeeded without arecord"
+fi
+rmdir "${empty_path}"
+# Nest audio rides the video publish, but a dead microphone must never take
+# the live feed down with it.
+grep -F -- 'OWLCAM_AUDIO_DEVICE:-owlmic' "${stream_script}" >/dev/null \
+  || fail "stream script no longer publishes nest audio from owlmic"
+grep -F -- '-c:a aac' "${stream_script}" >/dev/null \
+  || fail "stream script does not encode audio browsers can play"
+grep -F -- 'publishing video only' "${stream_script}" >/dev/null \
+  || fail "stream script does not fall back to video when the mic is missing"
+awk '/arecord -D/ { found = 1 } END { exit !found }' "${stream_script}" \
+  || fail "stream script opens the microphone without probing it first"
+grep -F -- '-use_wallclock_as_timestamps 1' "${stream_script}" >/dev/null \
+  || fail "stream script does not put audio and video on one timeline"
+# Both publishes share one microphone, which an ALSA capture device only
+# permits through dsnoop.
+grep -F -- '-c:a aac' "${REPO_ROOT}/pi/scripts/start-stream-usb.sh" >/dev/null \
+  || fail "USB stream script dropped the shared nest audio"
+grep -F -- 'dsnoop' "${owlmic_config}" >/dev/null \
+  || fail "owlmic is not shareable, so the second publish cannot open the mic"
+
+grep -F -- 'dtoverlay=googlevoicehat-soundcard' "${i2s_config}" >/dev/null \
+  || fail "I2S configurator does not use the overlay installed on this Pi"
+grep -F -- 'pcm.owlmic' "${owlmic_config}" >/dev/null \
+  || fail "owlmic alias installer dropped pcm.owlmic"
+grep -F -- 'ttable.0.0 1' "${owlmic_config}" >/dev/null \
+  || fail "owlmic alias installer dropped left-channel ttable"
+grep -F -- 'arecord' "${capture_py}" >/dev/null \
+  || fail "Python capture does not call arecord"
+grep -F -- 'docs/microphone.md' "${REPO_ROOT}/README.md" >/dev/null \
+  || fail "README does not point at the microphone runbook"
+grep -F -- 'microphone.md' "${REPO_ROOT}/docs/next_steps.md" >/dev/null \
+  || fail "next_steps.md dropped the INMP441 row"
+
 printf 'Script checks passed.\n'

@@ -197,6 +197,7 @@ def _head(*, title: str, description: str, include_player: bool, include_identif
                 crossorigin="anonymous",
             ),
             Script(src="/assets/player.js", defer=True),
+            Script(src="/assets/audio.js", defer=True),
             Script(src="/assets/diagnostics.js", defer=True),
             Script(src="/assets/home-status.js", defer=True),
             *scripts,
@@ -616,6 +617,31 @@ def render_page(
                                 cls="camera-toggle",
                                 role="group",
                                 aria_label="Live camera source",
+                            ),
+                            Div(
+                                # No custom play/mute control: the video
+                                # element's own speaker button is the gesture
+                                # browsers require before unmuted playback, and
+                                # a second control beside it just competes.
+                                # Decorative: audio-status is what carries the
+                                # state to a screen reader.
+                                Div(
+                                    Span(
+                                        id="audio-meter-fill",
+                                        cls="audio-meter-fill",
+                                    ),
+                                    id="audio-meter",
+                                    cls="audio-meter",
+                                    aria_hidden="true",
+                                ),
+                                Span(
+                                    "Muted",
+                                    id="audio-status",
+                                    cls="audio-status",
+                                    aria_live="polite",
+                                ),
+                                id="nest-audio",
+                                cls="audio-controls",
                             ),
                             Small(
                                 "Nest 1920×1080 · USB 1280×720 · H.264",
