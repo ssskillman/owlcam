@@ -8,10 +8,11 @@ import os
 import sys
 import threading
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 # owlcam-diagnostics and bme280_raw.py install side by side in ~/.local/bin.
 _BIN_DIR = Path(__file__).resolve().parent
@@ -33,6 +34,17 @@ PROCESS_NAMES = {
     "ffmpeg": "ffmpeg",
 }
 CLIMATE_POLL_SECONDS = int(os.environ.get("OWLCAM_CLIMATE_POLL_SECONDS", "30"))
+HISTORY_SAMPLE_SECONDS = int(
+    os.environ.get("OWLCAM_DIAGNOSTICS_HISTORY_SECONDS", "300")
+)
+HISTORY_RETENTION = timedelta(days=30)
+HISTORY_MAX_HOURS = int(HISTORY_RETENTION.total_seconds() // 3600)
+HISTORY_PATH = Path(
+    os.environ.get(
+        "OWLCAM_DIAGNOSTICS_HISTORY_PATH",
+        Path.home() / ".local/state/owlcam/diagnostics-history.json",
+    )
+)
 
 DISCONNECTED_CLIMATE: dict[str, Any] = {
     "connected": False,
@@ -161,6 +173,114 @@ def collect_diagnostics(
     }
 
 
+class HistoryStore:
+    """Small, bounded JSON history for the dashboard's numeric metrics."""
+
+    def __init__(
+        self,
+        path: Path,
+        *,
+        retention: timedelta = HISTORY_RETENTION,
+        clock: Any = None,
+    ) -> None:
+        self.path = path
+        self.retention = retention
+        self.clock = clock or (lambda: datetime.now(UTC))
+        self._lock = threading.Lock()
+        self._samples = self._pruned(self._load())
+
+    def _load(self) -> list[dict[str, Any]]:
+        try:
+            payload = json.loads(self.path.read_text())
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return []
+        if not isinstance(payload, list):
+            return []
+        return [sample for sample in payload if isinstance(sample, dict)]
+
+    def _cutoff(self) -> datetime:
+        return self.clock() - self.retention
+
+    def _pruned(self, samples: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        cutoff = self._cutoff()
+        kept = []
+        for sample in samples:
+            try:
+                sampled_at = datetime.fromisoformat(
+                    str(sample["sampledAt"]).replace("Z", "+00:00")
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
+            if sampled_at >= cutoff:
+                kept.append(sample)
+        return kept
+
+    def add(self, diagnostics: dict[str, Any]) -> None:
+        climate = diagnostics["climate"]
+        sample = {
+            "sampledAt": diagnostics["sampledAt"],
+            "habitatTemperatureC": (
+                climate["temperatureC"] if climate["connected"] else None
+            ),
+            "humidityPercent": (
+                climate["humidityPercent"] if climate["connected"] else None
+            ),
+            "pressureHpa": climate["pressureHpa"] if climate["connected"] else None,
+            "temperatureC": diagnostics["temperatureC"],
+            "memoryAvailableGiB": diagnostics["memoryAvailableGiB"],
+            "load1": diagnostics["load1"],
+            "stableProcessCount": sum(diagnostics["processes"].values()),
+        }
+        with self._lock:
+            self._samples = self._pruned([*self._samples, sample])
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = self.path.with_suffix(".tmp")
+            temporary.write_text(json.dumps(self._samples, separators=(",", ":")))
+            temporary.replace(self.path)
+
+    def samples(self, *, hours: int | None = None) -> list[dict[str, Any]]:
+        window = self.retention if hours is None else timedelta(hours=hours)
+        cutoff = self.clock() - window
+        with self._lock:
+            samples = list(self._samples)
+        return [
+            sample
+            for sample in samples
+            if datetime.fromisoformat(
+                str(sample["sampledAt"]).replace("Z", "+00:00")
+            )
+            >= cutoff
+        ]
+
+
+_history_store = HistoryStore(HISTORY_PATH)
+
+
+def history_payload(hours: int) -> dict[str, Any]:
+    return {
+        "samples": _history_store.samples(hours=hours),
+        "sampleIntervalSeconds": HISTORY_SAMPLE_SECONDS,
+    }
+
+
+def _history_worker() -> None:
+    while True:
+        try:
+            _history_store.add(collect_diagnostics())
+        except (OSError, ValueError, KeyError) as exc:
+            print(f"Diagnostics history error: {exc}", flush=True)
+        time.sleep(HISTORY_SAMPLE_SECONDS)
+
+
+def start_history_worker() -> None:
+    thread = threading.Thread(
+        target=_history_worker,
+        name="owlcam-diagnostics-history",
+        daemon=True,
+    )
+    thread.start()
+
+
 class DiagnosticsHandler(BaseHTTPRequestHandler):
     server_version = "OwlCamDiagnostics"
     sys_version = ""
@@ -206,8 +326,23 @@ class DiagnosticsHandler(BaseHTTPRequestHandler):
         if not self._origin_is_allowed():
             self._send_json(403, {"error": "origin_not_allowed"})
             return
+        parsed = urlsplit(self.path)
+        path = parsed.path.rstrip("/")
+        if path in ("/history", "/diagnostics/history"):
+            try:
+                hours = int(
+                    parse_qs(parsed.query).get("hours", [str(HISTORY_MAX_HOURS)])[0]
+                )
+            except ValueError:
+                self._send_json(400, {"error": "invalid_history_window"})
+                return
+            if hours < 1 or hours > HISTORY_MAX_HOURS:
+                self._send_json(400, {"error": "invalid_history_window"})
+                return
+            self._send_json(200, history_payload(hours))
+            return
         # Tailscale Serve can strip the configured /diagnostics mount point.
-        if self.path.rstrip("/") not in ("", "/diagnostics"):
+        if path not in ("", "/diagnostics"):
             self._send_json(404, {"error": "not_found"})
             return
 
@@ -226,6 +361,7 @@ class DiagnosticsHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     start_climate_worker()
+    start_history_worker()
     server = ThreadingHTTPServer((HOST, PORT), DiagnosticsHandler)
     server.serve_forever()
 

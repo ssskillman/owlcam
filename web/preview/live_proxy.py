@@ -15,20 +15,24 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-PROXIED = ("/owl/", "/owl2/")
+HLS_PATHS = ("/owl/", "/owl2/")
 
 
 class PreviewHandler(SimpleHTTPRequestHandler):
     hls_port = 8888
+    diagnostics_port = 8765
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib naming
-        if self.path.startswith(PROXIED):
-            self._proxy()
+        if self.path.startswith(HLS_PATHS):
+            self._proxy(self.hls_port)
+            return
+        if self.path == "/diagnostics" or self.path.startswith("/diagnostics/"):
+            self._proxy(self.diagnostics_port)
             return
         super().do_GET()
 
-    def _proxy(self) -> None:
-        upstream = f"http://127.0.0.1:{self.hls_port}{self.path}"
+    def _proxy(self, port: int) -> None:
+        upstream = f"http://127.0.0.1:{port}{self.path}"
         try:
             with urllib.request.urlopen(upstream, timeout=10) as response:
                 body = response.read()
@@ -58,7 +62,9 @@ def main() -> None:
     site = Path(sys.argv[1])
     port = int(sys.argv[2])
     hls_port = int(sys.argv[3])
+    diagnostics_port = int(sys.argv[4])
     PreviewHandler.hls_port = hls_port
+    PreviewHandler.diagnostics_port = diagnostics_port
     handler = partial(PreviewHandler, directory=str(site))
     ThreadingHTTPServer(("127.0.0.1", port), handler).serve_forever()
 

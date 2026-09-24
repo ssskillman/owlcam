@@ -3,6 +3,7 @@ import json
 import tempfile
 import threading
 import unittest
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError
@@ -126,6 +127,108 @@ class DiagnosticsCollectionTests(unittest.TestCase):
             diagnostics.set_climate_cache(diagnostics.DISCONNECTED_CLIMATE)
 
 
+class DiagnosticsHistoryTests(unittest.TestCase):
+    def test_history_store_persists_numeric_trends_and_prunes_old_samples(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "diagnostics-history.json"
+            now = datetime(2026, 9, 24, 13, 0, tzinfo=UTC)
+            store = diagnostics.HistoryStore(
+                path,
+                retention=timedelta(hours=24),
+                clock=lambda: now,
+            )
+            recent = dict(DiagnosticsHTTPTests.PAYLOAD)
+            recent["sampledAt"] = "2026-09-24T12:59:00Z"
+            recent["climate"] = {
+                "connected": True,
+                "sensor": "bme280",
+                "temperatureC": 20.4,
+                "humidityPercent": 56.5,
+                "pressureHpa": 1006.6,
+                "sampledAt": "2026-09-24T12:59:00Z",
+            }
+            old = dict(recent)
+            old["sampledAt"] = "2026-09-23T12:00:00Z"
+
+            store.add(old)
+            store.add(recent)
+
+            self.assertEqual(
+                store.samples(),
+                [
+                    {
+                        "sampledAt": "2026-09-24T12:59:00Z",
+                        "habitatTemperatureC": 20.4,
+                        "humidityPercent": 56.5,
+                        "pressureHpa": 1006.6,
+                        "temperatureC": 54.5,
+                        "memoryAvailableGiB": 1.4,
+                        "load1": 0.56,
+                        "stableProcessCount": 3,
+                    }
+                ],
+            )
+            self.assertEqual(
+                diagnostics.HistoryStore(
+                    path,
+                    retention=timedelta(hours=24),
+                    clock=lambda: now,
+                ).samples(),
+                store.samples(),
+            )
+
+    def test_history_store_keeps_weeks_but_can_still_serve_one_day(self):
+        with tempfile.TemporaryDirectory() as directory:
+            now = datetime(2026, 9, 24, 13, 0, tzinfo=UTC)
+            store = diagnostics.HistoryStore(
+                Path(directory) / "diagnostics-history.json",
+                clock=lambda: now,
+            )
+            climate = {
+                "connected": True,
+                "sensor": "bme280",
+                "temperatureC": 20.4,
+                "humidityPercent": 56.5,
+                "pressureHpa": 1006.6,
+                "sampledAt": "2026-09-24T12:59:00Z",
+            }
+            recent = dict(DiagnosticsHTTPTests.PAYLOAD)
+            recent["sampledAt"] = "2026-09-24T12:59:00Z"
+            recent["climate"] = climate
+            last_week = dict(recent)
+            last_week["sampledAt"] = "2026-09-10T12:59:00Z"
+            ancient = dict(recent)
+            ancient["sampledAt"] = "2026-08-01T12:59:00Z"
+
+            store.add(ancient)
+            store.add(last_week)
+            store.add(recent)
+
+            sampled_at = [sample["sampledAt"] for sample in store.samples()]
+            self.assertEqual(
+                sampled_at,
+                ["2026-09-10T12:59:00Z", "2026-09-24T12:59:00Z"],
+            )
+            self.assertEqual(
+                [sample["sampledAt"] for sample in store.samples(hours=24)],
+                ["2026-09-24T12:59:00Z"],
+            )
+
+    def test_disconnected_climate_is_recorded_as_missing_not_zero(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = diagnostics.HistoryStore(
+                Path(directory) / "history.json",
+                clock=lambda: datetime(2026, 8, 30, 3, 0, tzinfo=UTC),
+            )
+            store.add(DiagnosticsHTTPTests.PAYLOAD)
+
+            sample = store.samples()[0]
+
+        self.assertIsNone(sample["habitatTemperatureC"])
+        self.assertIsNone(sample["humidityPercent"])
+        self.assertIsNone(sample["pressureHpa"])
+
+
 class DiagnosticsHTTPTests(unittest.TestCase):
     ORIGIN = "https://carver-owlcam-72343.web.app"
     PAYLOAD = {
@@ -200,6 +303,55 @@ class DiagnosticsHTTPTests(unittest.TestCase):
             urlopen(blocked)
         self.assertEqual(error.exception.code, 403)
         error.exception.close()
+
+    def test_history_response_is_bounded_cache_free_json(self):
+        sample = {
+            "sampledAt": "2026-08-30T02:30:00Z",
+            "temperatureC": 54.5,
+        }
+        with patch.object(
+            diagnostics,
+            "history_payload",
+            return_value={"samples": [sample], "sampleIntervalSeconds": 60},
+        ):
+            request = Request(
+                f"{self.url}/diagnostics/history?hours=24",
+                headers={"Origin": self.ORIGIN},
+            )
+            with urlopen(request) as response:
+                payload = json.load(response)
+
+        self.assertEqual(payload["samples"], [sample])
+        self.assertEqual(payload["sampleIntervalSeconds"], 60)
+
+    def test_history_rejects_an_unbounded_window(self):
+        request = Request(
+            f"{self.url}/history?hours=1000",
+            headers={"Origin": self.ORIGIN},
+        )
+        with self.assertRaises(HTTPError) as error:
+            urlopen(request)
+        self.assertEqual(error.exception.code, 400)
+        error.exception.close()
+
+    def test_history_serves_the_retained_month(self):
+        sample = {
+            "sampledAt": "2026-08-30T02:30:00Z",
+            "temperatureC": 54.5,
+        }
+        with patch.object(
+            diagnostics,
+            "history_payload",
+            return_value={"samples": [sample], "sampleIntervalSeconds": 300},
+        ):
+            request = Request(
+                f"{self.url}/diagnostics/history?hours=720",
+                headers={"Origin": self.ORIGIN},
+            )
+            with urlopen(request) as response:
+                payload = json.load(response)
+
+        self.assertEqual(payload["samples"], [sample])
 
 
 if __name__ == "__main__":

@@ -436,6 +436,43 @@ def test_live_page_offers_nest_audio_with_a_level_meter():
     assert 'aria-hidden="true"' in meter
 
 
+def test_every_css_variable_used_is_actually_defined():
+    source = (WEB_ROOT / "static" / "styles.css").read_text()
+
+    defined = set(re.findall(r"(--[\w-]+)\s*:", source))
+    # A var() with a fallback still renders if the token is missing; one
+    # without a fallback resolves to "unset" and silently inherits, which is
+    # how dark tooltip text ended up on a dark tooltip background.
+    used = set(re.findall(r"var\(\s*(--[\w-]+)\s*\)", source))
+
+    assert not (used - defined), f"undefined CSS variables: {sorted(used - defined)}"
+
+
+def test_diagnostics_hover_never_hides_the_trend_behind_the_button():
+    source = (WEB_ROOT / "static" / "styles.css").read_text()
+
+    # Global "button:hover" paints the button with --ink. Any trend control
+    # that keeps a transparent face has to say so again on hover, or the line
+    # disappears into a near-black block.
+    assert "button:hover {\n  background: var(--ink);\n}" in source
+    for rule in (
+        ".diagnostics-sparkline:hover",
+        ".diagnostics-history-close:hover",
+    ):
+        block = source[source.index(rule) : source.index("}", source.index(rule))]
+        assert "background:" in block, f"{rule} does not override the dark hover fill"
+
+
+def test_muted_notice_is_announced_without_being_printed_beside_the_player():
+    html = render_page()
+    source = (WEB_ROOT / "static" / "styles.css").read_text()
+
+    assert 'id="audio-status"' in html
+    assert 'aria-live="polite"' in html
+    status = source[source.index(".audio-status {") : source.index("}", source.index(".audio-status {"))]
+    assert "clip:" in status, "the muted notice is still drawn next to the player"
+
+
 def test_nest_audio_uses_the_players_own_mute_control():
     html = render_page()
     source = (WEB_ROOT / "static" / "audio.js").read_text()
@@ -527,6 +564,47 @@ def test_live_page_has_accessible_realtime_diagnostics():
     assert 'id="diagnostics-status"' in html
     assert 'aria-live="polite"' in html
     assert 'src="/assets/diagnostics.js"' in html
+
+
+def test_numeric_diagnostics_offer_sparklines_and_a_history_dialog():
+    html = render_page()
+
+    assert html.count('class="diagnostics-sparkline"') == 7
+    for metric in (
+        "habitatTemperatureC",
+        "humidityPercent",
+        "pressureHpa",
+        "temperatureC",
+        "memoryAvailableGiB",
+        "load1",
+        "stableProcessCount",
+    ):
+        assert f'data-history-metric="{metric}"' in html
+    assert 'id="diagnostics-history-dialog"' in html
+    assert 'id="diagnostics-history-chart"' in html
+    assert 'id="diagnostics-history-close"' in html
+    assert 'aria-label="Close historical trend"' in html
+    # There is no reading to chart until the daylight sensor exists.
+    daylight = html[
+        html.index('id="diagnostics-daylight"') : html.index("PI HEALTH")
+    ]
+    assert "diagnostics-sparkline" not in daylight
+
+
+def test_diagnostics_history_draws_svg_without_injecting_markup():
+    source = (WEB_ROOT / "static" / "diagnostics.js").read_text()
+
+    assert "hours=${HISTORY_HOURS}" in source
+    assert "SPARKLINE_HOURS = 24" in source
+    assert "toLocaleDateString" in source
+    assert "createElementNS" in source
+    assert 'dialog.showModal()' in source
+    assert 'dialog.addEventListener("click"' in source
+    assert "diagnostics-sparkline--up" in source
+    assert "diagnostics-sparkline--down" in source
+    assert "if (!Number.isFinite(value)) return null" in source
+    assert 'dialog.addEventListener("cancel"' in source
+    assert ".innerHTML" not in source
 
 
 def test_diagnostics_polling_is_bounded_and_renders_as_text():
