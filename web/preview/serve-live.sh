@@ -11,6 +11,7 @@ readonly ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly SITE="${ROOT}/public"
 readonly PORT="${OWLCAM_PREVIEW_PORT:-8770}"
 readonly HLS_PORT="${OWLCAM_PREVIEW_HLS_PORT:-8888}"
+readonly DIAGNOSTICS_PORT="${OWLCAM_PREVIEW_DIAGNOSTICS_PORT:-18765}"
 readonly TARGET="${OWLCAM_SSH_TARGET:-shawn@100.123.8.55}"
 readonly PID_TUNNEL="${ROOT}/preview/.live-tunnel.pid"
 readonly PID_SERVER="${ROOT}/preview/.live-server.pid"
@@ -60,14 +61,17 @@ python3 -c "
 import os, sys
 os.setsid()
 os.execvp('ssh', sys.argv[1:])
-" ssh "${ssh_opts[@]}" -N -L "${HLS_PORT}:127.0.0.1:8888" "${TARGET}" >>"${LOG}" 2>&1 &
+" ssh "${ssh_opts[@]}" -N \
+  -L "${HLS_PORT}:127.0.0.1:8888" \
+  -L "${DIAGNOSTICS_PORT}:127.0.0.1:8765" \
+  "${TARGET}" >>"${LOG}" 2>&1 &
 echo $! >"${PID_TUNNEL}"
 
 python3 -c "
 import os, sys
 os.setsid()
-os.execv(sys.executable, [sys.executable, sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]])
-" "${ROOT}/preview/live_proxy.py" "${SITE}" "${PORT}" "${HLS_PORT}" >>"${LOG}" 2>&1 &
+os.execv(sys.executable, [sys.executable, *sys.argv[1:]])
+" "${ROOT}/preview/live_proxy.py" "${SITE}" "${PORT}" "${HLS_PORT}" "${DIAGNOSTICS_PORT}" >>"${LOG}" 2>&1 &
 echo $! >"${PID_SERVER}"
 
 sleep 1.5

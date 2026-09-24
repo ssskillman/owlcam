@@ -148,15 +148,67 @@ def _diagnostic_metric(
     label: str,
     metric_id: str,
     explanation: str,
+    history_metric: str | None = None,
 ) -> Div:
     help_id = f"{metric_id}-help"
+    trend = (
+        Button(
+            Span("Collecting trend", cls="diagnostics-sparkline-status"),
+            type="button",
+            cls="diagnostics-sparkline",
+            data_history_metric=history_metric,
+            data_history_label=label.title(),
+            aria_label=f"Open {label.lower()} historical trend",
+            disabled=True,
+        )
+        if history_metric
+        else None
+    )
     return Div(
         Span(label, cls="diagnostics-key"),
         P("—", id=metric_id),
+        trend,
         Span(explanation, id=help_id, role="tooltip", cls="diagnostics-help"),
         cls="diagnostics-metric",
         tabindex="0",
         aria_describedby=help_id,
+    )
+
+
+def _diagnostics_history_dialog() -> Dialog:
+    return Dialog(
+        Div(
+            Div(
+                Div(
+                    Span("HISTORICAL TREND", cls="diagnostics-label"),
+                    H2("Metric history", id="diagnostics-history-title"),
+                ),
+                Button(
+                    "Close",
+                    type="button",
+                    id="diagnostics-history-close",
+                    cls="diagnostics-history-close",
+                    aria_label="Close historical trend",
+                ),
+                cls="diagnostics-history-header",
+            ),
+            P(
+                "Loading retained samples…",
+                id="diagnostics-history-summary",
+                cls="diagnostics-history-summary",
+                aria_live="polite",
+            ),
+            Div(
+                id="diagnostics-history-chart",
+                cls="diagnostics-history-chart",
+                role="img",
+                aria_label="Historical line chart",
+            ),
+            cls="diagnostics-history-content",
+        ),
+        id="diagnostics-history-dialog",
+        cls="diagnostics-history-dialog",
+        aria_labelledby="diagnostics-history-title",
     )
 
 
@@ -702,6 +754,7 @@ def render_page(
                                 "Air temperature shapes how easily adults and "
                                 "hatchlings regulate body heat. Watch trends; "
                                 "do not disturb the nest to chase a single reading.",
+                                "habitatTemperatureC",
                             ),
                             _diagnostic_metric(
                                 "RELATIVE HUMIDITY",
@@ -709,6 +762,7 @@ def render_page(
                                 "Humidity adds context for damp bedding, mold risk, "
                                 "and heat stress. Outdoor nests naturally swing "
                                 "through a wide range.",
+                                "humidityPercent",
                             ),
                             _diagnostic_metric(
                                 "BAROMETRIC PRESSURE",
@@ -716,6 +770,7 @@ def render_page(
                                 "Pressure helps track weather fronts and altitude "
                                 "context for the nest site. It is independent of "
                                 "the camera enclosure.",
+                                "pressureHpa",
                             ),
                             _diagnostic_metric(
                                 "DAYLIGHT",
@@ -734,18 +789,21 @@ def render_page(
                                 "The processor temperature is not the nest "
                                 "temperature. It warns when the camera computer may "
                                 "throttle or stop streaming.",
+                                "temperatureC",
                             ),
                             _diagnostic_metric(
                                 "MEMORY AVAILABLE",
                                 "diagnostics-memory",
                                 "Free working memory helps the Pi encode and serve "
                                 "video without interruption.",
+                                "memoryAvailableGiB",
                             ),
                             _diagnostic_metric(
                                 "1-MINUTE LOAD",
                                 "diagnostics-load",
                                 "Recent processor demand. Sustained high load can "
                                 "make the live view stutter or fall behind.",
+                                "load1",
                             ),
                             _diagnostic_metric(
                                 "STREAMING PROCESSES",
@@ -753,6 +811,7 @@ def render_page(
                                 "The camera, encoder, and media server must all be "
                                 "running for observers to watch without approaching "
                                 "the nest.",
+                                "stableProcessCount",
                             ),
                             cls="diagnostics-row diagnostics-row-system",
                         ),
@@ -764,6 +823,7 @@ def render_page(
                     data_diagnostics_url=DEFAULT_DIAGNOSTICS_URL,
                     aria_label="Realtime OwlCam system diagnostics",
                 ),
+                _diagnostics_history_dialog(),
                 Section(
                     Div(
                         Span("01", cls="fact-number"),

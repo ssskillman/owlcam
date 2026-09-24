@@ -892,10 +892,18 @@ video:focus-visible {
   transition: width 80ms linear;
 }
 
+/* The meter already shows the level, so the wording is for screen readers
+   only; printed beside the player it just repeated the speaker icon. */
 .audio-status {
-  color: var(--muted);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .status {
@@ -991,7 +999,7 @@ video:focus-visible {
 }
 
 .temperature-unit:focus-visible {
-  outline: 2px solid var(--paper);
+  outline: 2px solid var(--ink);
   outline-offset: -3px;
 }
 
@@ -1058,6 +1066,161 @@ video:focus-visible {
   font-size: clamp(1.45rem, 2.8vw, 2.5rem);
 }
 
+.diagnostics-sparkline {
+  display: block;
+  width: 100%;
+  height: 2.5rem;
+  margin-top: 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--amber);
+  cursor: pointer;
+}
+
+.diagnostics-sparkline:disabled {
+  color: var(--muted);
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* Global "button:hover" fills with --ink, which would bury the trend line in
+   a near-black block, so the transparent face is restated here. */
+.diagnostics-sparkline:hover {
+  background: transparent;
+}
+
+.diagnostics-sparkline:not(:disabled):hover {
+  color: var(--ink);
+}
+
+.diagnostics-sparkline:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 0.25rem;
+}
+
+.diagnostics-sparkline svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.diagnostics-sparkline-path,
+.diagnostics-history-line {
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.diagnostics-sparkline-path {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.diagnostics-sparkline-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.diagnostics-history-dialog {
+  width: min(56rem, calc(100vw - 2rem));
+  max-width: none;
+  padding: 0;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: var(--forest);
+}
+
+.diagnostics-history-dialog::backdrop {
+  background: rgb(5 9 6 / 72%);
+  backdrop-filter: blur(3px);
+}
+
+.diagnostics-history-content {
+  padding: clamp(1.25rem, 3vw, 2.4rem);
+}
+
+.diagnostics-history-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.diagnostics-history-header h2 {
+  margin: 0.35rem 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.65rem, 4vw, 2.5rem);
+  font-weight: 400;
+}
+
+.diagnostics-history-close {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.diagnostics-history-close:hover {
+  border-color: var(--amber);
+  background: var(--amber);
+  color: var(--forest);
+}
+
+.diagnostics-history-close:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 0.2rem;
+}
+
+.diagnostics-history-summary {
+  margin: 1.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.diagnostics-history-chart {
+  min-height: 20rem;
+  color: var(--amber);
+}
+
+.diagnostics-history-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.diagnostics-history-gridline {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.diagnostics-history-line {
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.diagnostics-history-axis-label {
+  fill: var(--muted);
+  font: 11px "Avenir Next", Avenir, "Segoe UI", sans-serif;
+}
+
 .diagnostics-help {
   position: absolute;
   z-index: 4;
@@ -1069,7 +1232,9 @@ video:focus-visible {
   border: 1px solid var(--amber);
   background: #111a13;
   box-shadow: 0 12px 30px rgb(0 0 0 / 35%);
-  color: var(--paper);
+  /* Pinned to the hardcoded dark background above rather than a theme token,
+     which would invert with the page and vanish in one of the two themes. */
+  color: #f2ead8;
   font-size: 0.75rem;
   line-height: 1.5;
   opacity: 0;
@@ -1079,8 +1244,7 @@ video:focus-visible {
 }
 
 .diagnostics-metric:hover .diagnostics-help,
-.diagnostics-metric:focus .diagnostics-help,
-.diagnostics-metric:focus-within .diagnostics-help {
+.diagnostics-metric:focus .diagnostics-help {
   visibility: visible;
   opacity: 1;
   transform: translateY(0);
@@ -1227,7 +1391,7 @@ html[data-theme="light"] .moments-calendar-drawer {
   padding: 1rem 1.15rem;
   cursor: pointer;
   list-style: none;
-  font-family: var(--display);
+  font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(1.35rem, 3.2vw, 1.75rem);
   font-weight: 600;
   line-height: 1.2;

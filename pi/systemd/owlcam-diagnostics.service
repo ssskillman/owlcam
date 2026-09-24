@@ -11,6 +11,8 @@ Environment=PYTHONUNBUFFERED=1
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=always
 RestartSec=5
+StateDirectory=owlcam
+StateDirectoryMode=0700
 
 # Loopback plus /proc, SoC thermal, and nest BME280 via i2ctransfer.
 # PrivateDevices hides /dev/i2c-1 from user units even with DeviceAllow.
