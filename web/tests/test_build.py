@@ -421,6 +421,78 @@ def test_player_starts_playback_rather_than_only_reporting_online():
     ), "playback start must be wired to the online transition"
 
 
+def test_live_page_offers_nest_audio_with_a_level_meter():
+    html = render_page()
+
+    assert 'id="nest-audio"' in html
+    assert 'id="audio-meter"' in html
+    assert 'id="audio-meter-fill"' in html
+    assert 'id="audio-status"' in html
+    assert 'src="/assets/audio.js"' in html
+    # The bar is a picture of the level; the text beside it is what a screen
+    # reader announces, so the bar itself must stay out of the tree.
+    marker = html.index('id="audio-meter"')
+    meter = html[html.rindex("<div", 0, marker) : html.index('id="audio-status"')]
+    assert 'aria-hidden="true"' in meter
+
+
+def test_nest_audio_uses_the_players_own_mute_control():
+    html = render_page()
+    source = (WEB_ROOT / "static" / "audio.js").read_text()
+
+    # A second mute button beside the video element's own speaker icon gives
+    # two controls for one setting that can disagree with each other.
+    assert 'id="audio-toggle"' not in html
+    assert "controls" in html[html.index("<video") : html.index(">", html.index("<video"))]
+    assert 'video.addEventListener("volumechange"' in source
+    assert ".innerHTML" not in source
+
+
+def test_nest_audio_never_routes_through_a_suspended_context():
+    html = render_page()
+    source = (WEB_ROOT / "static" / "audio.js").read_text()
+
+    # Autoplay policy blocks unmuted playback, so the page loads muted.
+    video = html[html.index("<video") : html.index(">", html.index("<video"))]
+    assert "muted" in video
+
+    # createMediaElementSource permanently re-routes the element's output. If
+    # the context were suspended the viewer would unmute and hear nothing, so
+    # the graph is built only once resume() reports a running context.
+    assert "await pending.resume()" in source
+    assert 'if (pending.state !== "running") return false' in source
+    assert source.index("await pending.resume()") < source.index(
+        "createMediaElementSource(video)"
+    )
+    assert "analyser.connect(context.destination)" in source
+
+
+def test_nest_audio_meter_reports_a_quiet_nest_rather_than_looking_broken():
+    source = (WEB_ROOT / "static" / "audio.js").read_text()
+    css = (WEB_ROOT / "static" / "styles.css").read_text()
+
+    # An empty bar reads as a dead feed. A nest box is usually silent, so the
+    # quiet case has to say so in words.
+    assert "nest is quiet" in source
+    assert "getByteTimeDomainData" in source
+    assert "cancelAnimationFrame" in source
+    assert ".audio-meter" in css
+    assert ".audio-meter-fill" in css
+
+
+def test_both_cameras_publish_the_shared_nest_microphone():
+    scripts = Path(__file__).resolve().parents[2] / "pi" / "scripts"
+    nest = (scripts / "start-stream.sh").read_text()
+    usb = (scripts / "start-stream-usb.sh").read_text()
+
+    # One ALSA capture device allows a single reader, so two publishes can
+    # only share the microphone through dsnoop.
+    for script in (nest, usb):
+        assert "OWLCAM_AUDIO_DEVICE:-owlmic" in script
+        assert "-c:a aac" in script
+    assert "dsnoop" in (scripts / "configure-owlmic.sh").read_text()
+
+
 def test_livestream_element_can_autoplay():
     html = render_page()
 
@@ -727,6 +799,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     assets = output / "assets"
     assert not (assets / "styles.css").exists(), "unhashed stylesheet still shipped"
     assert not (assets / "player.js").exists()
+    assert not (assets / "audio.js").exists()
     assert not (assets / "diagnostics.js").exists()
     assert not (assets / "moments.js").exists()
     assert not (assets / "moments-live.js").exists()
@@ -742,6 +815,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
     }
     assert any(n.startswith("styles.") and n.endswith(".css") for n in hashed)
     assert any(n.startswith("player.") and n.endswith(".js") for n in hashed)
+    assert any(n.startswith("audio.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("diagnostics.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("moments.") and n.endswith(".js") for n in hashed)
     assert any(n.startswith("admin.") and n.endswith(".js") for n in hashed)
@@ -760,6 +834,7 @@ def test_build_fingerprints_code_assets_to_defeat_stale_caches(tmp_path: Path):
             (
                 "styles.",
                 "player.",
+                "audio.",
                 "diagnostics.",
                 "home-status.",
                 "admin.",

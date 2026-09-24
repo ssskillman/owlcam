@@ -65,6 +65,7 @@ Candidates that fit the nest-box job, in likely order:
 
 | Sensor | Why | How it should land |
 | --- | --- | --- |
+| INMP441 I²S microphone | Nest audio, later event clips | Standalone ALSA capture first; wiring, overlay, and test scripts in [`microphone.md`](microphone.md). Do not mux into HLS until WAVs are proven. |
 | IR illuminator / IR-cut | Night watch inside a dark box | Prefer Arducam B0506 (onboard IR-cut + 850 nm LEDs) as camera #2 after the public domain; see [`next-steps/always-up-and-camera-2.md`](next-steps/always-up-and-camera-2.md) |
 | Light / lux | Know dusk vs a blocked lens | I2C (e.g. VEML7700) on the same bus as the BME280 |
 | Occupancy / PIR or break-beam | Optional nest-visit cue, not a substitute for video | Debounce in diagnostics or a future snapshot trigger |

@@ -14,6 +14,7 @@ FINGERPRINTED = (
     "styles.css",
     "theme.js",
     "player.js",
+    "audio.js",
     "diagnostics.js",
     "moments.js",
     "moments-calendar.js",

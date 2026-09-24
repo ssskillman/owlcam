@@ -867,6 +867,37 @@ video:focus-visible {
   outline-offset: 2px;
 }
 
+.audio-controls {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.audio-meter {
+  width: 5.5rem;
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.audio-meter-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--amber);
+  /* The bar is redrawn every animation frame; a short transition keeps a
+     peaky waveform from strobing without hiding the peak itself. */
+  transition: width 80ms linear;
+}
+
+.audio-status {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
 .status {
   display: inline-flex;
   gap: 0.65rem;
