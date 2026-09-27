@@ -533,6 +533,73 @@ html[data-theme="dark"] .admin-alert {
   font-size: 0.88rem;
 }
 
+.admin-gpio-wiring-visual {
+  margin: 0.75rem 0 1rem;
+}
+
+.admin-gpio-figure {
+  margin: 0;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, #0f1410 40%, var(--forest));
+  overflow: hidden;
+}
+
+.admin-gpio-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(52vh, 520px);
+  object-fit: contain;
+}
+
+.admin-gpio-caption {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+}
+
+.admin-gpio-callouts {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 720px) {
+  .admin-gpio-callouts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.admin-gpio-callout {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--forest) 58%, transparent);
+}
+
+.admin-gpio-callout-name {
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.98rem;
+  margin-bottom: 0.25rem;
+}
+
+.admin-gpio-callout-pins {
+  display: block;
+  font-size: 0.78rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: #8bbf72;
+  margin-bottom: 0.2rem;
+}
+
+.admin-gpio-callout-role {
+  display: block;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+}
+
 .admin-gpio-header {
   display: flex;
   justify-content: center;

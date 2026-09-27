@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 520" role="img" aria-labelledby="title desc">
+  <title id="title">OwlCam Raspberry Pi 4 GPIO wiring</title>
+  <desc id="desc">Thirteen 40-pin header connections for nest climate, audio, and IR illuminator power.</desc>
+  <defs>
+    <style>
+      .bg { fill: #0f1410; }
+      .panel { fill: #1a231c; stroke: #3d5244; stroke-width: 1.2; }
+      .pi { fill: #243028; stroke: #5a735f; }
+      .pin { fill: #2a352e; stroke: #4a5f52; }
+      .pin-used { fill: #2d4a35; stroke: #8bbf72; stroke-width: 1.4; }
+      .wire { fill: none; stroke-width: 2; opacity: 0.85; }
+      .w-pwr { stroke: #e8c468; }
+      .w-gnd { stroke: #9aa39c; }
+      .w-i2c { stroke: #6eb5ff; }
+      .w-i2s { stroke: #c49bff; }
+      .w-gpio { stroke: #ff9b6b; }
+      .box { fill: #1e2a22; stroke: #5a735f; }
+      .t-title { fill: #e8efe9; font: 600 15px Poppins, system-ui, sans-serif; }
+      .t-sub { fill: #a8b5ac; font: 400 11px Poppins, system-ui, sans-serif; }
+      .t-pin { fill: #d8e5dc; font: 500 9px ui-monospace, monospace; }
+      .t-num { fill: #8bbf72; font: 700 10px ui-monospace, monospace; }
+    </style>
+  </defs>
+  <rect class="bg" width="920" height="520"/>
+  <text x="24" y="34" class="t-title">OwlCam  40-pin header (13 connections)</text>
+  <text x="24" y="52" class="t-sub">Raspberry Pi 4 ù BCM numbering ù field harness</text>
+
+  <rect class="pi" x="40" y="78" width="200" height="300" rx="8"/>
+  <text x="140" y="108" text-anchor="middle" class="t-sub">Raspberry Pi 4</text>
+  <text x="140" y="348" text-anchor="middle" class="t-sub">CSI ù IMX708</text>
+  <text x="140" y="364" text-anchor="middle" class="t-sub">USB ù UVC /owl2</text>
+
+  <!-- odd column pins 1-39 -->
+  <g transform="translate(72, 130)">
+    <rect class="pin-used" x="0" y="0" width="28" height="14" rx="2"/><text x="32" y="11" class="t-num">1</text><text x="48" y="11" class="t-pin">3V3</text>
+    <rect class="pin" x="0" y="18" width="28" height="14" rx="2"/>
+    <rect class="pin-used" x="0" y="36" width="28" height="14" rx="2"/><text x="32" y="47" class="t-num">3</text><text x="48" y="47" class="t-pin">SDA</text>
+    <rect class="pin" x="0" y="54" width="28" height="14" rx="2"/>
+    <rect class="pin-used" x="0" y="72" width="28" height="14" rx="2"/><text x="32" y="83" class="t-num">5</text><text x="48" y="83" class="t-pin">SCL</text>
+    <rect class="pin-used" x="0" y="90" width="28" height="14" rx="2"/><text x="32" y="101" class="t-num">9</text><text x="48" y="101" class="t-pin">GND</text>
+    <rect class="pin" x="0" y="108" width="28" height="14" rx="2"/>
+    <rect class="pin" x="0" y="126" width="28" height="14" rx="2"/>
+    <rect class="pin" x="0" y="144" width="28" height="14" rx="2"/>
+    <rect class="pin" x="0" y="162" width="28" height="14" rx="2"/>
+    <rect class="pin" x="0" y="180" width="28" height="14" rx="2"/>
+    <rect class="pin" x="0" y="198" width="28" height="14" rx="2"/>
+    <rect class="pin" x="0" y="216" width="28" height="14" rx="2"/>
+    <rect class="pin-used" x="0" y="234" width="28" height="14" rx="2"/><text x="32" y="245" class="t-num">35</text><text x="48" y="245" class="t-pin">19</text>
+  </g>
+  <!-- even column 2-40 -->
+  <g transform="translate(120, 130)">
+    <rect class="pin-used" x="0" y="0" width="28" height="14" rx="2"/><text x="32" y="11" class="t-num">2</text><text x="48" y="11" class="t-pin">5V</text>
+    <rect class="pin-used" x="0" y="18" width="28" height="14" rx="2"/><text x="32" y="29" class="t-num">4</text>
+    <rect class="pin-used" x="0" y="36" width="28" height="14" rx="2"/><text x="32" y="47" class="t-num">6</text><text x="48" y="47" class="t-pin">GND</text>
+    <rect class="pin" x="0" y="54" width="28" height="14" rx="2"/>
+    <rect class="pin-used" x="0" y="72" width="28" height="14" rx="2"/><text x="32" y="83" class="t-num">12</text><text x="48" y="83" class="t-pin">18</text>
+    <rect class="pin" x="0" y="90" width="28" height="14" rx="2"/>
+    <rect class="pin-used" x="0" y="108" width="28" height="14" rx="2"/><text x="32" y="119" class="t-num">14</text><text x="48" y="119" class="t-pin">GND</text>
+    <rect class="pin-used" x="0" y="126" width="28" height="14" rx="2"/><text x="32" y="137" class="t-num">16</text><text x="48" y="137" class="t-pin">23</text>
+    <rect class="pin" x="0" y="144" width="28" height="14" rx="2"/>
+    <rect class="pin-used" x="0" y="162" width="28" height="14" rx="2"/><text x="32" y="173" class="t-num">20</text><text x="48" y="173" class="t-pin">GND</text>
+    <rect class="pin" x="0" y="180" width="28" height="14" rx="2"/>
+    <rect class="pin-used" x="0" y="198" width="28" height="14" rx="2"/><text x="32" y="209" class="t-num">38</text><text x="48" y="209" class="t-pin">20</text>
+    <rect class="pin-used" x="0" y="216" width="28" height="14" rx="2"/><text x="32" y="227" class="t-num">39</text><text x="48" y="227" class="t-pin">GND</text>
+    <rect class="pin" x="0" y="234" width="28" height="14" rx="2"/>
+  </g>
+
+  <!-- wires to devices -->
+  <path class="wire w-pwr" d="M 188 137 L 280 137 L 280 100"/>
+  <path class="wire w-pwr" d="M 188 145 L 280 145 L 280 160"/>
+  <path class="wire w-i2c" d="M 100 166 L 280 166 L 280 220"/>
+  <path class="wire w-i2c" d="M 100 184 L 300 184 L 300 220"/>
+  <path class="wire w-i2s" d="M 188 202 L 320 202 L 320 300"/>
+  <path class="wire w-i2s" d="M 100 364 L 340 364 L 340 300"/>
+  <path class="wire w-i2s" d="M 188 328 L 360 328 L 360 300"/>
+  <path class="wire w-gpio" d="M 188 256 L 400 256 L 400 400"/>
+  <path class="wire w-gnd" d="M 100 220 L 420 220 L 420 400"/>
+  <path class="wire w-gnd" d="M 188 238 L 440 238 L 440 400"/>
+  <path class="wire w-gnd" d="M 188 292 L 460 292 L 460 400"/>
+
+  <rect class="box" x="400" y="82" width="200" height="56" rx="6"/>
+  <text x="412" y="104" class="t-title">3.3 V rail</text>
+  <text x="412" y="122" class="t-sub">Pins 1 ù INMP441 VDD, BME280 VCC</text>
+
+  <rect class="box" x="400" y="148" width="200" height="56" rx="6"/>
+  <text x="412" y="170" class="t-title">5 V ù LM2596</text>
+  <text x="412" y="188" class="t-sub">Pin 2 IN+ ù buck ù 3.0 V IR load</text>
+
+  <rect class="box" x="400" y="214" width="220" height="56" rx="6"/>
+  <text x="412" y="236" class="t-title">BME280 (IùC)</text>
+  <text x="412" y="254" class="t-sub">Pins 3ù5 SDA/SCL ù /diagnostics climate</text>
+
+  <rect class="box" x="400" y="280" width="240" height="56" rx="6"/>
+  <text x="412" y="302" class="t-title">INMP441 (IùS)</text>
+  <text x="412" y="320" class="t-sub">Pins 12ù35ù38 ù nest audio on HLS</text>
+
+  <rect class="box" x="400" y="346" width="260" height="72" rx="6"/>
+  <text x="412" y="368" class="t-title">IR path</text>
+  <text x="412" y="386" class="t-sub">Pin 16 GPIO23 ù IRF520 SIG</text>
+  <text x="412" y="402" class="t-sub">GND pins 6ù9ù14ù20ù39 ù owlcam-ir</text>
+
+  <rect class="panel" x="40" y="400" width="840" height="96" rx="8"/>
+  <text x="56" y="426" class="t-title">What the Pi gains</text>
+  <text x="56" y="448" class="t-sub">Video (CSI) + sound (IùS) + weather (IùC) + night fill (GPIO IR) + second camera (USB)</text>
+  <text x="56" y="468" class="t-sub">without extra processes fighting for the IMX708 sensor.</text>
+</svg>

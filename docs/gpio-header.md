@@ -4,6 +4,11 @@ Ground truth for the admin **GPIO & nest hardware** panel. Edit
 [`web/data/gpio_header.json`](../web/data/gpio_header.json) when the harness
 changes, then rebuild and deploy the site.
 
+The panel shows [`web/static/owlcam-gpio-wiring.svg`](../web/static/owlcam-gpio-wiring.svg)
+plus callouts from `wiringDiagram` in the JSON. Replace that SVG with a field
+photo (same filename or update `wiringDiagram.image`) if you want a bench
+picture instead of the schematic.
+
 ## Header (13 positions)
 
 | Phys | BCM | Signal | Lands on | Pi job |

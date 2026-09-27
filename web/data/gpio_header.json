@@ -1,6 +1,43 @@
 {
   "title": "OwlCam nest box — 40-pin header",
   "summary": "Thirteen positions on the GPIO header carry power, ground, I²C, I²S, and the IR drive. CSI camera and USB peripherals use other ports on the Pi.",
+  "wiringDiagram": {
+    "image": "owlcam-gpio-wiring.svg",
+    "alt": "OwlCam Raspberry Pi 4 wiring schematic showing thirteen GPIO header connections to the nest microphone, climate sensor, and IR illuminator power path.",
+    "caption": "Field wiring schematic (13 header pins). Green cells in the interactive map below match this diagram.",
+    "callouts": [
+      {
+        "name": "BME280 — nest climate",
+        "pins": "1, 3, 5, 6",
+        "role": "Temperature, humidity, and barometric pressure on /diagnostics and the Pi vitals history."
+      },
+      {
+        "name": "INMP441 — nest microphone",
+        "pins": "1, 6, 12, 35, 38",
+        "role": "I²S audio muxed into the live HLS stream (GPIO 18 / 19 / 20)."
+      },
+      {
+        "name": "IR illuminator power",
+        "pins": "2, 20",
+        "role": "5 V into LM2596 buck (3.0 V) to the IR LED board through the MOSFET load terminals."
+      },
+      {
+        "name": "IRF520 + GPIO drive",
+        "pins": "6, 9, 14, 16, 39",
+        "role": "Ground references and GPIO 23 to MOSFET SIG; owlcam-ir pulses the light at night."
+      },
+      {
+        "name": "IMX708 camera (CSI)",
+        "pins": "CSI port",
+        "role": "Primary /owl video — not on the 40-pin header."
+      },
+      {
+        "name": "USB camera",
+        "pins": "USB port",
+        "role": "Secondary /owl2 angle — not on the 40-pin header."
+      }
+    ]
+  },
   "headerPins": [
     {
       "physical": 1,

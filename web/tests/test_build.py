@@ -697,6 +697,8 @@ def test_every_page_has_an_accessible_admin_login_and_panel():
         assert 'id="admin-gpio-diagram"' in markup
         assert 'id="admin-gpio-pin-23"' in markup
         assert 'class="admin-gpio-header"' in markup
+        assert "owlcam-gpio-wiring.svg" in markup
+        assert 'class="admin-gpio-callouts"' in markup
         assert 'class="admin-feed-grid"' in markup
         assert 'class="admin-alert"' in markup
         assert "Moments visit log offline" in markup

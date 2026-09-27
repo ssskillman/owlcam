@@ -362,6 +362,48 @@ def _admin_gpio_header_pin(physical: int, entry: dict | None) -> Div:
     )
 
 
+def _admin_gpio_wiring_figure(wiring: dict) -> Div | None:
+    diagram = wiring.get("wiringDiagram")
+    if not diagram:
+        return None
+    image = diagram.get("image", "owlcam-gpio-wiring.svg")
+    callouts = diagram.get("callouts", [])
+    callout_nodes = [
+        Div(
+            Strong(item["name"], cls="admin-gpio-callout-name"),
+            P(
+                Span(f"Pins: {item['pins']}", cls="admin-gpio-callout-pins"),
+                Span(item["role"], cls="admin-gpio-callout-role"),
+            ),
+            cls="admin-gpio-callout",
+            role="listitem",
+        )
+        for item in callouts
+    ]
+    return Div(
+        Div(
+            Img(
+                src=f"/assets/{image}",
+                alt=diagram.get("alt", "GPIO wiring diagram"),
+                cls="admin-gpio-photo",
+                loading="lazy",
+                decoding="async",
+                width="920",
+                height="520",
+            ),
+            P(diagram.get("caption", ""), cls="admin-gpio-caption"),
+            cls="admin-gpio-figure",
+        ),
+        Div(
+            *callout_nodes,
+            cls="admin-gpio-callouts",
+            role="list",
+            aria_label="What each connection does for the Pi",
+        ),
+        cls="admin-gpio-wiring-visual",
+    )
+
+
 def _admin_gpio_connection_row(entry: dict) -> Div:
     bcm = entry.get("bcm")
     bcm_label = f"GPIO{bcm}" if bcm is not None else entry["signal"]
@@ -424,7 +466,7 @@ def _admin_gpio_diagram() -> Div:
         for entry in wiring.get("otherPorts", [])
     ]
 
-    return Div(
+    diagram_children: list = [
         Div(
             Span("Raspberry Pi 4", cls="admin-gpio-board-title"),
             P(wiring["summary"], cls="admin-intro"),
@@ -436,16 +478,24 @@ def _admin_gpio_diagram() -> Div:
             ),
             cls="admin-gpio-board-head",
         ),
-        header_visual,
-        Div(
-            *[_admin_gpio_connection_row(by_physical[n]) for n in header_pins],
-            *other_rows,
-            cls="admin-gpio-board",
-            id="admin-gpio-diagram",
-            role="list",
-            aria_label="GPIO and sensor connections",
-        ),
+    ]
+    wiring_figure = _admin_gpio_wiring_figure(wiring)
+    if wiring_figure is not None:
+        diagram_children.append(wiring_figure)
+    diagram_children.extend(
+        [
+            header_visual,
+            Div(
+                *[_admin_gpio_connection_row(by_physical[n]) for n in header_pins],
+                *other_rows,
+                cls="admin-gpio-board",
+                id="admin-gpio-diagram",
+                role="list",
+                aria_label="GPIO and sensor connections",
+            ),
+        ]
     )
+    return Div(*diagram_children)
 
 
 def _admin_panel() -> Dialog:
