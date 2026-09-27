@@ -528,6 +528,71 @@ html[data-theme="dark"] .admin-alert {
   cursor: pointer;
 }
 
+.admin-gpio-count {
+  margin: 0.5rem 0 0;
+  font-size: 0.88rem;
+}
+
+.admin-gpio-header {
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 0.75rem 0 1rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--forest) 48%, transparent);
+}
+
+.admin-gpio-header-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.admin-gpio-header-pin {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 0.05rem;
+  min-width: 3.1rem;
+  padding: 0.2rem 0.15rem;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  font-size: 0.62rem;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--muted);
+}
+
+.admin-gpio-header-pin--empty {
+  opacity: 0.35;
+}
+
+.admin-gpio-header-pin--used {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--moss) 45%, var(--line));
+  background: color-mix(in srgb, var(--moss) 10%, transparent);
+}
+
+.admin-gpio-header-pin--used[data-active="true"] {
+  border-color: #8bbf72;
+  background: color-mix(in srgb, #8bbf72 22%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, #8bbf72 35%, transparent);
+}
+
+.admin-gpio-header-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.admin-gpio-header-bcm {
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.admin-gpio-header-sig {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .admin-gpio-board {
   display: grid;
   gap: 0.65rem;

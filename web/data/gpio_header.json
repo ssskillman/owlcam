@@ -1,0 +1,110 @@
+{
+  "title": "OwlCam nest box — 40-pin header",
+  "summary": "Thirteen positions on the GPIO header carry power, ground, I²C, I²S, and the IR drive. CSI camera and USB peripherals use other ports on the Pi.",
+  "headerPins": [
+    {
+      "physical": 1,
+      "bcm": null,
+      "signal": "3.3 V",
+      "device": "INMP441 VDD · BME280 VCC",
+      "helps": "3.3 V sensor rail. Powers the I²S microphone and the climate chip; do not feed 5 V to these parts."
+    },
+    {
+      "physical": 2,
+      "bcm": null,
+      "signal": "5 V",
+      "device": "LM2596 buck IN+",
+      "helps": "Pi 5 V feeds the buck converter that steps down to 3.0 V for the IR illuminator load through the MOSFET."
+    },
+    {
+      "physical": 3,
+      "bcm": 2,
+      "signal": "SDA",
+      "device": "BME280",
+      "helps": "I²C data for nest air temperature, humidity, and pressure on /diagnostics and the vitals history file."
+    },
+    {
+      "physical": 5,
+      "bcm": 3,
+      "signal": "SCL",
+      "device": "BME280",
+      "helps": "I²C clock paired with GPIO2. Keep leads short inside the box to reduce noise on the bus."
+    },
+    {
+      "physical": 6,
+      "bcm": null,
+      "signal": "GND",
+      "device": "Mic · BME · common",
+      "helps": "Primary ground return for the microphone (including L/R strap) and the BME280."
+    },
+    {
+      "physical": 9,
+      "bcm": null,
+      "signal": "GND",
+      "device": "Ground strap",
+      "helps": "Extra ground tie in the harness for a solid reference between nest-box boards and the Pi."
+    },
+    {
+      "physical": 12,
+      "bcm": 18,
+      "signal": "PCM_CLK",
+      "device": "INMP441 SCK",
+      "helps": "I²S bit clock for nest audio muxed into the live HLS feed (overlay maps GPIO18 to PCM_CLK)."
+    },
+    {
+      "physical": 14,
+      "bcm": null,
+      "signal": "GND",
+      "device": "IRF520 module GND",
+      "helps": "Logic ground for the MOSFET driver board that switches the IR illuminator."
+    },
+    {
+      "physical": 16,
+      "bcm": 23,
+      "signal": "OUT",
+      "device": "IRF520 SIG → IR load",
+      "helps": "Software-driven high turns the MOSFET on (owlcam-ir). Short night bursts; 60 s thermal cap in firmware.",
+      "live": true
+    },
+    {
+      "physical": 20,
+      "bcm": null,
+      "signal": "GND",
+      "device": "LM2596 IN−",
+      "helps": "Return for the buck converter input; pairs with pin 2 for the IR power path."
+    },
+    {
+      "physical": 35,
+      "bcm": 19,
+      "signal": "PCM_FS",
+      "device": "INMP441 WS",
+      "helps": "I²S left/right clock (GPIO19 / PCM_FS) for mono nest audio."
+    },
+    {
+      "physical": 38,
+      "bcm": 20,
+      "signal": "PCM_DIN",
+      "device": "INMP441 SD",
+      "helps": "I²S serial data from the mic into the Pi (GPIO20 / PCM_DIN)."
+    },
+    {
+      "physical": 39,
+      "bcm": null,
+      "signal": "GND",
+      "device": "Harness return",
+      "helps": "Additional ground at the far end of the header for the field wiring bundle."
+    }
+  ],
+  "otherPorts": [
+    {
+      "port": "CSI-2",
+      "device": "IMX708 Camera Module 3",
+      "helps": "Primary nest video: 1080p H.264 into MediaMTX path /owl. Not a GPIO pin."
+    },
+    {
+      "port": "USB",
+      "device": "UVC camera (owl2)",
+      "helps": "Second angle on /owl2 via ffmpeg; uses the USB bus, not the 40-pin header."
+    }
+  ]
+}

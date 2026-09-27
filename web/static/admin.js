@@ -159,7 +159,9 @@
     const lastOff = payload.lastOffAt
       ? new Date(payload.lastOffAt).toLocaleTimeString()
       : "—"
-    const pin23 = document.querySelector("#admin-gpio-pin-23")
+    const pin23 =
+      document.querySelector("#admin-gpio-pin-23") ||
+      document.querySelector('[data-gpio-bcm="23"]')
     if (pin23) {
       const on = Boolean(payload.gpioLevel)
       pin23.dataset.active = on ? "true" : "false"

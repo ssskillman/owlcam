@@ -633,6 +633,13 @@ def test_diagnostics_polling_is_bounded_and_renders_as_text():
     assert 'Not connected' in source
 
 
+def test_gpio_header_wiring_lists_thirteen_pins():
+    payload = json.loads((WEB_ROOT / "data" / "gpio_header.json").read_text())
+    assert len(payload["headerPins"]) == 13
+    physical = {pin["physical"] for pin in payload["headerPins"]}
+    assert physical == {1, 2, 3, 5, 6, 9, 12, 14, 16, 20, 35, 38, 39}
+
+
 def test_pages_declare_the_favicon():
     for markup in (
         render_page(),
@@ -689,6 +696,7 @@ def test_every_page_has_an_accessible_admin_login_and_panel():
         assert 'name="ir-mode"' in markup
         assert 'id="admin-gpio-diagram"' in markup
         assert 'id="admin-gpio-pin-23"' in markup
+        assert 'class="admin-gpio-header"' in markup
         assert 'class="admin-feed-grid"' in markup
         assert 'class="admin-alert"' in markup
         assert "Moments visit log offline" in markup

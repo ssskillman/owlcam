@@ -41,7 +41,9 @@ from fasthtml.common import (
     Video,
     to_xml,
 )
+import json
 import os
+from pathlib import Path
 
 # Relative on purpose. The Pi serves this page beside the stream, so both come
 # from one origin and the browser has no cross-origin request to block. Naming
@@ -326,101 +328,123 @@ def _nav(*, active: str, include_capture_status: bool = False) -> Div:
     )
 
 
-def _admin_gpio_diagram() -> Div:
-    """Schematic of nest-box hardware attached to the Pi (BCM numbering)."""
+_GPIO_WIRING_PATH = Path(__file__).resolve().parent / "data" / "gpio_header.json"
 
-    def row(
-        bcm: str,
-        physical: str,
-        signal: str,
-        device: str,
-        helps: str,
-        *,
-        pin_id: str | None = None,
-    ) -> Div:
-        pin = Strong(bcm, id=pin_id, cls="admin-gpio-bcm") if pin_id else Strong(bcm, cls="admin-gpio-bcm")
+
+def _gpio_wiring() -> dict:
+    with _GPIO_WIRING_PATH.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _admin_gpio_header_pin(physical: int, entry: dict | None) -> Div:
+    if entry is None:
         return Div(
+            Span(str(physical), cls="admin-gpio-header-num"),
+            cls="admin-gpio-header-pin admin-gpio-header-pin--empty",
+            **{"data-physical": str(physical)},
+        )
+    bcm = entry.get("bcm")
+    bcm_label = str(bcm) if bcm is not None else "—"
+    pin_attrs: dict = {
+        "cls": "admin-gpio-header-pin admin-gpio-header-pin--used",
+        "data_physical": str(physical),
+        "title": f"{entry['device']}: {entry['helps']}",
+    }
+    if bcm is not None:
+        pin_attrs["data_gpio_bcm"] = str(bcm)
+    if entry.get("live") and bcm is not None:
+        pin_attrs["id"] = f"admin-gpio-pin-{bcm}"
+    return Div(
+        Span(str(physical), cls="admin-gpio-header-num"),
+        Span(bcm_label, cls="admin-gpio-header-bcm"),
+        Span(entry["signal"], cls="admin-gpio-header-sig"),
+        **pin_attrs,
+    )
+
+
+def _admin_gpio_connection_row(entry: dict) -> Div:
+    bcm = entry.get("bcm")
+    bcm_label = f"GPIO{bcm}" if bcm is not None else entry["signal"]
+    return Div(
+        Div(
+            Span("Pin", cls="admin-kicker"),
+            Strong(str(entry["physical"]), cls="admin-gpio-bcm"),
+            Span(bcm_label, cls="admin-gpio-physical"),
+            cls="admin-gpio-pi-side",
+        ),
+        Div(Span(entry["signal"], cls="admin-gpio-signal"), aria_hidden="true"),
+        Div(
+            Strong(entry["device"], cls="admin-gpio-device-name"),
+            P(entry["helps"], cls="admin-gpio-help"),
+            cls="admin-gpio-device",
+        ),
+        cls="admin-gpio-row",
+        role="listitem",
+    )
+
+
+def _admin_gpio_diagram() -> Div:
+    """40-pin header map and connection list from web/data/gpio_header.json."""
+
+    wiring = _gpio_wiring()
+    by_physical = {pin["physical"]: pin for pin in wiring["headerPins"]}
+    header_pins = sorted(by_physical)
+
+    header_visual = Div(
+        Div(
+            *[
+                _admin_gpio_header_pin(n, by_physical.get(n))
+                for n in range(1, 40, 2)
+            ],
+            cls="admin-gpio-header-col",
+        ),
+        Div(
+            *[
+                _admin_gpio_header_pin(n, by_physical.get(n))
+                for n in range(2, 41, 2)
+            ],
+            cls="admin-gpio-header-col",
+        ),
+        cls="admin-gpio-header",
+        aria_label=wiring["title"],
+    )
+
+    other_rows = [
+        Div(
             Div(
-                Span("BCM", cls="admin-kicker"),
-                pin,
-                Span(f"physical {physical}", cls="admin-gpio-physical"),
+                Span(entry["port"], cls="admin-kicker"),
+                Strong(entry["device"], cls="admin-gpio-bcm"),
                 cls="admin-gpio-pi-side",
             ),
-            Div(Span(signal, cls="admin-gpio-signal"), aria_hidden="true"),
-            Div(
-                Strong(device, cls="admin-gpio-device-name"),
-                P(helps, cls="admin-gpio-help"),
-                cls="admin-gpio-device",
-            ),
-            cls="admin-gpio-row",
+            Div(Span("→", cls="admin-gpio-signal"), aria_hidden="true"),
+            Div(P(entry["helps"], cls="admin-gpio-help"), cls="admin-gpio-device"),
+            cls="admin-gpio-row admin-gpio-row--port",
             role="listitem",
         )
+        for entry in wiring.get("otherPorts", [])
+    ]
 
     return Div(
         Div(
             Span("Raspberry Pi 4", cls="admin-gpio-board-title"),
+            P(wiring["summary"], cls="admin-intro"),
             P(
-                "Signals leave the GPIO header or CSI port and reach sensors "
-                "around the nest. Software on the Pi reads and drives these "
-                "lines; nothing here replaces the wiring on the board.",
-                cls="admin-intro",
+                Strong(f"{len(wiring['headerPins'])} header pins in use"),
+                " — highlighted cells match the list below. "
+                "GPIO 23 glows when the IR drive is high.",
+                cls="admin-gpio-count",
             ),
             cls="admin-gpio-board-head",
         ),
+        header_visual,
         Div(
-            Div(
-                Span("CSI ribbon", cls="admin-kicker"),
-                Strong("IMX708", cls="admin-gpio-bcm"),
-                Span("camera port", cls="admin-gpio-physical"),
-                cls="admin-gpio-pi-side",
-            ),
-            Div(Span("MIPI", cls="admin-gpio-signal"), aria_hidden="true"),
-            Div(
-                Strong("Camera Module 3", cls="admin-gpio-device-name"),
-                P(
-                    "Captures 1080p video for the live nest feed and for motion "
-                    "still snapshots. The Pi encodes once and publishes over "
-                    "RTSP—no second process may open the sensor directly.",
-                    cls="admin-gpio-help",
-                ),
-                cls="admin-gpio-device",
-            ),
-            cls="admin-gpio-row admin-gpio-row--csi",
-            role="listitem",
+            *[_admin_gpio_connection_row(by_physical[n]) for n in header_pins],
+            *other_rows,
+            cls="admin-gpio-board",
+            id="admin-gpio-diagram",
+            role="list",
+            aria_label="GPIO and sensor connections",
         ),
-        row(
-            "23",
-            "16",
-            "OUT → MOSFET",
-            "850 nm IR illuminator",
-            "GPIO drives an IRF520 module that switches 3 V to the IR board. "
-            "Short bursts at night brighten the camera without leaving the "
-            "light on all night. The illuminator’s own photoresistor still "
-            "blocks emission in daylight.",
-            pin_id="admin-gpio-pin-23",
-        ),
-        row(
-            "18 · 19 · 20",
-            "12 · 35 · 38",
-            "I²S PCM",
-            "INMP441 microphone",
-            "Digital audio from the nest box is muxed into the HLS stream so "
-            "viewers hear rustles and calls. Wired as PCM clock, frame sync, "
-            "and data on 3.3 V I²S.",
-        ),
-        row(
-            "2 · 3",
-            "3 · 5",
-            "I²C SDA/SCL",
-            "BME280 climate sensor",
-            "Temperature, humidity, and pressure for the /diagnostics vitals "
-            "panel and history on the Pi. Shares the bus with nothing else "
-            "on this install.",
-        ),
-        cls="admin-gpio-board",
-        id="admin-gpio-diagram",
-        role="list",
-        aria_label="GPIO and sensor connections",
     )
 
 
@@ -629,9 +653,9 @@ def _admin_panel() -> Dialog:
                     _admin_gpio_diagram(),
                     P(
                         Small(
-                            "GPIO 23 live state follows the IR service (high = "
-                            "MOSFET on). Other lines are always active when "
-                            "their units are running.",
+                            "Pin map source: gpio_header.json in the repo. "
+                            "If your harness differs, update that file and "
+                            "redeploy the site.",
                         ),
                         cls="admin-gpio-footnote",
                     ),
