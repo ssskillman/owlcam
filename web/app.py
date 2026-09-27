@@ -326,6 +326,104 @@ def _nav(*, active: str, include_capture_status: bool = False) -> Div:
     )
 
 
+def _admin_gpio_diagram() -> Div:
+    """Schematic of nest-box hardware attached to the Pi (BCM numbering)."""
+
+    def row(
+        bcm: str,
+        physical: str,
+        signal: str,
+        device: str,
+        helps: str,
+        *,
+        pin_id: str | None = None,
+    ) -> Div:
+        pin = Strong(bcm, id=pin_id, cls="admin-gpio-bcm") if pin_id else Strong(bcm, cls="admin-gpio-bcm")
+        return Div(
+            Div(
+                Span("BCM", cls="admin-kicker"),
+                pin,
+                Span(f"physical {physical}", cls="admin-gpio-physical"),
+                cls="admin-gpio-pi-side",
+            ),
+            Div(Span(signal, cls="admin-gpio-signal"), aria_hidden="true"),
+            Div(
+                Strong(device, cls="admin-gpio-device-name"),
+                P(helps, cls="admin-gpio-help"),
+                cls="admin-gpio-device",
+            ),
+            cls="admin-gpio-row",
+            role="listitem",
+        )
+
+    return Div(
+        Div(
+            Span("Raspberry Pi 4", cls="admin-gpio-board-title"),
+            P(
+                "Signals leave the GPIO header or CSI port and reach sensors "
+                "around the nest. Software on the Pi reads and drives these "
+                "lines; nothing here replaces the wiring on the board.",
+                cls="admin-intro",
+            ),
+            cls="admin-gpio-board-head",
+        ),
+        Div(
+            Div(
+                Span("CSI ribbon", cls="admin-kicker"),
+                Strong("IMX708", cls="admin-gpio-bcm"),
+                Span("camera port", cls="admin-gpio-physical"),
+                cls="admin-gpio-pi-side",
+            ),
+            Div(Span("MIPI", cls="admin-gpio-signal"), aria_hidden="true"),
+            Div(
+                Strong("Camera Module 3", cls="admin-gpio-device-name"),
+                P(
+                    "Captures 1080p video for the live nest feed and for motion "
+                    "still snapshots. The Pi encodes once and publishes over "
+                    "RTSP—no second process may open the sensor directly.",
+                    cls="admin-gpio-help",
+                ),
+                cls="admin-gpio-device",
+            ),
+            cls="admin-gpio-row admin-gpio-row--csi",
+            role="listitem",
+        ),
+        row(
+            "23",
+            "16",
+            "OUT → MOSFET",
+            "850 nm IR illuminator",
+            "GPIO drives an IRF520 module that switches 3 V to the IR board. "
+            "Short bursts at night brighten the camera without leaving the "
+            "light on all night. The illuminator’s own photoresistor still "
+            "blocks emission in daylight.",
+            pin_id="admin-gpio-pin-23",
+        ),
+        row(
+            "18 · 19 · 20",
+            "12 · 35 · 38",
+            "I²S PCM",
+            "INMP441 microphone",
+            "Digital audio from the nest box is muxed into the HLS stream so "
+            "viewers hear rustles and calls. Wired as PCM clock, frame sync, "
+            "and data on 3.3 V I²S.",
+        ),
+        row(
+            "2 · 3",
+            "3 · 5",
+            "I²C SDA/SCL",
+            "BME280 climate sensor",
+            "Temperature, humidity, and pressure for the /diagnostics vitals "
+            "panel and history on the Pi. Shares the bus with nothing else "
+            "on this install.",
+        ),
+        cls="admin-gpio-board",
+        id="admin-gpio-diagram",
+        role="list",
+        aria_label="GPIO and sensor connections",
+    )
+
+
 def _admin_panel() -> Dialog:
     return Dialog(
         Header(
@@ -525,6 +623,19 @@ def _admin_panel() -> Dialog:
                         cls="admin-control-copy",
                     ),
                     cls="admin-section admin-section--ir",
+                ),
+                Section(
+                    H2("GPIO & nest hardware"),
+                    _admin_gpio_diagram(),
+                    P(
+                        Small(
+                            "GPIO 23 live state follows the IR service (high = "
+                            "MOSFET on). Other lines are always active when "
+                            "their units are running.",
+                        ),
+                        cls="admin-gpio-footnote",
+                    ),
+                    cls="admin-section admin-section--gpio",
                 ),
                 Section(
                     H2("Services"),

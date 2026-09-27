@@ -159,6 +159,16 @@
     const lastOff = payload.lastOffAt
       ? new Date(payload.lastOffAt).toLocaleTimeString()
       : "—"
+    const pin23 = document.querySelector("#admin-gpio-pin-23")
+    if (pin23) {
+      const on = Boolean(payload.gpioLevel)
+      pin23.dataset.active = on ? "true" : "false"
+      pin23.setAttribute(
+        "aria-label",
+        on ? "GPIO 23 high — IR drive on" : "GPIO 23 low — IR drive off",
+      )
+    }
+
     replaceItems(
       irMetrics,
       [

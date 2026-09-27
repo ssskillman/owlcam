@@ -687,6 +687,8 @@ def test_every_page_has_an_accessible_admin_login_and_panel():
         assert 'id="admin-stream-toggle"' in markup
         assert 'id="admin-ir-state"' in markup
         assert 'name="ir-mode"' in markup
+        assert 'id="admin-gpio-diagram"' in markup
+        assert 'id="admin-gpio-pin-23"' in markup
         assert 'class="admin-feed-grid"' in markup
         assert 'class="admin-alert"' in markup
         assert "Moments visit log offline" in markup
