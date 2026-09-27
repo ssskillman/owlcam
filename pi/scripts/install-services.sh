@@ -64,6 +64,7 @@ if "${uninstall}"; then
   done
   tailscale funnel --https=443 off 2>/dev/null || true
   tailscale serve --https=443 off 2>/dev/null || true
+  systemctl --user disable --now owlcam-ir.service 2>/dev/null || true
   systemctl --user disable --now owlcam-admin.service 2>/dev/null || true
   systemctl --user disable --now owlcam-diagnostics.service 2>/dev/null || true
   systemctl --user disable --now owlcam-site.service 2>/dev/null || true
@@ -71,7 +72,8 @@ if "${uninstall}"; then
   systemctl --user disable --now owlcam-stream-usb.service 2>/dev/null || true
   systemctl --user disable --now owlcam-feed-watcher.service 2>/dev/null || true
   systemctl --user disable --now owlcam-mediamtx.service 2>/dev/null || true
-  rm -f "${UNIT_DIR}/owlcam-diagnostics.service" \
+  rm -f         "${UNIT_DIR}/owlcam-diagnostics.service" \
+        "${UNIT_DIR}/owlcam-ir.service" \
         "${UNIT_DIR}/owlcam-admin.service" \
         "${UNIT_DIR}/owlcam-site.service" \
         "${UNIT_DIR}/owlcam-stream.service" \
@@ -80,6 +82,8 @@ if "${uninstall}"; then
         "${UNIT_DIR}/owlcam-mediamtx.service" \
         "${BIN_DIR}/owlcam-diagnostics" \
         "${BIN_DIR}/owlcam-feed-watcher" \
+        "${BIN_DIR}/owlcam-ir" \
+        "${BIN_DIR}/owlcam-test-ir" \
         "${BIN_DIR}/owlcam-admin" \
         "${BIN_DIR}/owlcam-configure-admin" \
         "${BIN_DIR}/owlcam-admin-add-user" \
@@ -107,12 +111,16 @@ install -m 0755 "${SCRIPT_DIR}/start-stream-usb.sh" "${BIN_DIR}/owlcam-start-str
 install -m 0755 "${SCRIPT_DIR}/bme280_raw.py" "${BIN_DIR}/bme280_raw.py"
 install -m 0755 "${SCRIPT_DIR}/diagnostics_server.py" "${BIN_DIR}/owlcam-diagnostics"
 install -m 0755 "${SCRIPT_DIR}/nest_visit_suppression.py" "${BIN_DIR}/nest_visit_suppression.py"
+install -m 0755 "${SCRIPT_DIR}/ir_controller.py" "${BIN_DIR}/ir_controller.py"
+install -m 0755 "${SCRIPT_DIR}/ir_server.py" "${BIN_DIR}/owlcam-ir"
+install -m 0755 "${SCRIPT_DIR}/test_ir.py" "${BIN_DIR}/owlcam-test-ir"
 install -m 0755 "${SCRIPT_DIR}/admin_server.py" "${BIN_DIR}/owlcam-admin"
 install -m 0755 "${SCRIPT_DIR}/configure-admin.sh" "${BIN_DIR}/owlcam-configure-admin"
 install -m 0755 "${SCRIPT_DIR}/configure-admin-add-user.sh" "${BIN_DIR}/owlcam-admin-add-user"
 install -m 0755 "${SCRIPT_DIR}/site_server.py" "${BIN_DIR}/owlcam-site"
 install -m 0755 "${SCRIPT_DIR}/feed_watcher.py" "${BIN_DIR}/owlcam-feed-watcher"
 install -m 0644 "${UNIT_SRC}/owlcam-diagnostics.service" "${UNIT_DIR}/"
+install -m 0644 "${UNIT_SRC}/owlcam-ir.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-admin.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-mediamtx.service" "${UNIT_DIR}/"
 install -m 0644 "${UNIT_SRC}/owlcam-site.service" "${UNIT_DIR}/"
@@ -142,7 +150,11 @@ systemctl --user enable owlcam-stream.service
 systemctl --user enable owlcam-stream-usb.service
 systemctl --user enable owlcam-site.service
 systemctl --user enable owlcam-diagnostics.service
+systemctl --user enable owlcam-ir.service
 systemctl --user enable owlcam-admin.service
+if [[ ! -f "${HOME}/.config/owlcam/ir.env" ]]; then
+  printf 'Note: copy pi/config/ir.env.example to ~/.config/owlcam/ir.env to configure IR.\n'
+fi
 if [[ -f "${HOME}/.config/owlcam/watcher.env" ]]; then
   systemctl --user enable owlcam-feed-watcher.service
 else
@@ -158,6 +170,7 @@ systemctl --user restart owlcam-stream.service
 systemctl --user restart owlcam-stream-usb.service
 systemctl --user restart owlcam-site.service
 systemctl --user restart owlcam-diagnostics.service
+systemctl --user restart owlcam-ir.service
 systemctl --user restart owlcam-admin.service
 if systemctl --user is-enabled owlcam-feed-watcher.service >/dev/null 2>&1; then
   systemctl --user restart owlcam-feed-watcher.service
@@ -253,6 +266,23 @@ if [[ "${admin_ready:-false}" != true ]]; then
   exit 1
 fi
 
+printf '\nWaiting for the local IR service...\n'
+ir_url="http://127.0.0.1:${OWLCAM_IR_PORT:-8767}/api/ir/status"
+for _ in $(seq 1 10); do
+  if curl -fsS -m 3 -o /dev/null "${ir_url}"; then
+    ir_ready=true
+    break
+  fi
+  sleep 1
+done
+
+if [[ "${ir_ready:-false}" != true ]]; then
+  printf 'The local IR service never answered. Check:\n' >&2
+  printf '  systemctl --user status owlcam-ir\n' >&2
+  printf '  journalctl --user -u owlcam-ir -n 50\n' >&2
+  exit 1
+fi
+
 # Declares the HLS root and the diagnostics mount together, keeping whatever
 # exposure is already in effect so a reinstall cannot pull a deliberately public
 # feed back to tailnet-only. Tailscale persists this across reboots.
@@ -265,5 +295,6 @@ systemctl --user is-enabled \
   owlcam-stream-usb.service \
   owlcam-site.service \
   owlcam-diagnostics.service \
+  owlcam-ir.service \
   owlcam-admin.service \
   owlcam-feed-watcher.service

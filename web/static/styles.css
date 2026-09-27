@@ -514,6 +514,20 @@ html[data-theme="dark"] .admin-alert {
   }
 }
 
+.admin-ir-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 0.75rem 0;
+}
+
+.admin-ir-mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
 .admin-control,
 .admin-section {
   padding: 1.25rem;

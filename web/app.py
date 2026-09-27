@@ -475,6 +475,58 @@ def _admin_panel() -> Dialog:
                     cls="admin-section admin-section--feeds",
                 ),
                 Section(
+                    H2("IR illuminator"),
+                    P(
+                        "Short motion-triggered bursts at night. GPIO drives "
+                        "the MOSFET; the board photoresistor still gates "
+                        "emission in daylight.",
+                        cls="admin-intro",
+                    ),
+                    Div(
+                        Span("Mode", cls="admin-kicker"),
+                        Div(
+                            Label(
+                                Input(
+                                    type="radio",
+                                    name="ir-mode",
+                                    value="off",
+                                    id="admin-ir-mode-off",
+                                ),
+                                " OFF",
+                            ),
+                            Label(
+                                Input(
+                                    type="radio",
+                                    name="ir-mode",
+                                    value="manual_on",
+                                    id="admin-ir-mode-on",
+                                ),
+                                " ON",
+                            ),
+                            Label(
+                                Input(
+                                    type="radio",
+                                    name="ir-mode",
+                                    value="auto",
+                                    id="admin-ir-mode-auto",
+                                ),
+                                " AUTO",
+                            ),
+                            cls="admin-ir-mode",
+                            role="radiogroup",
+                            aria_label="IR illuminator mode",
+                        ),
+                        P(
+                            "Status: checking…",
+                            id="admin-ir-state",
+                            cls="admin-feed-state",
+                        ),
+                        Div(id="admin-ir-metrics", cls="admin-metric-grid"),
+                        cls="admin-control-copy",
+                    ),
+                    cls="admin-section admin-section--ir",
+                ),
+                Section(
                     H2("Services"),
                     Div(id="admin-services", cls="admin-service-grid"),
                     cls="admin-section",
@@ -521,6 +573,7 @@ def _admin_panel() -> Dialog:
                                 Option("Site", value="site"),
                                 Option("Diagnostics", value="diagnostics"),
                                 Option("Admin", value="admin"),
+                                Option("IR", value="ir"),
                                 id="admin-log-service",
                             ),
                             Button(

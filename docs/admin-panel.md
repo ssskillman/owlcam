@@ -72,6 +72,8 @@ All responses are JSON with `Cache-Control: no-store`.
 | `GET` | `/admin/api/logs?service=stream&lines=100` | Bounded service journal |
 | `GET` | `/admin/api/firebase` | Firebase redirect health |
 | `DELETE` | `/admin/api/nest-visits/{id}` | Remove a live nest capture (proxies to the inference host) |
+| `GET` | `/admin/api/ir/status` | IR illuminator mode, GPIO state, and timers (proxies to loopback IR service) |
+| `POST` | `/admin/api/ir/mode` | Set IR mode to `off`, `manual_on`, or `auto` |
 
 Additional admin accounts live in `~/.config/owlcam/admin-users` (one
 `username:scrypt:…` line per user). Run `owlcam-admin-add-user` on the Pi to

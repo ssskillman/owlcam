@@ -1,0 +1,25 @@
+[Unit]
+Description=OwlCam IR illuminator control
+Documentation=https://github.com/ssskillman/owlcam/blob/main/docs/admin-panel.md
+After=network-online.target owlcam-stream.service owlcam-mediamtx.service
+Wants=owlcam-stream.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/owlcam-ir
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-%h/.config/owlcam/ir.env
+Restart=always
+RestartSec=5
+
+# GPIO23 via lgpio needs access to /dev/gpiochip*.
+NoNewPrivileges=true
+PrivateDevices=false
+PrivateTmp=true
+ProtectHome=read-only
+ReadWritePaths=%h/.config/owlcam
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET
+
+[Install]
+WantedBy=default.target

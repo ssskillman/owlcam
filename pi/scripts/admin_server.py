@@ -39,6 +39,8 @@ from nest_visit_suppression import suppress_visit, unsuppress_visit  # noqa: E40
 
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("OWLCAM_ADMIN_PORT", "8766"))
+IR_PORT = int(os.environ.get("OWLCAM_IR_PORT", "8767"))
+IR_SERVICE_BASE = f"http://127.0.0.1:{IR_PORT}"
 SESSION_COOKIE = "__Host-owlcam_admin"
 SESSION_TTL_SECONDS = 8 * 60 * 60
 MAX_BODY_BYTES = 4096
@@ -50,6 +52,7 @@ SERVICE_UNITS = {
     "site": "owlcam-site.service",
     "diagnostics": "owlcam-diagnostics.service",
     "admin": "owlcam-admin.service",
+    "ir": "owlcam-ir.service",
 }
 STREAM_TARGETS = {
     "nest": "stream",
@@ -334,6 +337,33 @@ def _wifi_connection() -> str | None:
     return value if result.returncode == 0 and value and value != "--" else None
 
 
+def _ir_request(method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    url = f"{IR_SERVICE_BASE}{path}"
+    body = None if payload is None else json.dumps(payload).encode()
+    request = Request(url, data=body, method=method)
+    if body is not None:
+        request.add_header("Content-Type", "application/json")
+    try:
+        with build_opener().open(request, timeout=5) as response:
+            return json.load(response)
+    except HTTPError as exc:
+        try:
+            detail = json.load(exc)
+        except (json.JSONDecodeError, ValueError):
+            detail = {"error": {"code": "IR_ERROR", "message": "IR service error"}}
+        raise RuntimeError(detail.get("error", {}).get("message", "IR service error")) from exc
+    except URLError as exc:
+        raise RuntimeError("IR service unavailable") from exc
+
+
+def fetch_ir_status() -> dict[str, Any]:
+    return _ir_request("GET", "/api/ir/status")
+
+
+def set_ir_mode(mode: str) -> dict[str, Any]:
+    return _ir_request("POST", "/api/ir/mode", {"mode": mode})
+
+
 def collect_status() -> dict[str, Any]:
     services = {name: service_state(unit) for name, unit in SERVICE_UNITS.items()}
     try:
@@ -538,6 +568,19 @@ class AdminHandler(BaseHTTPRequestHandler):
                 return
             self._send_json(HTTPStatus.OK, {"service": service, "lines": payload})
             return
+        if path == "/api/ir/status":
+            try:
+                payload = fetch_ir_status()
+            except RuntimeError as exc:
+                self._error(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    "IR_UNAVAILABLE",
+                    str(exc),
+                )
+                return
+            payload["csrfToken"] = csrf
+            self._send_json(HTTPStatus.OK, payload)
+            return
         self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Not found")
 
     def do_POST(self) -> None:
@@ -550,6 +593,36 @@ class AdminHandler(BaseHTTPRequestHandler):
             return
         auth = self._require_auth(csrf=True)
         if not auth:
+            return
+        if path == "/api/ir/mode":
+            payload = self._read_json()
+            if payload is None:
+                return
+            mode = payload.get("mode")
+            if not isinstance(mode, str) or mode not in ("off", "manual_on", "auto"):
+                self._error(
+                    HTTPStatus.UNPROCESSABLE_ENTITY,
+                    "INVALID_INPUT",
+                    "mode must be off, manual_on, or auto",
+                )
+                return
+            if set(payload.keys()) - {"mode"}:
+                self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "unexpected fields")
+                return
+            token, _csrf = auth
+            if not self.server.action_limiter.allow(token):
+                self._error(
+                    HTTPStatus.TOO_MANY_REQUESTS,
+                    "RATE_LIMITED",
+                    "Wait before changing IR mode again",
+                )
+                return
+            try:
+                body = set_ir_mode(mode)
+            except RuntimeError as exc:
+                self._error(HTTPStatus.SERVICE_UNAVAILABLE, "IR_UNAVAILABLE", str(exc))
+                return
+            self._send_json(HTTPStatus.OK, body)
             return
         if path != "/api/stream":
             self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Not found")

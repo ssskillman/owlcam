@@ -22,6 +22,9 @@
   const logOutput = document.querySelector("#admin-log-output")
   const actionStatus = document.querySelector("#admin-action-status")
   const navSignedIn = document.querySelector("#nav-signed-in")
+  const irState = document.querySelector("#admin-ir-state")
+  const irMetrics = document.querySelector("#admin-ir-metrics")
+  const irModeInputs = document.querySelectorAll('input[name="ir-mode"]')
 
   if (!dialog || !openButton) return
 
@@ -129,6 +132,65 @@
     toggle.disabled = false
   }
 
+  const formatIrState = (payload) => {
+    if (!payload || payload.error) return "Unavailable"
+    if (payload.state === "manual_on") return "MANUAL ON"
+    if (payload.state === "auto_on") return "AUTO ON"
+    return "OFF"
+  }
+
+  const renderIr = (payload) => {
+    if (!irState || !irMetrics) return
+    if (!payload || payload.error) {
+      irState.textContent = payload?.error?.message || "IR service unavailable"
+      irState.dataset.state = "inactive"
+      irMetrics.replaceChildren()
+      return
+    }
+    const label = formatIrState(payload)
+    irState.textContent = `Status: ${label}`
+    irState.dataset.state = payload.state === "off" ? "inactive" : "active"
+    for (const input of irModeInputs) {
+      input.checked = input.value === payload.mode
+    }
+    const lastOn = payload.lastOnAt
+      ? new Date(payload.lastOnAt).toLocaleTimeString()
+      : "—"
+    const lastOff = payload.lastOffAt
+      ? new Date(payload.lastOffAt).toLocaleTimeString()
+      : "—"
+    replaceItems(
+      irMetrics,
+      [
+        ["GPIO", String(payload.gpio ?? "—")],
+        ["Reason", payload.reason || "—"],
+        ["Last ON", lastOn],
+        ["Last OFF", lastOff],
+        [
+          "Auto timeout",
+          `${payload.autoTimeoutSeconds ?? "—"} sec`,
+        ],
+        [
+          "Max continuous",
+          `${payload.maxContinuousSeconds ?? "—"} sec`,
+        ],
+        ["Cooldown", `${payload.cooldownSeconds ?? "—"} sec`],
+        ["Night", payload.isDark ? "yes" : "no"],
+      ],
+      "admin-metric",
+    )
+  }
+
+  const loadIr = async () => {
+    try {
+      const payload = await api("/ir/status")
+      renderIr(payload)
+    } catch (error) {
+      if (error.status === 401) return showLogin("Your session expired.")
+      renderIr({ error: { message: error.message } })
+    }
+  }
+
   const renderStatus = (payload) => {
     csrfToken = payload.csrfToken
     streamEnabled = Boolean(payload.stream?.isEnabled)
@@ -221,6 +283,7 @@
       renderStatus(payload)
       actionStatus.textContent = `Updated ${new Date(payload.sampledAt).toLocaleTimeString()}`
       loadFirebase()
+      loadIr()
       refreshTimer = window.setTimeout(refresh, 10000)
     } catch (error) {
       if (error.status === 401) {
@@ -344,6 +407,25 @@
 
   bindStreamToggle(streamToggle, "nest", () => streamEnabled, "nest camera")
   bindStreamToggle(streamUsbToggle, "usb", () => streamUsbEnabled, "USB camera")
+
+  for (const input of irModeInputs) {
+    input.addEventListener("change", async () => {
+      if (!input.checked) return
+      actionStatus.textContent = `Setting IR mode to ${input.value}…`
+      try {
+        const payload = await api("/ir/mode", {
+          method: "POST",
+          headers: { "X-Owlcam-Csrf": csrfToken },
+          body: JSON.stringify({ mode: input.value }),
+        })
+        renderIr(payload)
+        actionStatus.textContent = `IR mode set to ${payload.mode}`
+      } catch (error) {
+        actionStatus.textContent = error.message
+        loadIr()
+      }
+    })
+  }
 
   refreshButton.addEventListener("click", refresh)
 

@@ -685,6 +685,8 @@ def test_every_page_has_an_accessible_admin_login_and_panel():
         assert 'autocomplete="current-password"' in markup
         assert 'id="admin-dashboard"' in markup
         assert 'id="admin-stream-toggle"' in markup
+        assert 'id="admin-ir-state"' in markup
+        assert 'name="ir-mode"' in markup
         assert 'class="admin-feed-grid"' in markup
         assert 'class="admin-alert"' in markup
         assert "Moments visit log offline" in markup
@@ -704,6 +706,8 @@ def test_admin_client_uses_cookie_sessions_csrf_and_safe_text_rendering():
     assert '"X-Owlcam-Csrf": csrfToken' in source
     assert 'api("/session"' in source
     assert 'api("/stream"' in source
+    assert 'api("/ir/status"' in source
+    assert 'api("/ir/mode"' in source
     assert "`/logs?service=${encodeURIComponent(" in source
     assert 'api("/firebase"' in source
     assert ".textContent =" in source

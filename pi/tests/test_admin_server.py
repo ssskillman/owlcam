@@ -333,6 +333,51 @@ class AdminHTTPTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(payload, {"deleted": True, "id": 11, "mode": "suppressed"})
 
+    @patch.object(admin, "fetch_ir_status")
+    def test_ir_status_requires_authentication(self, fetch_ir_status):
+        fetch_ir_status.return_value = {"mode": "auto", "state": "off"}
+        unauthenticated = Request(f"{self.base}/api/ir/status")
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(unauthenticated, timeout=5)
+        self.assertEqual(caught.exception.code, 401)
+        caught.exception.close()
+
+        _status, _headers, login, token = self.login()
+        status, _headers, payload = request_json(
+            f"{self.base}/api/ir/status",
+            headers={"Cookie": f"{admin.SESSION_COOKIE}={token}"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["mode"], "auto")
+        self.assertEqual(payload["csrfToken"], login["csrfToken"])
+
+    @patch.object(admin, "set_ir_mode")
+    def test_ir_mode_requires_csrf_and_allowlisted_values(self, set_mode):
+        set_mode.return_value = {"mode": "off", "state": "off"}
+        _status, _headers, login, token = self.login()
+        cookie = {"Cookie": f"{admin.SESSION_COOKIE}={token}"}
+
+        request = Request(
+            f"{self.base}/api/ir/mode",
+            data=json.dumps({"mode": "auto"}).encode(),
+            method="POST",
+            headers={**cookie, "Content-Type": "application/json"},
+        )
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(request, timeout=5)
+        self.assertEqual(caught.exception.code, 403)
+        caught.exception.close()
+
+        status, _headers, payload = request_json(
+            f"{self.base}/api/ir/mode",
+            method="POST",
+            payload={"mode": "auto"},
+            headers={**cookie, "X-Owlcam-Csrf": login["csrfToken"]},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["mode"], "off")
+        set_mode.assert_called_once_with("auto")
+
 
 if __name__ == "__main__":
     unittest.main()
