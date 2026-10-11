@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fasthtml.common import (
     A,
     Body,
