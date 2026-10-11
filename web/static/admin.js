@@ -12,6 +12,8 @@
   const streamToggle = document.querySelector("#admin-stream-toggle")
   const streamUsbState = document.querySelector("#admin-stream-usb-state")
   const streamUsbToggle = document.querySelector("#admin-stream-usb-toggle")
+  const stillsState = document.querySelector("#admin-stills-state")
+  const stillsToggle = document.querySelector("#admin-stills-toggle")
   const services = document.querySelector("#admin-services")
   const hostStatus = document.querySelector("#admin-host-status")
   const firebaseStatus = document.querySelector("#admin-firebase-status")
@@ -25,6 +27,11 @@
   const irState = document.querySelector("#admin-ir-state")
   const irMetrics = document.querySelector("#admin-ir-metrics")
   const irModeInputs = document.querySelectorAll('input[name="ir-mode"]')
+  const preflightSummary = document.querySelector("#admin-preflight-summary")
+  const preflightMetrics = document.querySelector("#admin-preflight-metrics")
+  const fieldModeState = document.querySelector("#admin-field-mode-state")
+  const fieldModeToggle = document.querySelector("#admin-field-mode-toggle")
+  const fieldModeControl = document.querySelector("#admin-field-mode-control")
 
   if (!dialog || !openButton) return
 
@@ -32,6 +39,8 @@
   let signedInUsername = null
   let streamEnabled = null
   let streamUsbEnabled = null
+  let stillsEnabled = null
+  let fieldModeEnabled = null
   let refreshTimer = null
 
   const api = async (path, options = {}) => {
@@ -203,10 +212,100 @@
     }
   }
 
+  const renderPreflight = (payload) => {
+    if (!preflightSummary || !preflightMetrics) return
+    if (!payload || payload.error) {
+      preflightSummary.textContent =
+        payload?.error?.message || "Preflight unavailable"
+      preflightSummary.dataset.state = "inactive"
+      preflightMetrics.replaceChildren()
+      return
+    }
+    const hls = payload.localHls || {}
+    const ok = Boolean(hls.ok)
+    preflightSummary.textContent = ok
+      ? `Local HLS OK (${hls.latencyMs ?? "—"} ms)`
+      : hls.note || "Local HLS check failed"
+    preflightSummary.dataset.state = ok ? "active" : "inactive"
+    replaceItems(
+      preflightMetrics,
+      [
+        ["Wi‑Fi", payload.wifiConnection || "Not connected"],
+        ["Tailscale", payload.tailscaleExposure || "unknown"],
+        [
+          "Nest stream",
+          payload.streams?.nest?.state || "—",
+          payload.streams?.nest?.active ? "active" : "inactive",
+        ],
+        [
+          "USB stream",
+          payload.streams?.usb?.state || "—",
+          payload.streams?.usb?.active ? "active" : "inactive",
+        ],
+        [
+          "HLS HTTP",
+          hls.httpCode != null ? String(hls.httpCode) : "—",
+          ok ? "active" : "inactive",
+        ],
+        ["Est. upload", `${payload.estimatedUploadMbps ?? "—"} Mbps`],
+        ["Hint", payload.uploadHint || "—"],
+      ],
+      "admin-metric",
+    )
+  }
+
+  const loadPreflight = async () => {
+    try {
+      const payload = await api("/preflight")
+      renderPreflight(payload)
+    } catch (error) {
+      if (error.status === 401) return showLogin("Your session expired.")
+      renderPreflight({ error: { message: error.message } })
+    }
+  }
+
+  const renderFieldMode = (payload) => {
+    if (!fieldModeState || !fieldModeToggle) return
+    const enabled = Boolean(payload?.enabled)
+    fieldModeEnabled = enabled
+    if (fieldModeControl) {
+      fieldModeControl.dataset.state = enabled ? "running" : "stopped"
+    }
+    fieldModeState.textContent = enabled
+      ? `On — nest ~${(payload.nestBitrate / 1_000_000).toFixed(1)} Mbps`
+      : `Off — nest ~${(payload.homeBitrate / 1_000_000).toFixed(1)} Mbps`
+    fieldModeState.dataset.state = enabled ? "active" : "inactive"
+    fieldModeToggle.textContent = enabled
+      ? "Disable field mode"
+      : "Enable field mode"
+    fieldModeToggle.classList.toggle("admin-danger", enabled)
+    fieldModeToggle.classList.toggle("admin-primary", !enabled)
+    fieldModeToggle.setAttribute("aria-pressed", String(enabled))
+    fieldModeToggle.setAttribute(
+      "aria-label",
+      enabled ? "Disable field mode" : "Enable field mode",
+    )
+    fieldModeToggle.disabled = false
+  }
+
+  const loadFieldMode = async () => {
+    try {
+      const payload = await api("/field-mode")
+      renderFieldMode(payload)
+    } catch (error) {
+      if (error.status === 401) return showLogin("Your session expired.")
+      if (fieldModeState) {
+        fieldModeState.textContent = error.message
+        fieldModeState.dataset.state = "inactive"
+      }
+    }
+  }
+
   const renderStatus = (payload) => {
     csrfToken = payload.csrfToken
     streamEnabled = Boolean(payload.stream?.isEnabled)
     streamUsbEnabled = Boolean(payload.streamUsb?.isEnabled)
+    stillsEnabled = Boolean(payload.stillCapture?.isEnabled)
     const anyFeedOnline = streamEnabled || streamUsbEnabled
     overallStatus.textContent = anyFeedOnline ? "Feed online" : "Feed offline"
     overallStatus.dataset.state = anyFeedOnline ? "active" : "inactive"
@@ -232,6 +331,18 @@
         stopped: "Capture unit is stopped.",
         turnOn: "Turn USB feed on",
         turnOff: "Turn USB feed off",
+      },
+    )
+    setFeedControl(
+      stillsToggle?.closest(".admin-control"),
+      stillsState,
+      stillsToggle,
+      stillsEnabled,
+      {
+        running: "Grabbing stills for identify (~every 30 s).",
+        stopped: "No new stills; live stream unchanged.",
+        turnOn: "Turn capture on",
+        turnOff: "Turn capture off",
       },
     )
 
@@ -296,6 +407,8 @@
       actionStatus.textContent = `Updated ${new Date(payload.sampledAt).toLocaleTimeString()}`
       loadFirebase()
       loadIr()
+      loadPreflight()
+      loadFieldMode()
       refreshTimer = window.setTimeout(refresh, 10000)
     } catch (error) {
       if (error.status === 401) {
@@ -406,6 +519,8 @@
         })
         if (which === "usb") {
           streamUsbEnabled = (payload.streamUsb || payload.stream).isEnabled
+        } else if (which === "stills") {
+          stillsEnabled = (payload.stillCapture || payload.stream).isEnabled
         } else {
           streamEnabled = payload.stream.isEnabled
         }
@@ -419,6 +534,29 @@
 
   bindStreamToggle(streamToggle, "nest", () => streamEnabled, "nest camera")
   bindStreamToggle(streamUsbToggle, "usb", () => streamUsbEnabled, "USB camera")
+  bindStreamToggle(stillsToggle, "stills", () => stillsEnabled, "identify stills")
+
+  if (fieldModeToggle) {
+    fieldModeToggle.addEventListener("click", async () => {
+      const nextEnabled = !fieldModeEnabled
+      fieldModeToggle.disabled = true
+      actionStatus.textContent = nextEnabled
+        ? "Enabling field mode…"
+        : "Disabling field mode…"
+      try {
+        const payload = await api("/field-mode", {
+          method: "POST",
+          headers: { "X-Owlcam-Csrf": csrfToken },
+          body: JSON.stringify({ enabled: nextEnabled }),
+        })
+        renderFieldMode(payload)
+        await refresh()
+      } catch (error) {
+        actionStatus.textContent = error.message
+        fieldModeToggle.disabled = false
+      }
+    })
+  }
 
   for (const input of irModeInputs) {
     input.addEventListener("change", async () => {

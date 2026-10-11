@@ -68,12 +68,19 @@ All responses are JSON with `Cache-Control: no-store`.
 | `POST` | `/admin/api/session` | Sign in |
 | `DELETE` | `/admin/api/session` | Sign out |
 | `GET` | `/admin/api/status` | Service and Pi health |
-| `POST` | `/admin/api/stream` | Start or stop the stream |
+| `POST` | `/admin/api/stream` | Start or stop nest/USB stream, or identify stills (`which`: `nest`, `usb`, `stills`) |
 | `GET` | `/admin/api/logs?service=stream&lines=100` | Bounded service journal |
 | `GET` | `/admin/api/firebase` | Firebase redirect health |
 | `DELETE` | `/admin/api/nest-visits/{id}` | Remove a live nest capture (proxies to the inference host) |
 | `GET` | `/admin/api/ir/status` | IR illuminator mode, GPIO state, and timers (proxies to loopback IR service) |
 | `POST` | `/admin/api/ir/mode` | Set IR mode to `off`, `manual_on`, or `auto` |
+| `GET` | `/admin/api/field-mode` | Field trip mode (lower nest bitrate, USB off when enabled) |
+| `POST` | `/admin/api/field-mode` | JSON body `{ "enabled": true \| false }` |
+| `GET` | `/admin/api/preflight` | Buddy-house checks: Wi‑Fi, local HLS, upload estimate |
+
+Field mode writes `~/.config/owlcam/field-mode.env` (read by `owlcam-stream`
+units), stops USB capture when enabled, and restarts the nest stream. On the Pi,
+`owlcam-field-preflight` prints the same JSON as `/admin/api/preflight`.
 
 Additional admin accounts live in `~/.config/owlcam/admin-users` (one
 `username:scrypt:…` line per user). Run `owlcam-admin-add-user` on the Pi to

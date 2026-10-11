@@ -84,6 +84,7 @@ if "${uninstall}"; then
         "${BIN_DIR}/owlcam-feed-watcher" \
         "${BIN_DIR}/owlcam-ir" \
         "${BIN_DIR}/owlcam-test-ir" \
+        "${BIN_DIR}/owlcam-field-preflight" \
         "${BIN_DIR}/owlcam-admin" \
         "${BIN_DIR}/owlcam-configure-admin" \
         "${BIN_DIR}/owlcam-admin-add-user" \
@@ -114,6 +115,7 @@ install -m 0755 "${SCRIPT_DIR}/nest_visit_suppression.py" "${BIN_DIR}/nest_visit
 install -m 0755 "${SCRIPT_DIR}/ir_controller.py" "${BIN_DIR}/ir_controller.py"
 install -m 0755 "${SCRIPT_DIR}/ir_server.py" "${BIN_DIR}/owlcam-ir"
 install -m 0755 "${SCRIPT_DIR}/test_ir.py" "${BIN_DIR}/owlcam-test-ir"
+install -m 0755 "${SCRIPT_DIR}/field-preflight.sh" "${BIN_DIR}/owlcam-field-preflight"
 install -m 0755 "${SCRIPT_DIR}/admin_server.py" "${BIN_DIR}/owlcam-admin"
 install -m 0755 "${SCRIPT_DIR}/configure-admin.sh" "${BIN_DIR}/owlcam-configure-admin"
 install -m 0755 "${SCRIPT_DIR}/configure-admin-add-user.sh" "${BIN_DIR}/owlcam-admin-add-user"

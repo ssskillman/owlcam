@@ -6,6 +6,7 @@ Wants=owlcam-mediamtx.service
 
 [Service]
 Type=simple
+EnvironmentFile=-%h/.config/owlcam/field-mode.env
 ExecStart=%h/.local/bin/owlcam-start-stream
 
 # The camera sensor accepts exactly one consumer. If MediaMTX is not up yet, or

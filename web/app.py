@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fasthtml.common import (
     A,
     Body,
@@ -647,6 +649,83 @@ def _admin_panel() -> Dialog:
                     cls="admin-section admin-section--feeds",
                 ),
                 Section(
+                    H2("Picture capture"),
+                    P(
+                        "Periodic stills from the nest RTSP feed for visit "
+                        "identification on the gaming PC. Turning this off "
+                        "stops new grabs; the live stream is unchanged.",
+                        cls="admin-intro",
+                    ),
+                    Div(
+                        Div(
+                            Span("Identify stills", cls="admin-feed-title"),
+                            P(
+                                "Checking the feed watcher…",
+                                id="admin-stills-state",
+                                cls="admin-feed-state",
+                            ),
+                            cls="admin-control-copy",
+                        ),
+                        Button(
+                            "Turn capture on",
+                            type="button",
+                            id="admin-stills-toggle",
+                            cls="admin-primary",
+                            disabled=True,
+                            aria_pressed="false",
+                            aria_label="Turn identify still capture on",
+                        ),
+                        cls="admin-control",
+                        data_feed="stills",
+                    ),
+                    cls="admin-section admin-section--stills",
+                ),
+                Section(
+                    H2("Field trip"),
+                    P(
+                        "Before travel: run preflight. On weak Wi‑Fi, field mode "
+                        "lowers nest bitrate and stops USB capture.",
+                        cls="admin-intro",
+                    ),
+                    Div(
+                        Div(
+                            Span("Preflight", cls="admin-kicker"),
+                            P(
+                                "Checking local HLS and Wi‑Fi…",
+                                id="admin-preflight-summary",
+                                cls="admin-feed-state",
+                            ),
+                            Div(id="admin-preflight-metrics", cls="admin-metric-grid"),
+                            cls="admin-control-copy",
+                        ),
+                        Div(
+                            Span("Field mode", cls="admin-kicker"),
+                            P(
+                                "Home bitrate when off; ~1.5 Mbps nest when on.",
+                                cls="admin-intro",
+                            ),
+                            P(
+                                "Status: checking…",
+                                id="admin-field-mode-state",
+                                cls="admin-feed-state",
+                            ),
+                            Button(
+                                "Enable field mode",
+                                type="button",
+                                id="admin-field-mode-toggle",
+                                cls="admin-primary",
+                                disabled=True,
+                                aria_pressed="false",
+                                aria_label="Enable field mode",
+                            ),
+                            cls="admin-control",
+                            id="admin-field-mode-control",
+                        ),
+                        cls="admin-field-trip-grid",
+                    ),
+                    cls="admin-section admin-section--field-trip",
+                ),
+                Section(
                     H2("IR illuminator"),
                     P(
                         "Short motion-triggered bursts at night. GPIO drives "
@@ -754,6 +833,7 @@ def _admin_panel() -> Dialog:
                             Select(
                                 Option("Nest stream", value="stream"),
                                 Option("USB stream", value="streamUsb"),
+                                Option("Feed watcher", value="feedWatcher"),
                                 Option("MediaMTX", value="media"),
                                 Option("Site", value="site"),
                                 Option("Diagnostics", value="diagnostics"),

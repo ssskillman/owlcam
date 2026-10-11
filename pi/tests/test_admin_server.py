@@ -234,6 +234,21 @@ class AdminHTTPTests(unittest.TestCase):
         self.assertEqual(payload["stream"]["state"], "inactive")
         control.assert_called_once_with("nest", False)
 
+    @patch.object(admin, "set_stream_enabled")
+    def test_stills_capture_uses_feed_watcher_unit(self, control):
+        control.return_value = {"state": "inactive", "isEnabled": False}
+        _status, _headers, login, token = self.login()
+        cookie = {"Cookie": f"{admin.SESSION_COOKIE}={token}"}
+        status, _headers, payload = request_json(
+            f"{self.base}/api/stream",
+            method="POST",
+            payload={"enabled": False, "which": "stills"},
+            headers={**cookie, "X-Owlcam-Csrf": login["csrfToken"]},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["stillCapture"]["state"], "inactive")
+        control.assert_called_once_with("stills", False)
+
         repeated = Request(
             f"{self.base}/api/stream",
             data=json.dumps({"enabled": True}).encode(),
@@ -377,6 +392,52 @@ class AdminHTTPTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(payload["mode"], "off")
         set_mode.assert_called_once_with("auto")
+
+    @patch.object(admin, "get_field_mode")
+    def test_field_mode_status_requires_authentication(self, get_field_mode):
+        get_field_mode.return_value = {"enabled": False}
+        unauthenticated = Request(f"{self.base}/api/field-mode")
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(unauthenticated, timeout=5)
+        self.assertEqual(caught.exception.code, 401)
+        caught.exception.close()
+
+    @patch.object(admin, "set_field_mode")
+    def test_field_mode_post_requires_csrf(self, set_field_mode):
+        set_field_mode.return_value = {"enabled": True}
+        _status, _headers, login, token = self.login()
+        cookie = {"Cookie": f"{admin.SESSION_COOKIE}={token}"}
+        request = Request(
+            f"{self.base}/api/field-mode",
+            data=json.dumps({"enabled": True}).encode(),
+            method="POST",
+            headers={**cookie, "Content-Type": "application/json"},
+        )
+        with self.assertRaises(HTTPError) as caught:
+            urlopen(request, timeout=5)
+        self.assertEqual(caught.exception.code, 403)
+        caught.exception.close()
+
+        status, _headers, payload = request_json(
+            f"{self.base}/api/field-mode",
+            method="POST",
+            payload={"enabled": True},
+            headers={**cookie, "X-Owlcam-Csrf": login["csrfToken"]},
+        )
+        self.assertEqual(status, 200)
+        set_field_mode.assert_called_once_with(True)
+
+    @patch.object(admin, "get_trip_preflight")
+    def test_preflight_returns_json(self, get_preflight):
+        get_preflight.return_value = {"localHls": {"ok": True}}
+        _status, _headers, login, token = self.login()
+        status, _headers, payload = request_json(
+            f"{self.base}/api/preflight",
+            headers={"Cookie": f"{admin.SESSION_COOKIE}={token}"},
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(payload["localHls"]["ok"])
+        self.assertEqual(payload["csrfToken"], login["csrfToken"])
 
 
 if __name__ == "__main__":
