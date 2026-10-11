@@ -7,6 +7,7 @@ Wants=owlcam-mediamtx.service
 [Service]
 Type=simple
 Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-%h/.config/owlcam/field-mode.env
 ExecStart=%h/.local/bin/owlcam-start-stream-usb
 Restart=always
 RestartSec=5

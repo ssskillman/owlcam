@@ -34,7 +34,9 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
+from field_mode import apply_field_mode, field_mode_status, read_field_mode_config  # noqa: E402
 from nest_visit_suppression import suppress_visit, unsuppress_visit  # noqa: E402
+from trip_preflight import collect_preflight  # noqa: E402
 
 
 HOST = "127.0.0.1"
@@ -53,10 +55,12 @@ SERVICE_UNITS = {
     "diagnostics": "owlcam-diagnostics.service",
     "admin": "owlcam-admin.service",
     "ir": "owlcam-ir.service",
+    "feedWatcher": "owlcam-feed-watcher.service",
 }
 STREAM_TARGETS = {
     "nest": "stream",
     "usb": "streamUsb",
+    "stills": "feedWatcher",
 }
 DEFAULT_ADMIN_USERS_FILE = os.path.expanduser("~/.config/owlcam/admin-users")
 
@@ -364,6 +368,33 @@ def set_ir_mode(mode: str) -> dict[str, Any]:
     return _ir_request("POST", "/api/ir/mode", {"mode": mode})
 
 
+def get_field_mode() -> dict[str, Any]:
+    return field_mode_status(
+        run=_run,
+        stream_unit=SERVICE_UNITS["stream"],
+        stream_usb_unit=SERVICE_UNITS["streamUsb"],
+    )
+
+
+def set_field_mode(enabled: bool) -> dict[str, Any]:
+    return apply_field_mode(
+        enabled,
+        run=_run,
+        stream_unit=SERVICE_UNITS["stream"],
+        stream_usb_unit=SERVICE_UNITS["streamUsb"],
+    )
+
+
+def get_trip_preflight() -> dict[str, Any]:
+    return collect_preflight(
+        run=_run,
+        wifi_connection=_wifi_connection,
+        service_state=service_state,
+        stream_unit=SERVICE_UNITS["stream"],
+        stream_usb_unit=SERVICE_UNITS["streamUsb"],
+    )
+
+
 def collect_status() -> dict[str, Any]:
     services = {name: service_state(unit) for name, unit in SERVICE_UNITS.items()}
     try:
@@ -384,6 +415,10 @@ def collect_status() -> dict[str, Any]:
             "state": services["streamUsb"],
             "isEnabled": services["streamUsb"] in ("active", "activating"),
         },
+        "stillCapture": {
+            "state": services["feedWatcher"],
+            "isEnabled": services["feedWatcher"] in ("active", "activating"),
+        },
         "services": services,
         "host": {
             "uptimeSeconds": uptime_seconds,
@@ -395,6 +430,7 @@ def collect_status() -> dict[str, Any]:
         "sampledAt": datetime.now(UTC).isoformat(timespec="seconds").replace(
             "+00:00", "Z"
         ),
+        "fieldMode": read_field_mode_config(),
     }
 
 
@@ -581,6 +617,32 @@ class AdminHandler(BaseHTTPRequestHandler):
             payload["csrfToken"] = csrf
             self._send_json(HTTPStatus.OK, payload)
             return
+        if path == "/api/field-mode":
+            try:
+                payload = get_field_mode()
+            except (OSError, RuntimeError, subprocess.SubprocessError):
+                self._error(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    "FIELD_MODE_UNAVAILABLE",
+                    "Field mode status unavailable",
+                )
+                return
+            payload["csrfToken"] = csrf
+            self._send_json(HTTPStatus.OK, payload)
+            return
+        if path == "/api/preflight":
+            try:
+                payload = get_trip_preflight()
+            except (OSError, RuntimeError, subprocess.SubprocessError):
+                self._error(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    "PREFLIGHT_UNAVAILABLE",
+                    "Preflight checks unavailable",
+                )
+                return
+            payload["csrfToken"] = csrf
+            self._send_json(HTTPStatus.OK, payload)
+            return
         self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Not found")
 
     def do_POST(self) -> None:
@@ -624,6 +686,40 @@ class AdminHandler(BaseHTTPRequestHandler):
                 return
             self._send_json(HTTPStatus.OK, body)
             return
+        if path == "/api/field-mode":
+            payload = self._read_json()
+            if payload is None:
+                return
+            enabled = payload.get("enabled")
+            if type(enabled) is not bool:
+                self._error(
+                    HTTPStatus.UNPROCESSABLE_ENTITY,
+                    "INVALID_INPUT",
+                    "enabled must be boolean",
+                )
+                return
+            if set(payload.keys()) - {"enabled"}:
+                self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "unexpected fields")
+                return
+            token, _csrf = auth
+            if not self.server.action_limiter.allow(token):
+                self._error(
+                    HTTPStatus.TOO_MANY_REQUESTS,
+                    "RATE_LIMITED",
+                    "Wait before changing field mode again",
+                )
+                return
+            try:
+                body = set_field_mode(enabled)
+            except (OSError, RuntimeError, subprocess.SubprocessError):
+                self._error(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    "CONTROL_FAILED",
+                    "Field mode change failed",
+                )
+                return
+            self._send_json(HTTPStatus.OK, body)
+            return
         if path != "/api/stream":
             self._error(HTTPStatus.NOT_FOUND, "NOT_FOUND", "Not found")
             return
@@ -636,7 +732,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             self._error(
                 HTTPStatus.UNPROCESSABLE_ENTITY,
                 "INVALID_INPUT",
-                "enabled must be boolean and which must be nest or usb",
+                "enabled must be boolean and which must be nest, usb, or stills",
             )
             return
         if set(payload.keys()) - {"enabled", "which"}:
@@ -658,6 +754,8 @@ class AdminHandler(BaseHTTPRequestHandler):
         body = {"stream": stream}
         if which == "usb":
             body["streamUsb"] = stream
+        elif which == "stills":
+            body["stillCapture"] = stream
         self._send_json(HTTPStatus.OK, body)
 
     def _login(self) -> None:

@@ -514,6 +514,18 @@ html[data-theme="dark"] .admin-alert {
   }
 }
 
+.admin-field-trip-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 720px) {
+  .admin-field-trip-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    align-items: start;
+  }
+}
+
 .admin-ir-mode {
   display: flex;
   flex-wrap: wrap;
