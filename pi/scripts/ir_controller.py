@@ -70,8 +70,11 @@ class LgpioBackend:
         self.chip = lgpio.gpiochip_open(0)
         lgpio.gpio_claim_output(self.chip, pin, 0)
         self._level = 0
+        self._closed = False
 
     def set_output(self, level: int) -> None:
+        if self._closed:
+            return
         self._lgpio.gpio_write(self.chip, self.pin, 1 if level else 0)
         self._level = 1 if level else 0
 
@@ -79,12 +82,24 @@ class LgpioBackend:
         return self._level
 
     def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        chip = self.chip
+        self.chip = None
         try:
-            self.set_output(0)
-            self._lgpio.gpio_free(self.chip, self.pin)
-            self._lgpio.gpiochip_close(self.chip)
+            self._lgpio.gpio_write(chip, self.pin, 0)
         except Exception:
-            LOG.exception("GPIO cleanup failed")
+            pass
+        try:
+            self._lgpio.gpio_free(chip, self.pin)
+        except Exception:
+            pass
+        try:
+            self._lgpio.gpiochip_close(chip)
+        except Exception:
+            pass
+        self._level = 0
 
 
 def open_gpio_backend(pin: int) -> GpioBackend:
@@ -96,6 +111,12 @@ def open_gpio_backend(pin: int) -> GpioBackend:
         if os.uname().machine != "aarch64":
             LOG.warning("lgpio unavailable (%s); using mock GPIO", exc)
             return MockGpioBackend(pin)
+        message = str(exc).lower()
+        if "gpio busy" in message or "busy" in message:
+            raise RuntimeError(
+                "GPIO is in use (usually owlcam-ir.service). "
+                "Run: systemctl --user stop owlcam-ir"
+            ) from exc
         raise
 
 
@@ -238,6 +259,7 @@ class IRController:
     _last_on_at: datetime | None = None
     _last_off_at: datetime | None = None
     _last_off_reason: str | None = None
+    _cleaned_up: bool = field(default=False, init=False, repr=False)
 
     @property
     def mode(self) -> IrMode:
@@ -401,5 +423,12 @@ class IRController:
 
     def cleanup(self) -> None:
         with self._lock:
+            if self._cleaned_up:
+                return
+            self._cleaned_up = True
+            try:
+                atexit.unregister(self.cleanup)
+            except Exception:
+                pass
             self._turn_off("shutdown")
             self.gpio.close()

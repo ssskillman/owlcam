@@ -54,9 +54,16 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     config = IrConfig.from_environ()
-    controller = IRController(config=config, gpio=open_gpio_backend(config.gpio))
-    if args.command != "status":
+    try:
+        gpio = open_gpio_backend(config.gpio)
+    except RuntimeError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(2) from exc
+    controller = IRController(config=config, gpio=gpio)
+    if args.command in ("on", "pulse"):
         controller.set_mode(IrMode.MANUAL_ON)
+    elif args.command == "off":
+        controller.set_mode(IrMode.OFF)
 
     def log_health(prefix: str) -> None:
         if not args.log_pi_health:
