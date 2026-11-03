@@ -416,8 +416,9 @@ def test_player_starts_playback_rather_than_only_reporting_online():
     # panel hides and the status reads online while a paused frame sits there,
     # which looks exactly like a broken stream.
     assert "video.play()" in source, "player never starts playback"
-    assert source.index("setState(\"online\", \"OwlCam online\")") < source.index(
-        "video.addEventListener(\"stalled\", start)"
+    assert "${sourceLabel(activeStreamUrl)} online" in source
+    assert source.index("MANIFEST_PARSED") < source.index(
+        'video.addEventListener("stalled", start)'
     ), "playback start must be wired to the online transition"
 
 
@@ -800,7 +801,7 @@ def test_offline_panel_names_the_cause_instead_of_blaming_the_camera():
     # Reachability is what separates a resting camera from a broken path to it,
     # and only the stream URL itself can answer that.
     assert "const diagnose" in source
-    assert "fetch(video.dataset.streamUrl" in source
+    assert "fetch(activeStreamUrl" in source
     assert 'return response.ok ? "interrupted" : "resting"' in source
     assert 'return "unreachable"' in source
     assert "diagnose().then(explain)" in source

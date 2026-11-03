@@ -257,6 +257,34 @@ class LoginRateLimiter:
             self._attempts.pop(client, None)
 
 
+class KeyedRateLimiter:
+    """Rate limit per arbitrary key (e.g. session token + stream target)."""
+
+    def __init__(
+        self,
+        *,
+        limit: int = 1,
+        window_seconds: int = 2,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.limit = limit
+        self.window_seconds = window_seconds
+        self.clock = clock
+        self._attempts: defaultdict[str, deque[float]] = defaultdict(deque)
+        self._lock = threading.Lock()
+
+    def allow(self, key: str) -> bool:
+        now = self.clock()
+        with self._lock:
+            attempts = self._attempts[key]
+            while attempts and attempts[0] <= now - self.window_seconds:
+                attempts.popleft()
+            if len(attempts) >= self.limit:
+                return False
+            attempts.append(now)
+            return True
+
+
 def _run(command: list[str], *, timeout: float = 4) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
@@ -286,11 +314,20 @@ def stream_state() -> dict[str, Any]:
 def set_stream_enabled(target: str, enabled: bool) -> dict[str, Any]:
     if target not in STREAM_TARGETS:
         raise ValueError("unknown stream target")
-    verb = "start" if enabled else "stop"
     unit = SERVICE_UNITS[STREAM_TARGETS[target]]
-    result = _run(["systemctl", "--user", verb, unit], timeout=10)
+    if enabled:
+        result = _run(["systemctl", "--user", "start", unit], timeout=15)
+    else:
+        result = _run(["systemctl", "--user", "stop", unit], timeout=45)
+        if result.returncode != 0:
+            _run(["systemctl", "--user", "kill", "-s", "SIGTERM", unit], timeout=10)
+            result = _run(["systemctl", "--user", "stop", unit], timeout=45)
+        if result.returncode != 0:
+            _run(["systemctl", "--user", "kill", "-s", "SIGKILL", unit], timeout=10)
+            result = _run(["systemctl", "--user", "stop", unit], timeout=20)
     if result.returncode != 0:
-        raise RuntimeError("stream control failed")
+        detail = (result.stderr or result.stdout or "").strip()
+        raise RuntimeError(detail or "stream control failed")
     print(
         f"{datetime.now(UTC).isoformat(timespec='seconds')} "
         f"admin stream_{target}_{'started' if enabled else 'stopped'}",
@@ -739,17 +776,19 @@ class AdminHandler(BaseHTTPRequestHandler):
             self._error(HTTPStatus.UNPROCESSABLE_ENTITY, "INVALID_INPUT", "unexpected fields")
             return
         token, _csrf = auth
-        if not self.server.action_limiter.allow(token):
+        stream_key = f"{token}:stream:{which}"
+        if not self.server.stream_limiter.allow(stream_key):
             self._error(
                 HTTPStatus.TOO_MANY_REQUESTS,
                 "RATE_LIMITED",
-                "Wait before changing the stream again",
+                "Wait a moment before toggling this feed again",
             )
             return
         try:
             stream = set_stream_enabled(which, enabled)
-        except (OSError, RuntimeError, subprocess.SubprocessError, ValueError):
-            self._error(HTTPStatus.SERVICE_UNAVAILABLE, "CONTROL_FAILED", "Stream control failed")
+        except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as exc:
+            message = str(exc) or "Stream control failed"
+            self._error(HTTPStatus.SERVICE_UNAVAILABLE, "CONTROL_FAILED", message)
             return
         body = {"stream": stream}
         if which == "usb":
@@ -853,6 +892,7 @@ def main() -> None:
     server.admin_credentials = load_admin_credentials()
     server.login_limiter = LoginRateLimiter()
     server.action_limiter = LoginRateLimiter(limit=1, window_seconds=15)
+    server.stream_limiter = KeyedRateLimiter(limit=2, window_seconds=5)
     if not server.admin_credentials:
         print(
             "warning: no admin credentials are configured; login is disabled",

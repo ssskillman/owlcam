@@ -527,6 +527,7 @@
         await refresh()
       } catch (error) {
         actionStatus.textContent = error.message
+      } finally {
         toggle.disabled = false
       }
     })

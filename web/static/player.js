@@ -23,11 +23,16 @@
 
   const sourceForUrl = (url) => (url === usbStreamUrl ? "usb" : "nest");
 
+  const sourceLabel = (url) =>
+    url === usbStreamUrl ? "USB cam" : "Nest cam";
+
   const readStoredStreamUrl = () => {
     const stored = sessionStorage.getItem(STREAM_STORAGE_KEY);
     if (stored === nestStreamUrl || stored === usbStreamUrl) return stored;
     return nestStreamUrl;
   };
+
+  let activeStreamUrl = readStoredStreamUrl();
 
   const applyCameraButtons = (source) => {
     cameraButtons.forEach((button) => {
@@ -37,12 +42,12 @@
   };
 
   const setActiveStreamUrl = (url) => {
-    video.dataset.streamUrl = url;
+    activeStreamUrl = url;
     sessionStorage.setItem(STREAM_STORAGE_KEY, url);
     applyCameraButtons(sourceForUrl(url));
   };
 
-  setActiveStreamUrl(readStoredStreamUrl());
+  applyCameraButtons(sourceForUrl(activeStreamUrl));
 
   // "Camera is resting" was the panel's only headline, so a blocked request, a
   // dead network, and a genuinely idle camera all read as an owl taking a nap.
@@ -90,7 +95,7 @@
   // URL directly separates "no answer" from "answered, nothing to play".
   const diagnose = async () => {
     try {
-      const response = await fetch(video.dataset.streamUrl, {
+      const response = await fetch(activeStreamUrl, {
         cache: "no-store",
       });
       return response.ok ? "interrupted" : "resting";
@@ -110,7 +115,7 @@
   };
 
   const showOffline = () => {
-    setState("offline", "Live feed unavailable");
+    setState("offline", `${sourceLabel(activeStreamUrl)} — playback error`);
   };
 
   const scheduleReconnect = () => {
@@ -130,13 +135,15 @@
     attempt.catch(() => {
       // Muted playback is normally allowed to autoplay. If a browser refuses
       // anyway, say so, because the controls are the only way forward.
-      if (video.paused) setState("online", "OwlCam online — press play");
+      if (video.paused) {
+        setState("online", `${sourceLabel(activeStreamUrl)} online — press play`);
+      }
     });
   };
 
   const connect = () => {
-    const source = video.dataset.streamUrl;
-    setState("", "Checking live feed…");
+    const source = activeStreamUrl;
+    setState("", `Checking ${sourceLabel(source).toLowerCase()}…`);
     explain("connecting");
     clearTimeout(reconnectTimer);
     reconnectTimer = undefined;
@@ -157,7 +164,7 @@
         fragLoadingTimeOut: 10000,
       });
       hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-        setState("online", "OwlCam online");
+        setState("online", `${sourceLabel(activeStreamUrl)} online`);
         start();
       });
       hls.on(window.Hls.Events.ERROR, (_event, data) => {
@@ -181,7 +188,7 @@
   };
 
   video.addEventListener("loadedmetadata", () => {
-    setState("online", "OwlCam online");
+    setState("online", `${sourceLabel(activeStreamUrl)} online`);
     start();
   });
 
@@ -194,7 +201,7 @@
   cameraButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const nextUrl = streamForSource(button.dataset.cameraSource);
-      if (nextUrl === video.dataset.streamUrl) return;
+      if (nextUrl === activeStreamUrl) return;
       setActiveStreamUrl(nextUrl);
       connect();
     });

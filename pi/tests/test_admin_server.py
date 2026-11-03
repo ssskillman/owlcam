@@ -121,6 +121,7 @@ class AdminHTTPTests(unittest.TestCase):
         self.server.admin_credentials = {"admin": admin.hash_password("nest-secret")}
         self.server.login_limiter = admin.LoginRateLimiter(limit=10, window_seconds=60)
         self.server.action_limiter = admin.LoginRateLimiter(limit=1, window_seconds=15)
+        self.server.stream_limiter = admin.KeyedRateLimiter(limit=1, window_seconds=60)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.base = f"http://127.0.0.1:{self.server.server_port}"
@@ -251,7 +252,7 @@ class AdminHTTPTests(unittest.TestCase):
 
         repeated = Request(
             f"{self.base}/api/stream",
-            data=json.dumps({"enabled": True}).encode(),
+            data=json.dumps({"enabled": True, "which": "stills"}).encode(),
             method="POST",
             headers={
                 **cookie,
