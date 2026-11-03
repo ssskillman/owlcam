@@ -9,6 +9,7 @@ SHELL := /bin/bash
 # See deploy.env.example.
 -include deploy.env
 export ANIMAL_ID_API_ORIGIN
+export OWLCAM_SSH_IDENTITY
 
 # This is a personal project and must never deploy or commit with work
 # credentials. Both are pinned here because the machine's global git identity
